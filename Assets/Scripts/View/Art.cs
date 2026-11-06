@@ -19,6 +19,9 @@ namespace Specimen07
         static readonly Dictionary<string, Sprite[]> dirCache = new Dictionary<string, Sprite[]>();
         public const int PPU = Cfg.PPU;
 
+        // 에디터에서 PNG를 새로 넣거나 바꿨을 때 다시 불러오도록 비운다
+        public static void ClearCache() { cache.Clear(); dirCache.Clear(); }
+
         public static Sprite Get(string key)
         {
             Sprite s;
