@@ -1,0 +1,65 @@
+이 폴더에 아래 이름 그대로 PNG를 넣으면 게임 속 그림이 바뀝니다. (확장자 .png)
+없는 그림은 코드가 임시로 그려서 씁니다. 넣으면 바로 교체, 지우면 다시 임시 그림.
+
+기본 규칙
+- 1칸 = 32 x 32 픽셀 (넣으면 자동으로 Sprite / Point 필터 / 압축 없음 / PPU 32로 설정됨)
+- 위에서 내려다본 시점(탑다운)
+- 캐릭터·주인공 한 장짜리 그림은 "오른쪽을 보는 모습"으로 그리면 게임이 방향에 맞게 회전시킴
+- 캐릭터를 4방향으로 그리고 싶으면 이름 뒤에 _right _down _left _up 을 붙여 네 장 넣기
+  (예: char_guard_right.png, char_guard_down.png, char_guard_left.png, char_guard_up.png)
+  → 네 장이 다 있으면 회전 대신 방향 그림을 씀
+
+[주인공]
+player_blob          본모습 (표본 07)
+
+[사람] — 먹으면 이 모습으로 변신함
+char_cleaner         늙은 청소부
+char_researcher      연구원
+char_researcher2     연구원 (두 번째 옷차림, NPC 전용)
+char_guard           경비원
+char_senior          고위 연구원
+char_soldier         군인
+char_director        연구소장
+
+[물건] — 먹으면 이 모습으로 변신함 (회전 없음, 의자만 놓인 방향대로 회전)
+obj_chair            의자
+obj_trash            쓰레기통
+obj_cart             바퀴 카트 (40x32 권장)
+
+[바닥] — 방 종류별 1칸짜리
+tile_floor_iso  tile_floor_lab  tile_floor_store  tile_floor_hall  tile_floor_rest  tile_floor_mech
+tile_floor_exit  tile_floor_office  tile_floor_sec  tile_floor_lift  tile_floor_cold  tile_floor_wing
+tile_floor_dir  tile_floor_roof
+
+[벽·가구] — 1칸짜리
+tile_wall            벽 (아래에도 벽이 있을 때)
+tile_wall_edge       벽 (아래가 바닥일 때 — 그림자/벽면이 보이는 쪽)
+tile_vent            환풍구 (본모습만 들어갈 수 있음)
+tile_glass           유리벽 (시야 통과)
+tile_shelf           선반
+tile_vending         자판기
+tile_table           테이블
+tile_notice          게시물 (가까이 가면 글이 보임)
+tile_machine         설비
+tile_console         조작 콘솔
+tile_lift            엘리베이터 문
+tile_stairs          계단
+
+[큰 그림] — 영역 크기에 맞춰 늘어남
+big_aircon           실외기 (보통 3x2칸 = 96x64)
+big_tank             탱크 (2x2 또는 3x3칸)
+helipad              헬리패드 (11x9칸 = 352x288)
+tank_broken          B1 시작 지점의 깨진 수조 (바닥 장식, 128x128)
+heli                 헬기 몸체
+heli_rotor           헬기 프로펠러 (회전함)
+
+[문]
+door_closed          닫힌 문 바탕
+door_stripes         닫힌 문 줄무늬 (흰색으로 그리면 카드 색이 입혀짐)
+door_open            열린 문
+
+[효과] — 보통 흰색으로 그림 (코드에서 색을 입힘)
+fx_dot  fx_ring  fx_glow  fx_white
+
+[UI]
+ui_ring  ui_vignette  ui_panel

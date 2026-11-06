@@ -1,0 +1,577 @@
+// 게임 화면(월드) 그리기. 게임 규칙은 건드리지 않고 Game.S(상태)를 읽어서 보여주기만 한다.
+// 모든 그림은 Art.Get("이름")에서 오므로, 그림을 바꾸려면 Resources/Art에 PNG를 넣으면 된다.
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace Specimen07
+{
+    public class WorldView : MonoBehaviour
+    {
+        // 그리는 순서 (숫자가 클수록 위)
+        public const int L_FLOOR = 0, L_DECAL = 1, L_WALL = 2, L_BIG = 3, L_DOOR = 4, L_TRAP = 5, L_TRAIL = 6, L_OBJ = 10, L_NPC = 11, L_PLAYER = 12,
+                         L_HELI = 13, L_DARK = 20, L_TINT = 21, L_GLOW = 22, L_CONE = 23, L_AIM = 24, L_RING = 26, L_FX = 27, L_LABEL = 2;
+
+        Game game; Camera cam;
+        Transform floorRoot, dynRoot;
+        Material lineMat;
+
+        FloorGeo G;
+        // 문
+        class DoorView { public SpriteRenderer baseR, stripes, led; }
+        readonly List<DoorView> doors = new List<DoorView>();
+        // 함정
+        class TrapView { public TrapDef def; public List<SpriteRenderer> parts = new List<SpriteRenderer>(); public List<int> rows = new List<int>(); public List<Vector2Int> cells = new List<Vector2Int>(); }
+        readonly List<TrapView> traps = new List<TrapView>();
+        readonly List<SpriteRenderer> consoleLeds = new List<SpriteRenderer>(), liftLeds = new List<SpriteRenderer>();
+        // 풀
+        readonly List<SpriteRenderer> objPool = new List<SpriteRenderer>(), npcPool = new List<SpriteRenderer>(), trailPool = new List<SpriteRenderer>(), fxPool = new List<SpriteRenderer>();
+        readonly List<MeshFilter> conePool = new List<MeshFilter>();
+        readonly List<LineRenderer> aimPool = new List<LineRenderer>();
+        readonly List<SpriteRenderer> aimRingPool = new List<SpriteRenderer>();
+        SpriteRenderer player, playerGlow, targetRing, heli, heliRotor, alarmTint;
+        LineRenderer shotLine;
+        // 어둠
+        const int DR = 4; // 1칸당 어둠 픽셀
+        Texture2D darkTex; SpriteRenderer darkR;
+        float[] darkBase, darkCur; Color32[] darkOut; int dW, dH;
+        readonly List<LightSrc> flickLights = new List<LightSrc>();
+        RectInt prevPlayerBox; float flickTimer;
+
+        void Awake()
+        {
+            game = GetComponent<Game>();
+            cam = Camera.main;
+            if (cam == null) { var go = new GameObject("Main Camera"); go.tag = "MainCamera"; cam = go.AddComponent<Camera>(); go.AddComponent<AudioListener>(); }
+            cam.orthographic = true;
+            cam.orthographicSize = Cfg.VTH / 2f;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = Data.Hex("#07090b");
+            cam.nearClipPlane = 0.01f; cam.farClipPlane = 100f;
+            lineMat = new Material(Shader.Find("Sprites/Default"));
+        }
+
+        /* ===== 층 만들기 ===== */
+        public void BuildFloor(FloorGeo g)
+        {
+            G = g;
+            if (floorRoot != null) Destroy(floorRoot.gameObject);
+            if (dynRoot != null) Destroy(dynRoot.gameObject);
+            floorRoot = new GameObject("Floor_" + g.id).transform;
+            dynRoot = new GameObject("Dynamic").transform;
+            objPool.Clear(); npcPool.Clear(); trailPool.Clear(); fxPool.Clear(); conePool.Clear(); aimPool.Clear(); aimRingPool.Clear();
+            doors.Clear(); traps.Clear(); consoleLeds.Clear(); liftLeds.Clear();
+
+            var tileRoot = new GameObject("Tiles").transform; tileRoot.SetParent(floorRoot);
+            for (int y = 0; y < g.h; y++) for (int x = 0; x < g.w; x++)
+            {
+                char ch = g.grid[y, x];
+                bool wallish = ch == '#' || ch == 'v';
+                if (!wallish)
+                {
+                    var z = g.ZoneAt(x + 0.5f, y + 0.5f);
+                    Tile(tileRoot, "tile_floor_" + (z != null ? z.kind : "hall"), x, y, L_FLOOR);
+                }
+                string key = null;
+                switch (ch)
+                {
+                    case '#':
+                        { char below = y + 1 < g.h ? g.grid[y + 1, x] : '#'; key = (below == '#' || below == 'v') ? "tile_wall" : "tile_wall_edge"; break; }
+                    case 'v': key = "tile_vent"; break;
+                    case 'G': key = "tile_glass"; break;
+                    case 'S': key = "tile_shelf"; break;
+                    case 'V': key = "tile_vending"; break;
+                    case 'T': key = "tile_table"; break;
+                    case 'N': key = "tile_notice"; break;
+                    case 'M': key = "tile_machine"; break;
+                    case 'C': key = "tile_console"; break;
+                    case 'E': key = "tile_lift"; break;
+                    case '>': case '<': key = "tile_stairs"; break;
+                }
+                if (key != null) Tile(tileRoot, key, x, y, L_WALL);
+            }
+            // 큰 설비 (실외기, 탱크): 영역 크기에 맞춰 늘린다
+            foreach (var f in g.def.fill)
+            {
+                if (f.ch == 'A') Stretch(floorRoot, "big_aircon", f.x, f.y, f.w, f.h, L_BIG);
+                else if (f.ch == 'W') Stretch(floorRoot, "big_tank", f.x, f.y, f.w, f.h, L_BIG);
+            }
+            if (g.def.pad.HasValue) { var p = g.def.pad.Value; Stretch(floorRoot, "helipad", p.x, p.y, p.w, p.h, L_DECAL); }
+            if (g.def.tank.HasValue) { var sr = Spr(floorRoot, "tank_broken", L_DECAL); sr.transform.position = U.W(g.def.tank.Value.x, g.def.tank.Value.y); }
+            // 바닥 글씨 (방 이름, 계단)
+            foreach (var z in g.zones)
+            {
+                if (!z.label || z.x1 - z.x0 < 4) continue;
+                Label(z.name, (z.x0 + z.x1 + 1) / 2f, z.y1 + 0.35f, 0.6f, new Color(220 / 255f, 235 / 255f, 230 / 255f, 0.1f));
+            }
+            foreach (var s in g.def.stairs) Label((s.dir == '>' ? "▲ " : "▼ ") + s.to, s.x + s.w / 2f, s.y + s.h / 2f, 0.4f, Data.Hex("#7fe0b0"));
+
+            // 문
+            foreach (var d in g.def.doors)
+            {
+                var dv = new DoorView();
+                dv.baseR = Spr(floorRoot, "door_closed", L_DOOR); dv.baseR.transform.position = U.W(d.x + 0.5f, d.y + 0.5f);
+                dv.stripes = Spr(floorRoot, "door_stripes", L_DOOR + 1); dv.stripes.transform.position = dv.baseR.transform.position; dv.stripes.color = Data.Cards[d.req].color;
+                dv.led = Spr(floorRoot, "fx_dot", L_DOOR + 2); dv.led.transform.position = dv.baseR.transform.position; dv.led.transform.localScale = Vector3.one * (5.6f / 32f);
+                doors.Add(dv);
+            }
+            // 함정
+            foreach (var tr in g.def.traps)
+            {
+                var tv = new TrapView { def = tr };
+                foreach (var r in tr.rects)
+                {
+                    if (tr.kind == "laser")
+                        for (int yy = r.y; yy < r.y + r.h; yy++)
+                            for (int k = -1; k <= 1; k++)
+                            {
+                                var sr = Spr(floorRoot, "fx_white", L_TRAP);
+                                sr.transform.position = U.W(r.x + r.w / 2f, yy + 0.5f + k * 0.25f);
+                                sr.transform.localScale = new Vector3(r.w, 2.5f / 32f, 1);
+                                tv.parts.Add(sr); tv.rows.Add(yy);
+                            }
+                    else
+                        for (int yy = r.y; yy < r.y + r.h; yy++) for (int xx = r.x; xx < r.x + r.w; xx++)
+                        {
+                            var sr = Spr(floorRoot, "fx_glow", L_TRAP);
+                            sr.transform.localScale = Vector3.one * 1.5f;
+                            tv.parts.Add(sr); tv.cells.Add(new Vector2Int(xx, yy));
+                        }
+                }
+                traps.Add(tv);
+            }
+            foreach (var c in g.def.consoles)
+            {
+                var led = Spr(floorRoot, "fx_white", L_DOOR); led.transform.position = U.W(c.x + 0.5f, c.y + 0.4f); led.transform.localScale = new Vector3(14f / 32f, 7f / 32f, 1);
+                consoleLeds.Add(led);
+            }
+            if (g.def.lift != null) foreach (var t in g.def.lift)
+            {
+                var led = Spr(floorRoot, "fx_white", L_DOOR); led.transform.position = U.W(t.x + 0.5f, t.y + 0.5f); led.transform.localScale = Vector3.one * (6f / 32f);
+                liftLeds.Add(led);
+            }
+            // 빛 색조
+            foreach (var l in g.lights)
+            {
+                if (l.tint.a <= 0) continue;
+                var sr = Spr(floorRoot, "fx_glow", L_TINT); sr.transform.position = U.W(l.x, l.y); sr.transform.localScale = Vector3.one * l.r * 2; sr.color = l.tint;
+            }
+
+            player = Spr(dynRoot, "player_blob", L_PLAYER);
+            playerGlow = Spr(dynRoot, "fx_glow", L_GLOW); playerGlow.transform.localScale = Vector3.one * 2.8f;
+            targetRing = Spr(dynRoot, "fx_ring", L_RING); targetRing.transform.localScale = Vector3.one * (34f / 32f);
+            heli = Spr(dynRoot, "heli", L_HELI); heliRotor = Spr(dynRoot, "heli_rotor", L_HELI + 1);
+            alarmTint = Spr(dynRoot, "fx_white", L_DARK + 1); alarmTint.transform.localScale = new Vector3(Cfg.VTW * 2, Cfg.VTH * 2, 1);
+            shotLine = NewLine(); shotLine.startColor = shotLine.endColor = new Color(1, 230 / 255f, 160 / 255f, 0.9f); shotLine.widthMultiplier = 3f / 32f;
+
+            BuildDarkness();
+        }
+
+        SpriteRenderer Spr(Transform parent, string key, int order)
+        {
+            var go = new GameObject(key);
+            go.transform.SetParent(parent, false);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = Art.Get(key); sr.sortingOrder = order;
+            return sr;
+        }
+        void Tile(Transform parent, string key, int x, int y, int order)
+        {
+            var sr = Spr(parent, key, order);
+            sr.transform.position = U.W(x + 0.5f, y + 0.5f);
+            FitTo(sr, 1, 1);
+        }
+        void Stretch(Transform parent, string key, int x, int y, int w, int h, int order)
+        {
+            var sr = Spr(parent, key, order);
+            sr.transform.position = U.W(x + w / 2f, y + h / 2f);
+            FitTo(sr, w, h);
+        }
+        static void FitTo(SpriteRenderer sr, float w, float h)
+        {
+            var b = sr.sprite.bounds.size;
+            if (b.x <= 0 || b.y <= 0) return;
+            sr.transform.localScale = new Vector3(w / b.x, h / b.y, 1);
+        }
+        void Label(string text, float x, float y, float size, Color col)
+        {
+            var go = new GameObject("Label_" + text);
+            go.transform.SetParent(floorRoot, false);
+            go.transform.position = U.W(x, y, 0);
+            var tm = go.AddComponent<TextMesh>();
+            tm.font = Fonts.Main; tm.text = text; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center;
+            tm.fontSize = 64; tm.characterSize = size / 6.4f; tm.color = col;
+            var mr = go.GetComponent<MeshRenderer>(); mr.sharedMaterial = Fonts.Main.material; mr.sortingOrder = L_LABEL;
+        }
+        LineRenderer NewLine()
+        {
+            var go = new GameObject("Line"); go.transform.SetParent(dynRoot, false);
+            var lr = go.AddComponent<LineRenderer>();
+            lr.sharedMaterial = lineMat; lr.positionCount = 2; lr.useWorldSpace = true; lr.sortingOrder = L_AIM; lr.numCapVertices = 2;
+            lr.enabled = false;
+            return lr;
+        }
+
+        /* ===== 어둠 ===== */
+        void BuildDarkness()
+        {
+            dW = G.w * DR; dH = G.h * DR;
+            darkBase = new float[dW * dH]; darkCur = new float[dW * dH]; darkOut = new Color32[dW * dH];
+            darkTex = new Texture2D(dW, dH, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            flickLights.Clear();
+            for (int i = 0; i < darkBase.Length; i++) darkBase[i] = G.def.dark;
+            foreach (var l in G.lights)
+            {
+                if (l.flick != 0) { flickLights.Add(l); continue; }
+                ApplyLight(darkBase, l, l.i, 0, 0, dW, dH);
+            }
+            System.Array.Copy(darkBase, darkCur, darkBase.Length);
+            foreach (var l in flickLights) ApplyLight(darkCur, l, l.i, 0, 0, dW, dH);
+            for (int i = 0; i < darkCur.Length; i++) darkOut[i] = DarkPx(darkCur[i]);
+            darkTex.SetPixels32(darkOut); darkTex.Apply();
+            var go = new GameObject("Darkness"); go.transform.SetParent(floorRoot, false);
+            darkR = go.AddComponent<SpriteRenderer>();
+            darkR.sprite = Sprite.Create(darkTex, new Rect(0, 0, dW, dH), new Vector2(0, 1), DR);
+            darkR.sortingOrder = L_DARK;
+            go.transform.position = Vector3.zero; // 맵 왼쪽 위 = (0,0)
+            prevPlayerBox = new RectInt(0, 0, 0, 0);
+        }
+        static Color32 DarkPx(float a) { return new Color32(3, 5, 8, (byte)Mathf.Clamp(Mathf.RoundToInt(a * 255), 0, 255)); }
+        // 텍스처 행 인덱스: y=0이 아래쪽이므로 게임 y(아래쪽)를 뒤집는다
+        int Idx(int px, int py) { return (dH - 1 - py) * dW + px; }
+        static float LightA(float d, float r, float lv)
+        {
+            float t = d / r;
+            if (t >= 1) return 0;
+            return t < 0.55f ? Mathf.Lerp(lv, lv * 0.7f, t / 0.55f) : Mathf.Lerp(lv * 0.7f, 0, (t - 0.55f) / 0.45f);
+        }
+        void ApplyLight(float[] buf, LightSrc l, float lv, int bx0, int by0, int bx1, int by1)
+        {
+            int x0 = Mathf.Max(bx0, Mathf.FloorToInt((l.x - l.r) * DR)), x1 = Mathf.Min(bx1, Mathf.CeilToInt((l.x + l.r) * DR));
+            int y0 = Mathf.Max(by0, Mathf.FloorToInt((l.y - l.r) * DR)), y1 = Mathf.Min(by1, Mathf.CeilToInt((l.y + l.r) * DR));
+            for (int py = y0; py < y1; py++) for (int px = x0; px < x1; px++)
+            {
+                float wx = (px + 0.5f) / DR, wy = (py + 0.5f) / DR;
+                float a = LightA(U.Dist(wx, wy, l.x, l.y), l.r, lv);
+                if (a > 0) buf[Idx(px, py)] *= 1 - a;
+            }
+        }
+        RectInt LightBox(LightSrc l)
+        {
+            int x0 = Mathf.Max(0, Mathf.FloorToInt((l.x - l.r) * DR)), x1 = Mathf.Min(dW, Mathf.CeilToInt((l.x + l.r) * DR));
+            int y0 = Mathf.Max(0, Mathf.FloorToInt((l.y - l.r) * DR)), y1 = Mathf.Min(dH, Mathf.CeilToInt((l.y + l.r) * DR));
+            return new RectInt(x0, y0, Mathf.Max(0, x1 - x0), Mathf.Max(0, y1 - y0));
+        }
+        void CopyBox(RectInt b, float[] src, float[] dst) { for (int py = b.yMin; py < b.yMax; py++) for (int px = b.xMin; px < b.xMax; px++) { int i = Idx(px, py); dst[i] = src[i]; } }
+        void OutBox(RectInt b) { for (int py = b.yMin; py < b.yMax; py++) for (int px = b.xMin; px < b.xMax; px++) { int i = Idx(px, py); darkOut[i] = DarkPx(darkCur[i]); } }
+        float LightLevel(LightSrc l, float t)
+        {
+            if (l.flick == 0) return l.i;
+            float n = Mathf.Sin(t * 13 + l.x) * Mathf.Sin(t * 7.3f + l.y * 2);
+            float v = l.i * (0.94f + 0.06f * Mathf.Sin(t * 50 + l.x));
+            if (l.flick == 2 && n > 0.7f) v *= 0.3f;
+            if (l.flick == 1 && n > 0.9f) v *= 0.55f;
+            return v;
+        }
+        void UpdateDarkness(float t, bool playing)
+        {
+            var S = game.S;
+            flickTimer -= Time.deltaTime;
+            if (flickTimer <= 0 && flickLights.Count > 0)
+            {
+                flickTimer = 0.05f;
+                foreach (var l in flickLights) CopyBox(LightBox(l), darkBase, darkCur);
+                foreach (var l in flickLights) { var b = LightBox(l); ApplyLight(darkCur, l, LightLevel(l, t), b.xMin, b.yMin, b.xMax, b.yMax); }
+                foreach (var l in flickLights) OutBox(LightBox(l));
+            }
+            OutBox(prevPlayerBox);
+            if (playing)
+            {
+                var pl = new LightSrc { x = S.player.x, y = S.player.y, r = 2.2f };
+                var b = LightBox(pl);
+                for (int py = b.yMin; py < b.yMax; py++) for (int px = b.xMin; px < b.xMax; px++)
+                {
+                    float d = U.Dist((px + 0.5f) / DR, (py + 0.5f) / DR, pl.x, pl.y) / pl.r;
+                    if (d >= 1) continue;
+                    int i = Idx(px, py);
+                    darkOut[i] = DarkPx(darkCur[i] * (1 - 0.75f * (1 - d)));
+                }
+                prevPlayerBox = b;
+            }
+            darkTex.SetPixels32(darkOut); darkTex.Apply();
+        }
+
+        /* ===== 매 프레임 ===== */
+        bool InView(float x, float y, float m)
+        {
+            var c = game.S.cam;
+            return x > c.x - m && x < c.x + Cfg.VTW + m && y > c.y - m && y < c.y + Cfg.VTH + m;
+        }
+
+        T Pooled<T>(List<T> pool, int i, System.Func<T> make) where T : Component
+        {
+            while (pool.Count <= i) pool.Add(make());
+            var c = pool[i]; c.gameObject.SetActive(true); return c;
+        }
+        static void HideFrom<T>(List<T> pool, int n) where T : Component { for (int i = n; i < pool.Count; i++) if (pool[i].gameObject.activeSelf) pool[i].gameObject.SetActive(false); }
+
+        // 캐릭터 그림 적용: 4방향 그림이 있으면 방향 선택, 없으면 회전
+        static void ApplyFacing(SpriteRenderer sr, string key, float face)
+        {
+            var dir = Art.Dir(key);
+            if (dir != null) { sr.sprite = dir[Art.DirIndex(face)]; sr.transform.rotation = Quaternion.identity; }
+            else { sr.sprite = Art.Get(key); sr.transform.rotation = Quaternion.Euler(0, 0, U.Deg(face)); }
+        }
+
+        public void Render()
+        {
+            if (game == null || game.S == null || G == null || player == null) return;
+            var S = game.S; var F = S.Fl; var p = S.player; float t = S.time;
+            bool playing = game.mode != Mode.Title && game.mode != Mode.Intro;
+
+            // 카메라
+            Vector2 shake = game.mode == Mode.Dying ? new Vector2(U.Rand(-3, 3), U.Rand(-3, 3)) / 32f : Vector2.zero;
+            cam.transform.position = new Vector3(S.cam.x + Cfg.VTW / 2 + shake.x, -(S.cam.y + Cfg.VTH / 2) + shake.y, -10);
+
+            // 문
+            for (int i = 0; i < doors.Count; i++)
+            {
+                var d = G.def.doors[i]; var st = F.doors[i]; var v = doors[i];
+                bool open = st.open || st.temp > 0;
+                v.baseR.sprite = Art.Get(open ? "door_open" : "door_closed");
+                v.stripes.enabled = !open;
+                if (open) { v.led.color = st.open ? Data.Hex("#7fe0b0") : Data.Cards[d.req].color; v.led.transform.position = U.W(d.x + 0.17f, d.y + 0.17f); }
+                else { v.led.color = game.HasCard(d.req) ? Data.Hex("#7fe0b0") : Data.Hex("#ff5148"); v.led.transform.position = U.W(d.x + 0.5f, d.y + 0.5f); }
+            }
+            // 함정
+            foreach (var tv in traps)
+            {
+                bool off = S.trapsOff.Contains(tv.def.id);
+                for (int i = 0; i < tv.parts.Count; i++)
+                {
+                    var sr = tv.parts[i];
+                    if (tv.def.kind == "laser")
+                    {
+                        sr.enabled = !off;
+                        float a = 0.55f + 0.35f * Mathf.Sin(t * 20 + tv.rows[i] * 2.3f);
+                        sr.color = new Color(1, 60 / 255f, 60 / 255f, a);
+                    }
+                    else
+                    {
+                        var c = tv.cells[i]; float ph = t * 1.3f + c.x * 1.7f + c.y * 2.9f;
+                        sr.transform.position = U.W(c.x + 0.5f + 0.25f * Mathf.Sin(ph), c.y + 0.5f + 0.25f * Mathf.Cos(ph * 0.8f));
+                        sr.color = off ? new Color(160 / 255f, 200 / 255f, 140 / 255f, 0.05f) : new Color(150 / 255f, 230 / 255f, 90 / 255f, 0.16f + 0.08f * Mathf.Sin(ph));
+                    }
+                }
+            }
+            for (int i = 0; i < consoleLeds.Count; i++)
+            {
+                var c = G.def.consoles[i];
+                bool done = c.heli ? S.heli != null : S.trapsOff.Contains(c.trap);
+                consoleLeds[i].color = done ? Data.Hex("#7fe0b0") : new Color(1, 81 / 255f, 72 / 255f, 0.6f + 0.4f * Mathf.Sin(t * 5));
+            }
+            foreach (var led in liftLeds) led.color = S.alarm != null ? new Color(1, 81 / 255f, 72 / 255f, 0.5f + 0.5f * Mathf.Sin(t * 8)) : Data.Hex("#7fe0b0");
+
+            // 점액 자국
+            int ti = 0;
+            foreach (var tr in S.trail)
+            {
+                var sr = Pooled(trailPool, ti++, () => Spr(dynRoot, "fx_dot", L_TRAIL));
+                sr.transform.position = U.W(tr.x, tr.y); sr.transform.localScale = Vector3.one * (tr.r * 2 / 32f);
+                sr.color = new Color(1, 125 / 255f, 140 / 255f, 0.22f * tr.t / 3.5f);
+            }
+            HideFrom(trailPool, ti);
+
+            // 물건
+            int oi = 0;
+            foreach (var o in F.objects)
+            {
+                if (!o.alive || !InView(o.x, o.y, 1)) continue;
+                var sr = Pooled(objPool, oi++, () => Spr(dynRoot, "obj_chair", L_OBJ));
+                sr.sprite = Art.Get("obj_" + o.form);
+                float s = 1;
+                if (p.eating != null && !p.eating.target.isNpc && p.eating.target.obj == o) s = Mathf.Max(0.05f, 1 - p.eating.t / Cfg.eatTime);
+                sr.transform.position = U.W(o.x, o.y); sr.transform.rotation = Quaternion.Euler(0, 0, U.Deg(o.form == "chair" ? o.rot : 0));
+                sr.transform.localScale = Vector3.one * s; sr.color = Color.white;
+            }
+            HideFrom(objPool, oi);
+
+            // 사람
+            int ni = 0;
+            foreach (var n in F.npcs)
+            {
+                if (!n.alive || !InView(n.x, n.y, 1)) continue;
+                var sr = Pooled(npcPool, ni++, () => Spr(dynRoot, "char_researcher", L_NPC));
+                ApplyFacing(sr, "char_" + n.pal, n.face);
+                float s = 1;
+                if (p.eating != null && p.eating.target.isNpc && p.eating.target.npc == n) s = Mathf.Max(0.05f, 1 - p.eating.t / Cfg.eatTime);
+                sr.transform.position = U.W(n.x, n.y); sr.transform.localScale = Vector3.one * s;
+            }
+            HideFrom(npcPool, ni);
+
+            // 주인공
+            player.gameObject.SetActive(playing);
+            playerGlow.gameObject.SetActive(false);
+            if (playing) DrawPlayer(t);
+
+            // 헬기
+            DrawHeli(t);
+
+            // 어둠 + 경보 색
+            UpdateDarkness(t, playing);
+            alarmTint.gameObject.SetActive(S.alarm != null);
+            if (S.alarm != null)
+            {
+                alarmTint.transform.position = new Vector3(cam.transform.position.x, cam.transform.position.y, 0);
+                alarmTint.color = new Color(120 / 255f, 0, 0, 0.10f + 0.08f * Mathf.Sin(t * 6));
+            }
+
+            // 시야
+            int ci = 0;
+            foreach (var n in F.npcs)
+            {
+                if (!n.alive || !InView(n.x, n.y, game.ViewDist(n) + 1)) continue;
+                var mf = Pooled(conePool, ci++, NewCone);
+                BuildCone(mf.sharedMesh, n);
+            }
+            HideFrom(conePool, ci);
+
+            // 조준선
+            int ai = 0;
+            foreach (var n in F.npcs)
+            {
+                if (!(n.alive && n.aim > 0.02f && n.seesPlayer)) continue;
+                float k2 = Mathf.Min(1, n.aim / Cfg.aimTime);
+                var lr = Pooled(aimPool, ai, NewLine); lr.enabled = true;
+                lr.SetPosition(0, U.W(n.x, n.y)); lr.SetPosition(1, U.W(p.x, p.y));
+                lr.widthMultiplier = (1 + 2 * k2) / 32f;
+                lr.startColor = lr.endColor = new Color(1, 40 / 255f, 40 / 255f, 0.25f + 0.65f * k2);
+                var ring = Pooled(aimRingPool, ai, () => Spr(dynRoot, "fx_ring", L_RING));
+                ring.transform.position = U.W(p.x, p.y); ring.transform.localScale = Vector3.one * ((22 - 10 * k2) * 2 / 32f);
+                ring.color = new Color(1, 40 / 255f, 40 / 255f, 0.5f + 0.5f * k2);
+                ai++;
+            }
+            HideFrom(aimPool, ai); HideFrom(aimRingPool, ai);
+            bool shot = game.mode == Mode.Dying && S.deathKind == "shot" && S.shotFrom.HasValue;
+            shotLine.enabled = shot;
+            if (shot) { shotLine.SetPosition(0, U.W(S.shotFrom.Value.x, S.shotFrom.Value.y)); shotLine.SetPosition(1, U.W(p.x, p.y)); }
+
+            // 먹을 대상 표시
+            var tgt = game.mode == Mode.Play && p.eating == null ? game.NearestEdible() : null;
+            targetRing.gameObject.SetActive(tgt != null);
+            if (tgt != null)
+            {
+                float pulse = 0.5f + 0.5f * Mathf.Sin(t * 6);
+                bool blocked = S.anySee && game.OthersSee(tgt.Ref);
+                targetRing.transform.position = U.W(tgt.X, tgt.Y);
+                targetRing.color = blocked ? new Color(1, 81 / 255f, 72 / 255f, 0.5f + pulse * 0.4f) : new Color(1, 125 / 255f, 140 / 255f, 0.5f + pulse * 0.4f);
+            }
+
+            // 파티클
+            int fi = 0;
+            foreach (var pt in S.particles)
+            {
+                var sr = Pooled(fxPool, fi++, () => Spr(dynRoot, "fx_dot", L_FX));
+                sr.transform.position = U.W(pt.x, pt.y); sr.transform.localScale = Vector3.one * (pt.r * 2 / 32f);
+                var c = pt.color; c.a = Mathf.Max(0, pt.life / pt.max); sr.color = c;
+            }
+            HideFrom(fxPool, fi);
+        }
+
+        void DrawPlayer(float t)
+        {
+            var S = game.S; var p = S.player; var f = Data.Forms[p.form];
+            bool hidden = game.PlayerHidden();
+            var tr = player.transform;
+            player.sortingOrder = L_PLAYER;
+            Color col = new Color(1, 1, 1, hidden ? 0.45f : 1f);
+            Vector2 j = Vector2.zero;
+            if (p.eating != null)
+            {
+                float k = p.eating.t / Cfg.eatTime;
+                ApplyFacing(player, "player_blob", p.face);
+                float s = 1 + 0.25f * Mathf.Sin(k * Mathf.PI), sq = 0.15f * Mathf.Sin(k * Mathf.PI * 3);
+                tr.localScale = new Vector3(s * (1 + sq), s * (1 - sq * 0.6f), 1);
+            }
+            else if (f.type == FormType.Body)
+            {
+                ApplyFacing(player, "player_blob", p.face);
+                float sq = p.speedNow > 0.3f ? 0.06f * Mathf.Sin(t * 14) : 0;
+                float s = hidden ? 0.8f : 1f;
+                tr.localScale = new Vector3(s * (1 + sq), s * (1 - sq * 0.6f), 1);
+                if (!hidden)
+                {
+                    playerGlow.gameObject.SetActive(true);
+                    playerGlow.transform.position = U.W(p.x, p.y);
+                    playerGlow.color = new Color(1, 125 / 255f, 140 / 255f, 0.18f);
+                }
+            }
+            else
+            {
+                bool warn = p.timer < f.dur * 0.25f;
+                if (warn) { j = new Vector2(Mathf.Sin(t * 43) * 1.2f, Mathf.Cos(t * 37) * 1.0f) / 32f; col = Color.Lerp(col, new Color(1, 0.6f, 0.65f, col.a), 0.5f + 0.5f * Mathf.Sin(t * 8)); }
+                if (f.type == FormType.Object && p.speedNow > 0.3f) j.y += Mathf.Sin(t * 22) * 0.8f / 32f;
+                if (f.type == FormType.Human) ApplyFacing(player, "char_" + p.form, p.face);
+                else { player.sprite = Art.Get("obj_" + p.form); tr.rotation = Quaternion.identity; }
+                tr.localScale = Vector3.one;
+            }
+            tr.position = U.W(p.x + j.x, p.y + j.y);
+            player.color = col;
+        }
+
+        void DrawHeli(float t)
+        {
+            var S = game.S;
+            bool show = G.def.pad.HasValue && S.heli != null;
+            float k = 0;
+            if (show) { k = S.heli.arrived ? 1 : Mathf.Max(0, 1 - S.heli.t / 5); if (k <= 0) show = false; }
+            heli.gameObject.SetActive(show); heliRotor.gameObject.SetActive(show);
+            if (!show) return;
+            var pad = G.def.pad.Value;
+            float cx = pad.x + pad.w / 2f, cy = pad.y + pad.h / 2f - (1 - k) * 120 / 32f;
+            float s = 0.5f + 0.5f * k, a = Mathf.Min(1, k * 1.5f);
+            heli.transform.position = U.W(cx, cy); heli.transform.localScale = Vector3.one * s; heli.color = new Color(1, 1, 1, a);
+            heliRotor.transform.position = U.W(cx, cy); heliRotor.transform.localScale = Vector3.one * s; heliRotor.color = new Color(1, 1, 1, a);
+            heliRotor.transform.rotation = Quaternion.Euler(0, 0, -t * 18 * Mathf.Rad2Deg);
+        }
+
+        /* ===== 시야 부채꼴 ===== */
+        MeshFilter NewCone()
+        {
+            var go = new GameObject("Cone"); go.transform.SetParent(dynRoot, false);
+            var mf = go.AddComponent<MeshFilter>(); var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = lineMat; mr.sortingOrder = L_CONE;
+            var m = new Mesh(); m.MarkDynamic(); mf.sharedMesh = m;
+            return mf;
+        }
+        readonly List<Vector3> cv = new List<Vector3>(); readonly List<Color> cc = new List<Color>(); readonly List<int> ct = new List<int>();
+        void BuildCone(Mesh m, Npc n)
+        {
+            var S = game.S; var c = n.C;
+            float half = Data.ShapeHalf(c.shape), vd = game.ViewDist(n);
+            int N = c.shape == ViewShape.Circle ? 72 : c.shape == ViewShape.Half ? 48 : 34;
+            bool danger = (S.spotNpc == n && S.spot > 0) || n.lockT > 0;
+            bool hunting = n.state == NpcState.Chase;
+            Color col = danger ? new Color(1, 81 / 255f, 72 / 255f) : hunting ? new Color(1, 140 / 255f, 90 / 255f) : new Color(243 / 255f, 176 / 255f, 74 / 255f);
+            float a0 = danger ? 0.34f : n.seesPlayer ? 0.26f : (n.state == NpcState.Inspect || hunting) ? 0.22f : 0.14f;
+            cv.Clear(); cc.Clear(); ct.Clear();
+            cv.Add(U.W(n.x, n.y)); cc.Add(new Color(col.r, col.g, col.b, a0));
+            for (int i = 0; i <= N; i++)
+            {
+                float a = n.face - half + (2 * half) * i / N, ca = Mathf.Cos(a), sa = Mathf.Sin(a);
+                float d = 0;
+                while (d < vd)
+                {
+                    float nd = d + 0.08f;
+                    if (game.IsOpaque(U.Floor(n.x + ca * nd), U.Floor(n.y + sa * nd))) break;
+                    d = nd;
+                }
+                cv.Add(U.W(n.x + ca * d, n.y + sa * d));
+                cc.Add(new Color(col.r, col.g, col.b, Mathf.Lerp(a0, 0.03f, d / vd)));
+                if (i > 0) { ct.Add(0); ct.Add(i + 1); ct.Add(i); }
+            }
+            m.Clear();
+            m.SetVertices(cv); m.SetColors(cc); m.SetTriangles(ct, 0);
+            m.RecalculateBounds();
+        }
+    }
+}
