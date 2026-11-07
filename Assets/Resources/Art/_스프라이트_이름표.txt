@@ -61,5 +61,16 @@ door_open            열린 문
 [효과] — 보통 흰색으로 그림 (코드에서 색을 입힘)
 fx_dot  fx_ring  fx_glow  fx_white
 
+[메인 화면] — 없으면 회색 버튼 + 글자 로고로 보임
+ui_title_bg          배경 (화면을 꽉 채움, 1920x1080 권장)
+ui_title_logo        로고 (비율 유지)
+ui_button            버튼 공통 바탕 (글자는 코드가 씀. Sprite Editor에서 테두리(Border)를 정하면 늘려도 모서리가 안 깨짐)
+ui_btn_new           새로하기 버튼 (글자까지 그린 그림이면 이걸로 → 코드 글자는 숨겨짐)
+ui_btn_continue      이어하기 버튼
+ui_btn_settings      설정 버튼
+ui_btn_quit          게임 종료 버튼
+ui_panel_bg          설정 창 바탕
+※ 위치·크기는 Assets/Scripts/View/HudMenu.cs 맨 위 "배치" 숫자에서 조정
+
 [UI]
 ui_ring  ui_vignette  ui_panel

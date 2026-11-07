@@ -61,49 +61,7 @@ namespace Specimen07
             objPool.Clear(); npcPool.Clear(); trailPool.Clear(); fxPool.Clear(); conePool.Clear(); aimPool.Clear(); aimRingPool.Clear();
             doors.Clear(); traps.Clear(); consoleLeds.Clear(); liftLeds.Clear();
 
-            var tileRoot = new GameObject("Tiles").transform; tileRoot.SetParent(floorRoot);
-            for (int y = 0; y < g.h; y++) for (int x = 0; x < g.w; x++)
-            {
-                char ch = g.grid[y, x];
-                bool wallish = ch == '#' || ch == 'v';
-                if (!wallish)
-                {
-                    var z = g.ZoneAt(x + 0.5f, y + 0.5f);
-                    Tile(tileRoot, "tile_floor_" + (z != null ? z.kind : "hall"), x, y, L_FLOOR);
-                }
-                string key = null;
-                switch (ch)
-                {
-                    case '#':
-                        { char below = y + 1 < g.h ? g.grid[y + 1, x] : '#'; key = (below == '#' || below == 'v') ? "tile_wall" : "tile_wall_edge"; break; }
-                    case 'v': key = "tile_vent"; break;
-                    case 'G': key = "tile_glass"; break;
-                    case 'S': key = "tile_shelf"; break;
-                    case 'V': key = "tile_vending"; break;
-                    case 'T': key = "tile_table"; break;
-                    case 'N': key = "tile_notice"; break;
-                    case 'M': key = "tile_machine"; break;
-                    case 'C': key = "tile_console"; break;
-                    case 'E': key = "tile_lift"; break;
-                    case '>': case '<': key = "tile_stairs"; break;
-                }
-                if (key != null) Tile(tileRoot, key, x, y, L_WALL);
-            }
-            // 큰 설비 (실외기, 탱크): 영역 크기에 맞춰 늘린다
-            foreach (var f in g.def.fill)
-            {
-                if (f.ch == 'A') Stretch(floorRoot, "big_aircon", f.x, f.y, f.w, f.h, L_BIG);
-                else if (f.ch == 'W') Stretch(floorRoot, "big_tank", f.x, f.y, f.w, f.h, L_BIG);
-            }
-            if (g.def.pad.HasValue) { var p = g.def.pad.Value; Stretch(floorRoot, "helipad", p.x, p.y, p.w, p.h, L_DECAL); }
-            if (g.def.tank.HasValue) { var sr = Spr(floorRoot, "tank_broken", L_DECAL); sr.transform.position = U.W(g.def.tank.Value.x, g.def.tank.Value.y); }
-            // 바닥 글씨 (방 이름, 계단)
-            foreach (var z in g.zones)
-            {
-                if (!z.label || z.x1 - z.x0 < 4) continue;
-                Label(z.name, (z.x0 + z.x1 + 1) / 2f, z.y1 + 0.35f, 0.6f, new Color(220 / 255f, 235 / 255f, 230 / 255f, 0.1f));
-            }
-            foreach (var s in g.def.stairs) Label((s.dir == '>' ? "▲ " : "▼ ") + s.to, s.x + s.w / 2f, s.y + s.h / 2f, 0.4f, Data.Hex("#7fe0b0"));
+            BuildStatic(g, floorRoot);
 
             // 문
             foreach (var d in g.def.doors)
@@ -166,7 +124,56 @@ namespace Specimen07
             BuildDarkness();
         }
 
-        SpriteRenderer Spr(Transform parent, string key, int order)
+        // 움직이지 않는 부분 (바닥, 벽, 가구, 큰 설비, 방 이름). 에디터 미리보기에서도 같이 쓴다.
+        public static void BuildStatic(FloorGeo g, Transform root)
+        {
+            var tileRoot = new GameObject("Tiles").transform; tileRoot.SetParent(root, false);
+            for (int y = 0; y < g.h; y++) for (int x = 0; x < g.w; x++)
+            {
+                char ch = g.grid[y, x];
+                bool wallish = ch == '#' || ch == 'v';
+                if (!wallish)
+                {
+                    var z = g.ZoneAt(x + 0.5f, y + 0.5f);
+                    Tile(tileRoot, "tile_floor_" + (z != null ? z.kind : "hall"), x, y, L_FLOOR);
+                }
+                string key = null;
+                switch (ch)
+                {
+                    case '#':
+                        { char below = y + 1 < g.h ? g.grid[y + 1, x] : '#'; key = (below == '#' || below == 'v') ? "tile_wall" : "tile_wall_edge"; break; }
+                    case 'v': key = "tile_vent"; break;
+                    case 'G': key = "tile_glass"; break;
+                    case 'S': key = "tile_shelf"; break;
+                    case 'V': key = "tile_vending"; break;
+                    case 'T': key = "tile_table"; break;
+                    case 'N': key = "tile_notice"; break;
+                    case 'M': key = "tile_machine"; break;
+                    case 'C': key = "tile_console"; break;
+                    case 'E': key = "tile_lift"; break;
+                    case '>': case '<': key = "tile_stairs"; break;
+                }
+                if (key != null) Tile(tileRoot, key, x, y, L_WALL);
+            }
+            // 큰 설비 (실외기, 탱크): 영역 크기에 맞춰 늘린다
+            foreach (var f in g.def.fill)
+            {
+                if (f.ch == 'A') Stretch(root, "big_aircon", f.x, f.y, f.w, f.h, L_BIG);
+                else if (f.ch == 'W') Stretch(root, "big_tank", f.x, f.y, f.w, f.h, L_BIG);
+            }
+            if (g.def.pad.HasValue) { var p = g.def.pad.Value; Stretch(root, "helipad", p.x, p.y, p.w, p.h, L_DECAL); }
+            if (g.def.tank.HasValue) { var sr = Spr(root, "tank_broken", L_DECAL); sr.transform.position = U.W(g.def.tank.Value.x, g.def.tank.Value.y); }
+            // 바닥 글씨 (방 이름, 계단)
+            foreach (var z in g.zones)
+            {
+                if (!z.label || z.x1 - z.x0 < 4) continue;
+                Label(root, z.name, (z.x0 + z.x1 + 1) / 2f, z.y1 + 0.35f, 0.6f, new Color(220 / 255f, 235 / 255f, 230 / 255f, 0.1f));
+            }
+            foreach (var s in g.def.stairs) Label(root, (s.dir == '>' ? "▲ " : "▼ ") + s.to, s.x + s.w / 2f, s.y + s.h / 2f, 0.4f, Data.Hex("#7fe0b0"));
+
+        }
+
+        public static SpriteRenderer Spr(Transform parent, string key, int order)
         {
             var go = new GameObject(key);
             go.transform.SetParent(parent, false);
@@ -174,13 +181,13 @@ namespace Specimen07
             sr.sprite = Art.Get(key); sr.sortingOrder = order;
             return sr;
         }
-        void Tile(Transform parent, string key, int x, int y, int order)
+        static void Tile(Transform parent, string key, int x, int y, int order)
         {
             var sr = Spr(parent, key, order);
             sr.transform.position = U.W(x + 0.5f, y + 0.5f);
             FitTo(sr, 1, 1);
         }
-        void Stretch(Transform parent, string key, int x, int y, int w, int h, int order)
+        static void Stretch(Transform parent, string key, int x, int y, int w, int h, int order)
         {
             var sr = Spr(parent, key, order);
             sr.transform.position = U.W(x + w / 2f, y + h / 2f);
@@ -192,10 +199,10 @@ namespace Specimen07
             if (b.x <= 0 || b.y <= 0) return;
             sr.transform.localScale = new Vector3(w / b.x, h / b.y, 1);
         }
-        void Label(string text, float x, float y, float size, Color col)
+        static void Label(Transform parent, string text, float x, float y, float size, Color col)
         {
             var go = new GameObject("Label_" + text);
-            go.transform.SetParent(floorRoot, false);
+            go.transform.SetParent(parent, false);
             go.transform.position = U.W(x, y, 0);
             var tm = go.AddComponent<TextMesh>();
             tm.font = Fonts.Main; tm.text = text; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center;

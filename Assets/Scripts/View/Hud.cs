@@ -26,7 +26,7 @@ namespace Specimen07
         }
     }
 
-    public class Hud : MonoBehaviour
+    public partial class Hud : MonoBehaviour
     {
         static readonly Color BG = Data.Hex("#0c1115"), PANEL = Data.Hex("#141b21"), FG = Data.Hex("#dde6e3"), MUTED = Data.Hex("#8a9a99"),
                               FLESH = Data.Hex("#ff7d8c"), HAZARD = Data.Hex("#f3b04a"), ALARM = Data.Hex("#ff5148"), EXIT = Data.Hex("#7fe0b0");
@@ -47,7 +47,7 @@ namespace Specimen07
         readonly List<Image> bubbleBgs = new List<Image>(); readonly List<Text> bubbleTexts = new List<Text>(); readonly List<Text> marks = new List<Text>();
         RectTransform bubbleLayer;
         // 오버레이
-        GameObject ovTitle, ovIntro, ovLift, ovOver, ovClear;
+        GameObject ovHowTo, ovIntro, ovLift, ovOver, ovClear;
         Text introLog; Coroutine introCo;
         RectTransform liftList;
         Text overHead, overReason, overTip;
@@ -231,8 +231,8 @@ namespace Specimen07
         void BuildOverlays()
         {
             RectTransform card;
-            // 타이틀
-            ovTitle = Overlay("Title", out card, 1100).gameObject;
+            // 게임 방법 (메인 화면 → 설정 → 게임 방법)
+            ovHowTo = Overlay("HowTo", out card, 1100).gameObject;
             Tag(card, "SPECIMEN 07 · 모방성 유기체 · 처분 예정 09:00");
             Txt(card, "Title", "표본 <color=#ff7d8c>07</color>", 150, FG, TextAnchor.UpperLeft, true);
             Txt(card, "Lede", "먹은 것의 모습이 되고, 그 사람의 출입 카드도 내 것이 된다. 지하 격리동에서 깨어나 층을 오르내리며 잠긴 문과 함정을 풀고, 4층 소장실에서 연구소장을 먹은 뒤 옥상 헬기로 빠져나가자.", 26, FG);
@@ -243,7 +243,7 @@ namespace Specimen07
             CharTable(card);
             Txt(card, "Keys", "<b>WASD / 방향키</b> 이동     <b>E / Space</b> 먹기 · 열기 · 조작     <b>M</b> 지도     <b>R</b> 층 도착 시점부터", 20, MUTED);
             var row = Row(card, "Buttons", 12);
-            Btn(row, "수조에서 깨어나기", FLESH, Data.Hex("#1a0d10"), () => game.StartGame(), 360, 70);
+            Btn(row, "닫기", PANEL, FG, () => ovHowTo.SetActive(false), 220, 64);
 
             // 인트로
             ovIntro = Overlay("Intro", out card, 1100).gameObject;
@@ -266,6 +266,7 @@ namespace Specimen07
             row = Row(card, "Buttons", 14);
             Btn(row, "층 도착 시점부터 (R)", FLESH, Data.Hex("#1a0d10"), () => game.Retry(), 380, 70);
             Btn(row, "처음부터", PANEL, FG, () => game.NewRun(), 220, 70);
+            Btn(row, "메인 화면", PANEL, FG, () => game.GoToMenu(), 220, 70);
 
             // 클리어
             ovClear = Overlay("Clear", out card, 1000).gameObject;
@@ -276,6 +277,9 @@ namespace Specimen07
             stTime = Stat(stats, "걸린 시간"); stDeaths = Stat(stats, "재시도"); stAlarms = Stat(stats, "경보");
             row = Row(card, "Buttons", 12);
             Btn(row, "처음부터 다시", FLESH, Data.Hex("#1a0d10"), () => game.NewRun(), 300, 70);
+            Btn(row, "메인 화면", PANEL, FG, () => game.GoToMenu(), 220, 70);
+
+            BuildMenu(); // 메인 화면 (HudMenu.cs)
 
             flashImg = Img(Stretch(canvasRt, "Flash"), new Color(1, 1, 1, 0)); flashImg.gameObject.SetActive(false);
         }
@@ -311,13 +315,14 @@ namespace Specimen07
         }
 
         /* ================= 화면 전환 ================= */
-        public void HideAllOverlays() { ovTitle.SetActive(false); ovIntro.SetActive(false); ovLift.SetActive(false); ovOver.SetActive(false); ovClear.SetActive(false); }
-        public void ShowTitle() { HideAllOverlays(); ovTitle.SetActive(true); hudRoot.SetActive(false); }
+        public void HideAllOverlays() { HideMenu(); ovHowTo.SetActive(false); ovIntro.SetActive(false); ovLift.SetActive(false); ovOver.SetActive(false); ovClear.SetActive(false); }
+        public void ShowTitle() { HideAllOverlays(); ShowMenu(); hudRoot.SetActive(false); }
+        public void ShowHowTo() { ovHowTo.SetActive(true); ovHowTo.transform.SetAsLastSibling(); }
 
         public void ShowIntro()
         {
             game.sfx.Init();
-            ovTitle.SetActive(false); ovIntro.SetActive(true);
+            HideMenu(); ovIntro.SetActive(true);
             if (introCo != null) StopCoroutine(introCo);
             introCo = StartCoroutine(IntroCo());
         }
