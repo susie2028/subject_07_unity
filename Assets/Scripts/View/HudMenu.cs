@@ -23,7 +23,7 @@ namespace Specimen07
         const float BTN_GAP = 12;
         static readonly Color BTN_COLOR = Data.Hex("#d9d9d9"), BTN_TEXT = Data.Hex("#111111");
 
-        GameObject menuRoot, settingsPanel, confirmPanel;
+        GameObject menuRoot, settingsPanel, confirmPanel, pausePanel;
         Button btnContinue; Text continueLabel;
         Text volText, fullText, miniText;
 
@@ -52,7 +52,7 @@ namespace Specimen07
 
             // 로고
             var logoRt = TopLeft(mr, "Logo", LOGO_POS, LOGO_SIZE);
-            var logoSprite = Art.TryLoad("ui_title_logo");
+            var logoSprite = Art.TryLoad("ui_title_logo") ?? Art.TryLoad("title01");
             if (logoSprite != null)
             {
                 var im = logoRt.gameObject.AddComponent<Image>(); im.sprite = logoSprite; im.preserveAspect = true; im.raycastTarget = false;
@@ -78,7 +78,21 @@ namespace Specimen07
             BuildSettings(mr);
             BuildConfirm(mr);
             menuRoot.SetActive(false);
+            BuildPause();
         }
+
+        /* ===== 일시 정지 (게임 중 Esc, MainMenu 씬이 있을 때) ===== */
+        void BuildPause()
+        {
+            pausePanel = ModalPanel(canvasRt, "Pause", "일시 정지", 600);
+            var card = pausePanel.transform.Find("Card");
+            Txt(card, "Msg", "메인 화면으로 나가면 이어하기는 이 층에 도착한 시점부터예요.", 22, MUTED);
+            var row = Row(card, "Buttons", 12);
+            Btn(row, "계속하기", FLESH, Data.Hex("#1a0d10"), () => game.Resume(), 220, 60);
+            Btn(row, "메인 화면으로", PANEL, FG, () => game.GoToMenu(), 240, 60);
+        }
+        public void ShowPause() { pausePanel.SetActive(true); pausePanel.transform.SetAsLastSibling(); }
+        public void HidePause() { pausePanel.SetActive(false); }
 
         static RectTransform TopLeft(Transform parent, string name, Vector2 pos, Vector2 size)
         {

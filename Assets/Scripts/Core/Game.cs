@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Specimen07
 {
-    public enum Mode { Title, Intro, Play, Lift, Dying, Over, Clear }
+    public enum Mode { Title, Intro, Play, Lift, Dying, Over, Clear, Pause }
 
     public class Game : MonoBehaviour
     {
@@ -43,7 +43,11 @@ namespace Specimen07
             showMini = Settings.Minimap;
             NewGame();
             EnterFloorVisual();
-            if (hud != null) hud.ShowTitle();
+            // MainMenu 씬에서 넘어왔으면 그 요청대로 시작, 아니면(게임 씬을 바로 Play) 게임 안의 임시 메뉴
+            var req = Launch.request; Launch.request = Launch.Request.None;
+            if (req == Launch.Request.New) StartGame();
+            else if (req == Launch.Request.Continue && HasSave()) Continue();
+            else if (hud != null) hud.ShowTitle();
         }
 
         public void Later(float sec, Action a) { if (laterImmediate) a(); else StartCoroutine(LaterCo(sec, a)); }
@@ -152,8 +156,19 @@ namespace Specimen07
         }
 
         bool pausedFromPlay;
+
+        /* 일시 정지 (MainMenu 씬이 있을 때 Esc) */
+        public void Pause() { if (mode != Mode.Play) return; mode = Mode.Pause; if (hud != null) hud.ShowPause(); }
+        public void Resume() { if (mode != Mode.Pause) return; if (hud != null) hud.HidePause(); mode = Mode.Play; }
+
         public void GoToMenu()
         {
+            if (Launch.MenuSceneInBuild)
+            {
+                // 진행은 마지막 층 도착 시점에 저장되어 있다
+                UnityEngine.SceneManagement.SceneManager.LoadScene(Launch.MenuScene);
+                return;
+            }
             // 플레이 중에 나오면 이번 실행 동안은 그 자리에서 이어하기. 게임을 끄면 마지막 층 도착 시점부터.
             pausedFromPlay = mode == Mode.Play;
             if (pausedFromPlay && S.player.eating != null)
@@ -894,12 +909,13 @@ namespace Specimen07
                 for (int i = 1; i <= 5; i++) if (Inp.Down(KeyCode.Alpha0 + i)) ChooseLift(i + "F");
                 return;
             }
+            if (mode == Mode.Pause) { if (Inp.Down(KeyCode.Escape)) Resume(); return; }
             if (mode == Mode.Over) { if (Inp.Down(KeyCode.R) || Inp.Down(KeyCode.Return) || Inp.Down(KeyCode.Space)) Retry(); else if (Inp.Down(KeyCode.Escape)) GoToMenu(); return; }
             if (mode == Mode.Clear) { if (Inp.Down(KeyCode.Return)) NewRun(); else if (Inp.Down(KeyCode.Escape)) GoToMenu(); return; }
             if (mode == Mode.Play)
             {
                 if (Inp.Down(KeyCode.R)) { Retry(); return; }
-                if (Inp.Down(KeyCode.Escape)) { GoToMenu(); return; }
+                if (Inp.Down(KeyCode.Escape)) { if (Launch.MenuSceneInBuild) Pause(); else GoToMenu(); return; }
                 if (Inp.Down(KeyCode.M)) { showMini = !showMini; if (hud != null) hud.SetMiniVisible(showMini); return; }
                 if (Inp.Down(KeyCode.E) || Inp.Down(KeyCode.Space)) Action();
             }

@@ -315,7 +315,7 @@ namespace Specimen07
         }
 
         /* ================= 화면 전환 ================= */
-        public void HideAllOverlays() { HideMenu(); ovHowTo.SetActive(false); ovIntro.SetActive(false); ovLift.SetActive(false); ovOver.SetActive(false); ovClear.SetActive(false); }
+        public void HideAllOverlays() { HideMenu(); HidePause(); ovHowTo.SetActive(false); ovIntro.SetActive(false); ovLift.SetActive(false); ovOver.SetActive(false); ovClear.SetActive(false); }
         public void ShowTitle() { HideAllOverlays(); ShowMenu(); hudRoot.SetActive(false); }
         public void ShowHowTo() { ovHowTo.SetActive(true); ovHowTo.transform.SetAsLastSibling(); }
 

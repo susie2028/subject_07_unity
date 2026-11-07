@@ -19,6 +19,8 @@ namespace Specimen07.EditorTools
         static MapPreview()
         {
             EditorApplication.playModeStateChanged += OnPlayMode;
+            // 게임 씬(Main)이 열려 있을 때만 미리보기를 보여 준다
+            UnityEditor.SceneManagement.EditorSceneManager.sceneOpened += (sc, m) => { if (!EditorApplication.isPlayingOrWillChangePlaymode) Rebuild(false); };
             // 스크립트를 다시 불러온 뒤(코드 수정 후 등) 미리보기 복구
             EditorApplication.delayCall += () =>
             {
@@ -45,6 +47,7 @@ namespace Specimen07.EditorTools
         static void Show(string fid)
         {
             if (EditorApplication.isPlaying) { Debug.Log("[표본07] 미리보기는 Play 중이 아닐 때 쓸 수 있어요."); return; }
+            if (!GameSceneOpen) Debug.Log("[표본07] 미리보기는 게임 씬(Main)에서 보여요. 메뉴 '표본07 → 게임 씬 열기'");
             Current = fid;
             Rebuild(true);
         }
@@ -58,9 +61,12 @@ namespace Specimen07.EditorTools
             root = null;
         }
 
+        static bool GameSceneOpen { get { return UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene().name == "Main"; } }
+
         public static void Rebuild(bool frame)
         {
             Clear();
+            if (!GameSceneOpen) return;
             string fid = Current;
             if (string.IsNullOrEmpty(fid) || !FloorGeo.All.ContainsKey(fid)) return;
             Art.ClearCache();

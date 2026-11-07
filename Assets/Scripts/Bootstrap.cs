@@ -10,6 +10,7 @@ namespace Specimen07
         static void Boot()
         {
             if (Object.FindFirstObjectByType<Game>() != null) return;
+            if (Object.FindFirstObjectByType<MainMenuController>() != null) return; // 메인 메뉴 씬에서는 게임을 만들지 않음
             new GameObject("Game").AddComponent<Game>();
         }
     }
