@@ -39,6 +39,8 @@ namespace Specimen07
 
         void Start()
         {
+            AudioListener.volume = Settings.Volume;
+            showMini = Settings.Minimap;
             NewGame();
             EnterFloorVisual();
             if (hud != null) hud.ShowTitle();
@@ -62,7 +64,14 @@ namespace Specimen07
             S.ResetTransient();
         }
 
-        void SaveCheckpoint() { checkpoint = ((SaveData)S).Clone(); }
+        string lastVia = "start";
+        bool runInSession; // 이번 실행 중에 시작한 판이 있는지 (있으면 이어하기가 메모리의 체크포인트를 씀)
+
+        void SaveCheckpoint()
+        {
+            checkpoint = ((SaveData)S).Clone();
+            SaveFile.Write(S, lastVia, deaths);
+        }
         void LoadCheckpoint()
         {
             S.Load(checkpoint);
@@ -99,6 +108,8 @@ namespace Specimen07
         public void NewRun()
         {
             deaths = 0;
+            lastVia = "start";
+            runInSession = true; pausedFromPlay = false;
             NewGame();
             EnterFloorVisual();
             SaveCheckpoint();
@@ -108,10 +119,59 @@ namespace Specimen07
 
         public void Retry()
         {
+            pausedFromPlay = false;
             if (checkpoint == null) { NewRun(); return; }
             if (mode == Mode.Play) deaths++;
             LoadCheckpoint();
             BeginPlay();
+        }
+
+        /* 메인 화면 */
+        public bool HasSave() { return (runInSession && checkpoint != null) || SaveFile.Exists(); }
+
+        public void Continue()
+        {
+            if (!HasSave()) return;
+            if (sfx != null) sfx.Init();
+            if (pausedFromPlay) { pausedFromPlay = false; BeginPlay(); return; }   // Esc로 나왔으면 그 자리에서 계속
+            if (runInSession && checkpoint != null) { LoadCheckpoint(); BeginPlay(); return; }
+            var f = SaveFile.Read();
+            if (f == null || !FloorGeo.All.ContainsKey(f.floorId)) { SaveFile.Delete(); if (hud != null) hud.ShowTitle(); return; }
+            runInSession = true;
+            NewGame();
+            deaths = f.deaths;
+            S.cards = new List<string>(f.cards); S.trapsOff = new List<string>(f.trapsOff);
+            S.visited = new List<string>(f.visited); S.seenForm = new List<string>(f.seenForm);
+            S.elapsed = f.elapsed; S.alarms = f.alarms;
+            if (f.floorId == "B1" && f.via == "start") { lastVia = "start"; EnterFloorVisual(); }
+            else GoFloor(f.floorId, f.via);
+            if (Data.Forms.ContainsKey(f.form)) { S.player.form = f.form; S.player.timer = f.timer; }
+            SaveCheckpoint();
+            BeginPlay();
+            UpdateCamera(0, true);
+        }
+
+        bool pausedFromPlay;
+        public void GoToMenu()
+        {
+            // 플레이 중에 나오면 이번 실행 동안은 그 자리에서 이어하기. 게임을 끄면 마지막 층 도착 시점부터.
+            pausedFromPlay = mode == Mode.Play;
+            if (pausedFromPlay && S.player.eating != null)
+            {
+                if (S.player.eating.target.isNpc) S.player.eating.target.npc.frozen = false;
+                S.player.eating = null;
+            }
+            mode = Mode.Title;
+            if (hud != null) hud.ShowTitle();
+        }
+
+        public void QuitGame()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         void EnterFloorVisual()
@@ -124,6 +184,7 @@ namespace Specimen07
 
         void GoFloor(string id, string via)
         {
+            lastVia = via;
             var p = S.player;
             S.floorId = id; G = FloorGeo.All[id];
             var a = G.def.Arrive(via);
@@ -176,6 +237,8 @@ namespace Specimen07
         void WinGame()
         {
             mode = Mode.Clear;
+            SaveFile.Delete();
+            runInSession = false; checkpoint = null;
             Snd("win");
             if (hud != null) hud.ShowClear();
         }
@@ -818,18 +881,25 @@ namespace Specimen07
         void HandleKeys()
         {
             if (mode == Mode.Intro) { if (Inp.AnyDown()) FinishIntro(); return; }
-            if (mode == Mode.Title) { if (Inp.Down(KeyCode.Return) || Inp.Down(KeyCode.Space)) StartGame(); return; }
+            if (mode == Mode.Title)
+            {
+                if (hud == null) return;
+                if (hud.MenuPanelOpen) { if (Inp.Down(KeyCode.Escape)) hud.CloseMenuPanels(); return; }
+                if (Inp.Down(KeyCode.Return)) { if (HasSave()) Continue(); else StartGame(); }
+                return;
+            }
             if (mode == Mode.Lift)
             {
                 if (Inp.Down(KeyCode.Escape)) CloseLift();
                 for (int i = 1; i <= 5; i++) if (Inp.Down(KeyCode.Alpha0 + i)) ChooseLift(i + "F");
                 return;
             }
-            if (mode == Mode.Over) { if (Inp.Down(KeyCode.R) || Inp.Down(KeyCode.Return) || Inp.Down(KeyCode.Space)) Retry(); return; }
-            if (mode == Mode.Clear) { if (Inp.Down(KeyCode.Return)) NewRun(); return; }
+            if (mode == Mode.Over) { if (Inp.Down(KeyCode.R) || Inp.Down(KeyCode.Return) || Inp.Down(KeyCode.Space)) Retry(); else if (Inp.Down(KeyCode.Escape)) GoToMenu(); return; }
+            if (mode == Mode.Clear) { if (Inp.Down(KeyCode.Return)) NewRun(); else if (Inp.Down(KeyCode.Escape)) GoToMenu(); return; }
             if (mode == Mode.Play)
             {
                 if (Inp.Down(KeyCode.R)) { Retry(); return; }
+                if (Inp.Down(KeyCode.Escape)) { GoToMenu(); return; }
                 if (Inp.Down(KeyCode.M)) { showMini = !showMini; if (hud != null) hud.SetMiniVisible(showMini); return; }
                 if (Inp.Down(KeyCode.E) || Inp.Down(KeyCode.Space)) Action();
             }

@@ -22,6 +22,9 @@ namespace Specimen07
         // 에디터에서 PNG를 새로 넣거나 바꿨을 때 다시 불러오도록 비운다
         public static void ClearCache() { cache.Clear(); dirCache.Clear(); }
 
+        // Resources/Art에 그림이 있을 때만 돌려준다 (임시 그림은 만들지 않음)
+        public static Sprite TryLoad(string key) { return Resources.Load<Sprite>("Art/" + key); }
+
         public static Sprite Get(string key)
         {
             Sprite s;
