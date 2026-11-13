@@ -9,8 +9,12 @@
   (예: char_guard_right.png, char_guard_down.png, char_guard_left.png, char_guard_up.png)
   → 네 장이 다 있으면 회전 대신 방향 그림을 씀
 
-[주인공]
-player_blob          본모습 (표본 07)
+[주인공] — 옆모습, 오른쪽을 보는 그림 (왼쪽으로 가면 자동 좌우 반전). 16픽셀 = 1칸 크기로 표시
+player_idle_0, _1 …    가만히 (숨쉬기)
+player_crawl_0 ~ _3 …  기어가기 (초당 10장)
+player_eat_0 ~ _3 …    먹기 (먹는 0.8초 동안 순서대로, 입이 점점 크게)
+player_blob            HUD·미리보기용 한 장
+※ 프레임 수는 자유 — _0부터 이어지는 만큼 다 씀. Tools/make_player.py로 만든 임시 그림
 
 [사람] — 먹으면 이 모습으로 변신함
 char_cleaner         늙은 청소부

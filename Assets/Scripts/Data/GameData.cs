@@ -17,8 +17,11 @@ namespace Specimen07
         public const float VTW = 22f, VTH = 12.375f;
         // 스프라이트 해상도: 1칸 = 32픽셀 (타일 PNG는 16픽셀이어도 1칸에 맞춰 늘어남)
         public const int PPU = 32;
-        // 화면 어둠 세기 (0 = 없음, 1 = 프로토타입과 같음)
-        public const float darkScale = 0.6f;
+        // 화면 어둠·조명 (그림 분위기용, 게임 규칙과 무관)
+        public const float darkMul = 1.35f;    // 층별 기본 어둠 × 이 값
+        public const float maxDark = 0.9f;     // 가장 어두운 곳의 어둠 (0~1)
+        public const float roomLightI = 0.55f; // 방 전체 조명 세기 배율 (낮을수록 천장등 주변만 밝음)
+        public const float roomLightR = 0.85f; // 방 전체 조명 반경 배율
     }
 
     public enum ViewShape { Cone, Half, Circle }

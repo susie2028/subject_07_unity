@@ -20,7 +20,19 @@ namespace Specimen07
         public const int PPU = Cfg.PPU;
 
         // 에디터에서 PNG를 새로 넣거나 바꿨을 때 다시 불러오도록 비운다
-        public static void ClearCache() { cache.Clear(); dirCache.Clear(); has.Clear(); }
+        public static void ClearCache() { cache.Clear(); dirCache.Clear(); has.Clear(); frames.Clear(); }
+
+        // 애니메이션 프레임: 이름_0, 이름_1, … 이 있는 만큼 (없으면 빈 목록)
+        static readonly Dictionary<string, List<Sprite>> frames = new Dictionary<string, List<Sprite>>();
+        public static List<Sprite> Frames(string key)
+        {
+            List<Sprite> l;
+            if (frames.TryGetValue(key, out l)) return l;
+            l = new List<Sprite>();
+            for (int i = 0; i < 64; i++) { var s = Resources.Load<Sprite>("Art/" + key + "_" + i); if (s == null) break; l.Add(s); }
+            frames[key] = l;
+            return l;
+        }
 
         // Resources/Art에 그 이름의 그림이 있는지 (변형 타일·테두리 조각용)
         static readonly Dictionary<string, bool> has = new Dictionary<string, bool>();

@@ -41,7 +41,10 @@ namespace Specimen07
             AudioListener.volume = Settings.Volume;
             // 기본 글꼴(LegacyRuntime)로 된 글자는 한글이 나오는 글꼴로 바꿔 준다
             foreach (var t in GetComponentsInChildren<Text>(true))
+            {
                 if (t.font == null || t.font.name == "LegacyRuntime" || t.font.name == "Arial") t.font = Fonts.Main;
+                if (t.fontStyle == FontStyle.Bold && Fonts.Bold != Fonts.Main) { t.font = Fonts.Bold; t.fontStyle = FontStyle.Normal; }
+            }
             if (settingsPanel != null) settingsPanel.SetActive(false);
             if (confirmPanel != null) confirmPanel.SetActive(false);
             bool has = SaveFile.Exists();

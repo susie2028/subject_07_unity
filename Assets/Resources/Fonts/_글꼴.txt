@@ -1,3 +1,4 @@
-이 폴더에 Main.ttf (또는 Main.otf) 라는 이름으로 한글 글꼴을 넣으면 게임 전체 글꼴이 바뀝니다.
-없으면 컴퓨터에 설치된 맑은 고딕(윈도우) / Apple SD Gothic Neo(맥)를 씁니다.
-예: 프로토타입에서 쓰던 Black Han Sans, IBM Plex Sans KR (둘 다 무료, Google Fonts)
+게임 글꼴: Pretendard (무료, SIL Open Font License 1.1 — 같은 폴더의 LICENSE 참고)
+  Main.ttf = Pretendard Regular (보통 글씨)
+  Bold.ttf = Pretendard Bold    (굵은 글씨 — 가짜 굵게 대신 진짜 Bold를 써서 뭉개지지 않음)
+다른 글꼴로 바꾸려면 같은 이름(Main.ttf / Bold.ttf)으로 덮어쓰면 됩니다.

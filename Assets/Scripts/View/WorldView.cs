@@ -146,8 +146,8 @@ namespace Specimen07
                 // 2) 벽면: 바로 위가 벽인 칸의 윗부분에 벽 패널 (옥상 제외). 4칸마다 천장 조명.
                 if (FACE_OK.IndexOf(ch) >= 0 && at(x, y - 1) == '#' && kind != "roof")
                 {
-                    string fk;
-                    if (x % 4 == 2) fk = (kind == "sec" || kind == "dir") ? "wall_face_alarm" : "wall_face_light";
+                    string fk; bool redFix;
+                    if (IsFixture(g, x, y, out redFix)) fk = redFix ? "wall_face_alarm" : "wall_face_light";
                     else { int r = Hash(x, y, salt + 5); fk = r < 6 ? "wall_face_poster" : r < 12 ? "wall_face_note" : "wall_face"; }
                     Tile(tileRoot, Pick(fk, "wall_face"), x, y, L_DECAL);
                 }
@@ -204,6 +204,51 @@ namespace Specimen07
             foreach (var s in g.def.stairs) Label(root, (s.dir == '>' ? "▲ " : "▼ ") + s.to, s.x + s.w / 2f, s.y + s.h / 2f, 0.4f, Data.Hex("#7fe0b0"));
 
         }
+
+        /* ===== 소품 조명 (천장등, 수조, 모니터, 엘리베이터) ===== */
+        public struct Glow { public float x, y, r; public Color c; }
+        public static bool IsFixture(FloorGeo g, int x, int y, out bool red)
+        {
+            red = false;
+            char ch = g.Tile(x, y);
+            if (FACE_OK.IndexOf(ch) < 0 || g.Tile(x, y - 1) != '#' || x % 4 != 2) return false;
+            var z = g.ZoneAt(x + 0.5f, y + 0.5f); string kind = z != null ? z.kind : "hall";
+            if (kind == "roof") return false;
+            red = kind == "sec" || kind == "dir";
+            return true;
+        }
+        public static void CollectProps(FloorGeo g, List<LightSrc> lights, List<Glow> glows)
+        {
+            Color cyan = new Color(0.35f, 0.86f, 1f), red = new Color(1f, 0.35f, 0.43f), mint = new Color(0.43f, 0.94f, 0.78f), green = new Color(0.35f, 0.94f, 0.67f);
+            for (int y = 0; y < g.h; y++) for (int x = 0; x < g.w; x++)
+            {
+                char ch = g.grid[y, x]; bool isRed;
+                if (IsFixture(g, x, y, out isRed))
+                {
+                    lights.Add(new LightSrc { x = x + 0.5f, y = y + 0.4f, r = 3.6f, i = 0.8f });
+                    glows.Add(new Glow { x = x + 0.5f, y = y + 0.25f, r = 2.2f, c = WithA(isRed ? red : cyan, 0.30f) });
+                }
+                if (ch == 'C' || ch == 'V' || ch == 'N')
+                {
+                    lights.Add(new LightSrc { x = x + 0.5f, y = y + 0.5f, r = 1.8f, i = 0.6f });
+                    glows.Add(new Glow { x = x + 0.5f, y = y + 0.4f, r = 1.3f, c = WithA(cyan, 0.28f) });
+                }
+                if (ch == 'M' && (x + y) % 2 == 0) glows.Add(new Glow { x = x + 0.5f, y = y + 0.5f, r = 1.0f, c = WithA(green, 0.18f) });
+                if (ch == 'E')
+                {
+                    lights.Add(new LightSrc { x = x + 0.5f, y = y + 0.5f, r = 2.2f, i = 0.55f });
+                    glows.Add(new Glow { x = x + 0.5f, y = y + 0.2f, r = 1.4f, c = WithA(mint, 0.22f) });
+                }
+            }
+            foreach (var f in g.def.fill)
+                if (f.ch == 'W')
+                {
+                    float cx = f.x + f.w / 2f, cy = f.y + f.h / 2f;
+                    lights.Add(new LightSrc { x = cx, y = cy, r = 3.8f, i = 0.85f });
+                    glows.Add(new Glow { x = cx, y = cy, r = 3.4f, c = WithA(cyan, 0.38f) });
+                }
+        }
+        static Color WithA(Color c, float a) { c.a = a; return c; }
 
         /* ===== 타일 변형 고르기 ===== */
         // 가구·바닥은 같은 이름 뒤에 _2, _3 … 을 붙인 그림이 있으면 칸마다 섞어서 쓴다 (없으면 기본 그림만).
@@ -289,8 +334,19 @@ namespace Specimen07
             darkBase = new float[dW * dH]; darkCur = new float[dW * dH]; darkOut = new Color32[dW * dH];
             darkTex = new Texture2D(dW, dH, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
             flickLights.Clear();
-            for (int i = 0; i < darkBase.Length; i++) darkBase[i] = G.def.dark;
-            foreach (var l in G.lights)
+            // 바탕 어둠은 진하게, 방 조명은 약하게 → 소품 조명 주변만 밝게 고인다
+            float baseDark = Mathf.Min(Cfg.maxDark, G.def.dark * Cfg.darkMul);
+            for (int i = 0; i < darkBase.Length; i++) darkBase[i] = baseDark;
+            var all = new List<LightSrc>();
+            foreach (var l in G.lights) all.Add(new LightSrc { x = l.x, y = l.y, r = l.r * Cfg.roomLightR, i = l.i * Cfg.roomLightI, flick = l.flick, tint = l.tint });
+            var glows = new List<Glow>();
+            CollectProps(G, all, glows);
+            foreach (var gl in glows)
+            {
+                var sr = Spr(floorRoot, "fx_glow", L_TINT);
+                sr.transform.position = U.W(gl.x, gl.y); sr.transform.localScale = Vector3.one * gl.r * 2; sr.color = gl.c;
+            }
+            foreach (var l in all)
             {
                 if (l.flick != 0) { flickLights.Add(l); continue; }
                 ApplyLight(darkBase, l, l.i, 0, 0, dW, dH);
@@ -306,8 +362,8 @@ namespace Specimen07
             go.transform.position = Vector3.zero; // 맵 왼쪽 위 = (0,0)
             prevPlayerBox = new RectInt(0, 0, 0, 0);
         }
-        // 어둠: 남색 계열, 세기는 Cfg.darkScale (아트가 보이도록 프로토타입보다 약하게)
-        static Color32 DarkPx(float a) { return new Color32(4, 5, 24, (byte)Mathf.Clamp(Mathf.RoundToInt(a * Cfg.darkScale * 255), 0, 255)); }
+        // 어둠: 깊은 남색. 세기는 Cfg.darkMul / maxDark / roomLightI 로 조절
+        static Color32 DarkPx(float a) { return new Color32(6, 7, 34, (byte)Mathf.Clamp(Mathf.RoundToInt(a * 255), 0, 255)); }
         // 텍스처 행 인덱스: y=0이 아래쪽이므로 게임 y(아래쪽)를 뒤집는다
         int Idx(int px, int py) { return (dH - 1 - py) * dW + px; }
         static float LightA(float d, float r, float lv)
@@ -550,6 +606,9 @@ namespace Specimen07
             HideFrom(fxPool, fi);
         }
 
+        bool faceLeft;
+        const float TILE_PX = 16f; // 타일 그림 1칸의 픽셀 수 (캐릭터 크기 기준)
+
         void DrawPlayer(float t)
         {
             var S = game.S; var p = S.player; var f = Data.Forms[p.form];
@@ -558,6 +617,30 @@ namespace Specimen07
             player.sortingOrder = L_PLAYER;
             Color col = new Color(1, 1, 1, hidden ? 0.45f : 1f);
             Vector2 j = Vector2.zero;
+            player.flipX = false;
+            var idleF = Art.Frames("player_idle");
+            if ((p.eating != null || f.type == FormType.Body) && idleF.Count > 0)
+            {
+                // 옆모습 지렁이: 왼쪽으로 가면 좌우 반전, 위아래로 갈 땐 마지막 방향 유지
+                float cs = Mathf.Cos(p.face);
+                if (cs < -0.2f) faceLeft = true; else if (cs > 0.2f) faceLeft = false;
+                var crawlF = Art.Frames("player_crawl"); var eatF = Art.Frames("player_eat");
+                Sprite spr;
+                if (p.eating != null && eatF.Count > 0) spr = eatF[Mathf.Min(eatF.Count - 1, Mathf.FloorToInt(p.eating.t / Cfg.eatTime * eatF.Count))];
+                else if (p.speedNow > 0.3f && crawlF.Count > 0) spr = crawlF[Mathf.FloorToInt(t * 10) % crawlF.Count];
+                else spr = idleF[Mathf.FloorToInt(t * 2.5f) % idleF.Count];
+                player.sprite = spr; player.flipX = faceLeft; tr.rotation = Quaternion.identity;
+                tr.localScale = Vector3.one * (spr.pixelsPerUnit / TILE_PX) * (hidden ? 0.8f : 1f);   // 16픽셀 = 1칸
+                if (!hidden && p.eating == null)
+                {
+                    playerGlow.gameObject.SetActive(true);
+                    playerGlow.transform.position = U.W(p.x, p.y);
+                    playerGlow.color = new Color(0.62f, 0.42f, 1f, 0.16f);
+                }
+                tr.position = U.W(p.x, p.y - 0.15f);
+                player.color = col;
+                return;
+            }
             if (p.eating != null)
             {
                 float k = p.eating.t / Cfg.eatTime;

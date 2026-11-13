@@ -104,7 +104,7 @@ namespace Specimen07.EditorTools
             if (logo.sprite == null)
             {
                 logo.color = new Color(1, 1, 1, 0);
-                var t = Label(logoRt, "SUBJECT\n07", 110, Color.white, TextAnchor.UpperLeft); t.fontStyle = FontStyle.Bold;
+                Label(logoRt, "SUBJECT\n07", 110, Color.white, TextAnchor.UpperLeft, true);
             }
 
             // 버튼 (각자 따로 옮길 수 있게 하나씩 배치)
@@ -160,11 +160,12 @@ namespace Specimen07.EditorTools
         {
             var rt = Make(parent, name); rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0, 1); rt.anchoredPosition = new Vector2(pos.x, -pos.y); rt.sizeDelta = size; return rt;
         }
-        static Text Label(Transform parent, string text, int size, Color c, TextAnchor align)
+        static Text Label(Transform parent, string text, int size, Color c, TextAnchor align, bool bold = false)
         {
             var rt = Full(parent, "Text");
             var t = rt.gameObject.AddComponent<Text>();
-            t.font = MenuFont(); t.text = text; t.fontSize = size; t.color = c; t.alignment = align; t.raycastTarget = false;
+            var bf = Resources.Load<Font>("Fonts/Bold");
+            t.font = bold && bf != null ? bf : MenuFont(); t.text = text; t.fontSize = size; t.color = c; t.alignment = align; t.raycastTarget = false;
             t.horizontalOverflow = HorizontalWrapMode.Overflow; t.verticalOverflow = VerticalWrapMode.Overflow;
             return t;
         }
@@ -208,7 +209,7 @@ namespace Specimen07.EditorTools
             var v = c.gameObject.AddComponent<VerticalLayoutGroup>(); v.padding = new RectOffset(40, 40, 36, 36); v.spacing = 18;
             v.childControlWidth = true; v.childControlHeight = true; v.childForceExpandWidth = true; v.childForceExpandHeight = false;
             c.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            var t = Label(c, title, 40, FG, TextAnchor.MiddleLeft); t.fontStyle = FontStyle.Bold; Pref(t.gameObject, 0, 56);
+            var t = Label(c, title, 40, FG, TextAnchor.MiddleLeft, true); Pref(t.gameObject, 0, 56);
             card = c;
             return root.gameObject;
         }
@@ -224,7 +225,7 @@ namespace Specimen07.EditorTools
             var rt = Make(parent, "Btn_" + text);
             var im = rt.gameObject.AddComponent<Image>(); im.color = bg;
             var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = im; Wire(b, a);
-            Label(rt, text, 26, fg, TextAnchor.MiddleCenter).fontStyle = FontStyle.Bold;
+            Label(rt, text, 26, fg, TextAnchor.MiddleCenter, true);
             Pref(rt.gameObject, w, 56);
             return b;
         }
@@ -233,7 +234,7 @@ namespace Specimen07.EditorTools
             var row = Row(card, "Row_" + label);
             var l = Label(Make(row, "Label"), label, 26, FG, TextAnchor.MiddleLeft); Pref(l.transform.parent.gameObject, 200, 56);
             var vHolder = Make(row, "Value"); Pref(vHolder.gameObject, 130, 56);
-            var v = Label(vHolder, "", 26, new Color(0.71f, 0.55f, 0.94f), TextAnchor.MiddleCenter); v.fontStyle = FontStyle.Bold;
+            var v = Label(vHolder, "", 26, new Color(0.71f, 0.55f, 0.94f), TextAnchor.MiddleCenter, true);
             if (aText != null) SmallButton(row, aText, 70, PANEL_BTN, FG, a);
             SmallButton(row, bText, aText != null ? 70 : 152, PANEL_BTN, FG, b);
             return v;

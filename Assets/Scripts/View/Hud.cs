@@ -11,7 +11,16 @@ namespace Specimen07
 {
     public static class Fonts
     {
-        static Font main;
+        static Font main, bold;
+        // 굵은 글씨는 가짜 굵게(FontStyle.Bold) 대신 진짜 Bold 글꼴 파일을 쓴다 → 뭉개지지 않음
+        public static Font Bold
+        {
+            get
+            {
+                if (bold == null) { bold = Resources.Load<Font>("Fonts/Bold"); if (bold == null) bold = Main; }
+                return bold;
+            }
+        }
         public static Font Main
         {
             get
@@ -88,10 +97,11 @@ namespace Specimen07
             var rt = R(parent, name, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(400, size * 1.6f));
             var t = rt.gameObject.AddComponent<Text>();
             t.font = Fonts.Main; t.text = text; t.fontSize = size; t.color = c; t.alignment = align; t.supportRichText = true; t.raycastTarget = false;
-            t.fontStyle = bold ? FontStyle.Bold : FontStyle.Normal; t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow;
+            if (bold) { t.font = Fonts.Bold; t.fontStyle = Fonts.Bold == Fonts.Main ? FontStyle.Bold : FontStyle.Normal; }
+            t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow;
             return t;
         }
-        static void Shadow(Graphic g) { var s = g.gameObject.AddComponent<Shadow>(); s.effectColor = new Color(0, 0, 0, 0.9f); s.effectDistance = new Vector2(0, -3); }
+        static void Shadow(Graphic g) { var s = g.gameObject.AddComponent<Shadow>(); s.effectColor = new Color(0, 0, 0, 0.6f); s.effectDistance = new Vector2(0, -2); }
         Button Btn(Transform parent, string label, Color bg, Color fg, UnityEngine.Events.UnityAction onClick, float w = 360, float h = 64)
         {
             var rt = R(parent, "Btn_" + label, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(w, h));
@@ -440,6 +450,7 @@ namespace Specimen07
                 ring.transform.parent.gameObject.SetActive(f.type != FormType.Body);
                 formIcon.sprite = Art.Get(f.type == FormType.Body ? "player_blob" : f.type == FormType.Human ? "char_" + p.form : "obj_" + p.form);
                 formIcon.rectTransform.localRotation = Quaternion.Euler(0, 0, f.type == FormType.Human ? -90 : 0);
+                if (f.type == FormType.Body) { var fr = Art.Frames("player_idle"); if (fr.Count > 0) formIcon.sprite = fr[0]; }
             }
             if (f.type != FormType.Body)
             {
@@ -493,7 +504,6 @@ namespace Specimen07
                 var hg = hint.transform.parent.gameObject;
                 hg.SetActive(!string.IsNullOrEmpty(h));
                 hint.text = h;
-                hint.font = Fonts.Main;
                 hint.alignment = note ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter;
                 hint.color = note ? Data.Hex("#f1e3c4") : FG;
                 hintBg.color = note ? new Color(36 / 255f, 30 / 255f, 20 / 255f, 0.94f) : new Color(10 / 255f, 14 / 255f, 17 / 255f, 0.88f);
