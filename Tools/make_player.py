@@ -193,7 +193,7 @@ def shade_round(m, cx, mouth=0.0, back=False):
 MOUTH_IDLE = 0.38   # 평소에도 입을 이만큼 벌리고 있음
 
 def side(name, L, R, mouth=MOUTH_IDLE, **kw): save(paint(body(L, R, **kw), mouth=mouth), name)
-def front(name, rx, ry, mouth=MOUTH_IDLE, lift=0.0, tail=(6.5, -1.5, 2.0)):
+def front(name, rx, ry, mouth=MOUTH_IDLE, lift=0.0, tail=None):   # 앞에선 꼬리가 몸 뒤에 숨어 안 보임
     save(shade_round(blob_mask(rx, ry, lift=lift, tail=tail), 14.0, mouth), name)
 def back(name, rx, ry, lift=0.0, tail=(0, 0.5, 2.2)):
     save(shade_round(blob_mask(rx, ry, lift=lift, tail=tail), 14.0, back=True), name)
@@ -206,8 +206,11 @@ side('player_eat_side_0', 20, 6.8, mouth=0.55); side('player_eat_side_1', 19, 7.
 side('player_eat_side_2', 18, 8.0, mouth=0.88, x_front=24); side('player_eat_side_3', 18, 8.4, mouth=1.0, x_front=25)
 # --- 앞 (아래로 갈 때) — 꼬리가 옆으로 살짝 보임
 front('player_idle_down_0', 7.2, 6.8); front('player_idle_down_1', 7.0, 7.3)
-front('player_crawl_down_0', 7.2, 6.8, tail=(6.5, -1.5, 2.0)); front('player_crawl_down_1', 8.0, 6.0, tail=(7.0, -1.0, 2.0))
-front('player_crawl_down_2', 6.6, 7.6, lift=0.5, tail=(6.0, -1.5, 2.0)); front('player_crawl_down_3', 7.2, 6.9, tail=(-6.5, -1.5, 2.0))
+# 기어가기(앞): 다리가 없으니 좌우로 흔들지 않고, 옆·뒷모습처럼 몸 전체를 오므렸다(납작·넓게) 폈다(길쭉·살짝 뜸) 한다
+front('player_crawl_down_0', 7.2, 6.8)
+front('player_crawl_down_1', 8.1, 5.9)
+front('player_crawl_down_2', 6.6, 7.7, lift=0.5)
+front('player_crawl_down_3', 7.0, 7.1)
 front('player_eat_down_0', 7.4, 7.2, mouth=0.55); front('player_eat_down_1', 7.8, 7.8, mouth=0.72)
 front('player_eat_down_2', 8.2, 8.4, mouth=0.88); front('player_eat_down_3', 8.6, 8.8, mouth=1.0)
 # --- 뒤 (위로 갈 때) — 입은 안 보이고 꼬리가 아래로 나와 흔들림
