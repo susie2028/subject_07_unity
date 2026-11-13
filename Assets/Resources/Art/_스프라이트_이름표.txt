@@ -26,6 +26,15 @@ obj_chair            의자
 obj_trash            쓰레기통
 obj_cart             바퀴 카트 (40x32 권장)
 
+[★ 연구소 타일셋 — 지금 들어 있는 16x16 PNG] (Tools/make_tiles.py로 생성, 직접 고쳐도 됨)
+- 타일은 16x16이든 32x32든 1칸에 맞춰 늘어남
+- 이름 뒤 _2, _3 … 을 붙인 그림이 있으면 칸마다 섞어서 씀 (바닥 금·얼룩·종이, 책상 위 컴퓨터, 선반/화분 등)
+  바닥: tile_floor_<방종류>, _2(금) _3(얼룩) _4 _5(종이)      책상: tile_table, _2 _3 _4 / 아래로 이어질 때 tile_table_inner, _2 _3
+  선반: tile_shelf(캐비닛), _2(화분), _3(물건 선반)          설비: tile_machine, _2
+- 벽 테두리 조각 (바닥과 닿은 면에 자동으로 붙음): wall_trim_n/s/e/w, 안쪽 모서리 wall_corner_ne/nw/se/sw
+- 벽면 (위쪽이 벽인 칸 윗부분): wall_face, wall_face_light(천장 조명, 4칸마다), wall_face_alarm(보안동·소장실은 빨간 조명),
+  wall_face_poster, wall_face_note (가끔)
+
 [바닥] — 방 종류별 1칸짜리
 tile_floor_iso  tile_floor_lab  tile_floor_store  tile_floor_hall  tile_floor_rest  tile_floor_mech
 tile_floor_exit  tile_floor_office  tile_floor_sec  tile_floor_lift  tile_floor_cold  tile_floor_wing

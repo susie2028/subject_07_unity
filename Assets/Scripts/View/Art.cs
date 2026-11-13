@@ -20,7 +20,16 @@ namespace Specimen07
         public const int PPU = Cfg.PPU;
 
         // 에디터에서 PNG를 새로 넣거나 바꿨을 때 다시 불러오도록 비운다
-        public static void ClearCache() { cache.Clear(); dirCache.Clear(); }
+        public static void ClearCache() { cache.Clear(); dirCache.Clear(); has.Clear(); }
+
+        // Resources/Art에 그 이름의 그림이 있는지 (변형 타일·테두리 조각용)
+        static readonly Dictionary<string, bool> has = new Dictionary<string, bool>();
+        public static bool Has(string key)
+        {
+            bool b;
+            if (!has.TryGetValue(key, out b)) { b = Resources.Load<Sprite>("Art/" + key) != null; has[key] = b; }
+            return b;
+        }
 
         // Resources/Art에 그림이 있을 때만 돌려준다 (임시 그림은 만들지 않음)
         public static Sprite TryLoad(string key) { return Resources.Load<Sprite>("Art/" + key); }
@@ -77,6 +86,7 @@ namespace Specimen07
                 return p.ToSprite(key);
             }
             if (key.StartsWith("char_")) return Human(key, key.Substring(5));
+            if (key.StartsWith("wall_face")) { var f = new Painter(16, 16); f.Rect(0, 0, 16, 11, H("#393d7d")); f.Rect(0, 11, 16, 2, H("#1c1e4c")); return f.ToSprite(key, 16); }
             Painter q;
             switch (key)
             {

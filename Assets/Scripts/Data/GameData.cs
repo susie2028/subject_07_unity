@@ -15,8 +15,10 @@ namespace Specimen07
 
         // 화면에 보이는 칸 수 (작을수록 확대)
         public const float VTW = 22f, VTH = 12.375f;
-        // 스프라이트 해상도: 1칸 = 32픽셀
+        // 스프라이트 해상도: 1칸 = 32픽셀 (타일 PNG는 16픽셀이어도 1칸에 맞춰 늘어남)
         public const int PPU = 32;
+        // 화면 어둠 세기 (0 = 없음, 1 = 프로토타입과 같음)
+        public const float darkScale = 0.6f;
     }
 
     public enum ViewShape { Cone, Half, Circle }

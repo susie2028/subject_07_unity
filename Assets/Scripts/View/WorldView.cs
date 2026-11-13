@@ -8,8 +8,8 @@ namespace Specimen07
     public class WorldView : MonoBehaviour
     {
         // 그리는 순서 (숫자가 클수록 위)
-        public const int L_FLOOR = 0, L_DECAL = 1, L_WALL = 2, L_BIG = 3, L_DOOR = 4, L_TRAP = 5, L_TRAIL = 6, L_OBJ = 10, L_NPC = 11, L_PLAYER = 12,
-                         L_HELI = 13, L_DARK = 20, L_TINT = 21, L_GLOW = 22, L_CONE = 23, L_AIM = 24, L_RING = 26, L_FX = 27, L_LABEL = 2;
+        public const int L_FLOOR = 0, L_DECAL = 1, L_WALL = 2, L_TRIM = 3, L_BIG = 4, L_DOOR = 5, L_TRAP = 8, L_TRAIL = 9, L_OBJ = 10, L_NPC = 11, L_PLAYER = 12,
+                         L_HELI = 13, L_DARK = 20, L_TINT = 21, L_GLOW = 22, L_CONE = 23, L_AIM = 24, L_RING = 26, L_FX = 27, L_LABEL = 3;
 
         Game game; Camera cam;
         Transform floorRoot, dynRoot;
@@ -67,8 +67,8 @@ namespace Specimen07
             foreach (var d in g.def.doors)
             {
                 var dv = new DoorView();
-                dv.baseR = Spr(floorRoot, "door_closed", L_DOOR); dv.baseR.transform.position = U.W(d.x + 0.5f, d.y + 0.5f);
-                dv.stripes = Spr(floorRoot, "door_stripes", L_DOOR + 1); dv.stripes.transform.position = dv.baseR.transform.position; dv.stripes.color = Data.Cards[d.req].color;
+                dv.baseR = Spr(floorRoot, "door_closed", L_DOOR); dv.baseR.transform.position = U.W(d.x + 0.5f, d.y + 0.5f); FitTo(dv.baseR, 1, 1);
+                dv.stripes = Spr(floorRoot, "door_stripes", L_DOOR + 1); dv.stripes.transform.position = dv.baseR.transform.position; dv.stripes.color = Data.Cards[d.req].color; FitTo(dv.stripes, 1, 1);
                 dv.led = Spr(floorRoot, "fx_dot", L_DOOR + 2); dv.led.transform.position = dv.baseR.transform.position; dv.led.transform.localScale = Vector3.one * (5.6f / 32f);
                 doors.Add(dv);
             }
@@ -128,32 +128,64 @@ namespace Specimen07
         public static void BuildStatic(FloorGeo g, Transform root)
         {
             var tileRoot = new GameObject("Tiles").transform; tileRoot.SetParent(root, false);
+            int salt = 0; foreach (char c in g.id) salt += c;
+            System.Func<int, int, char> at = (x, y) => g.Tile(x, y);                    // 맵 밖은 '#'
+            System.Func<int, int, bool> wall = (x, y) => { char c = at(x, y); return c == '#' || c == 'v'; };
+            System.Func<int, int, bool> inside = (x, y) => x >= 0 && y >= 0 && x < g.w && y < g.h;
+
             for (int y = 0; y < g.h; y++) for (int x = 0; x < g.w; x++)
             {
                 char ch = g.grid[y, x];
+                var z = g.ZoneAt(x + 0.5f, y + 0.5f);
+                string kind = z != null ? z.kind : "hall";
                 bool wallish = ch == '#' || ch == 'v';
-                if (!wallish)
+
+                // 1) 바닥 (가끔 금 간 타일·얼룩·종이)
+                if (!wallish) Tile(tileRoot, Variant("tile_floor_" + kind, x, y, salt, FLOOR_V, FLOOR_W), x, y, L_FLOOR);
+
+                // 2) 벽면: 바로 위가 벽인 칸의 윗부분에 벽 패널 (옥상 제외). 4칸마다 천장 조명.
+                if (FACE_OK.IndexOf(ch) >= 0 && at(x, y - 1) == '#' && kind != "roof")
                 {
-                    var z = g.ZoneAt(x + 0.5f, y + 0.5f);
-                    Tile(tileRoot, "tile_floor_" + (z != null ? z.kind : "hall"), x, y, L_FLOOR);
+                    string fk;
+                    if (x % 4 == 2) fk = (kind == "sec" || kind == "dir") ? "wall_face_alarm" : "wall_face_light";
+                    else { int r = Hash(x, y, salt + 5); fk = r < 6 ? "wall_face_poster" : r < 12 ? "wall_face_note" : "wall_face"; }
+                    Tile(tileRoot, Pick(fk, "wall_face"), x, y, L_DECAL);
                 }
+
+                // 3) 벽·가구
                 string key = null;
                 switch (ch)
                 {
-                    case '#':
-                        { char below = y + 1 < g.h ? g.grid[y + 1, x] : '#'; key = (below == '#' || below == 'v') ? "tile_wall" : "tile_wall_edge"; break; }
+                    case '#': key = "tile_wall"; break;
                     case 'v': key = "tile_vent"; break;
                     case 'G': key = "tile_glass"; break;
-                    case 'S': key = "tile_shelf"; break;
+                    case 'S': key = Variant("tile_shelf", x, y, salt + 1, SHELF_V, SHELF_W); break;
                     case 'V': key = "tile_vending"; break;
-                    case 'T': key = "tile_table"; break;
+                    case 'T':
+                        key = at(x, y + 1) == 'T' && Art.Has("tile_table_inner")
+                            ? Variant("tile_table_inner", x, y, salt + 2, INNER_V, INNER_W)   // 아래로 책상이 이어지면 앞면 없는 윗면
+                            : Variant("tile_table", x, y, salt + 2, TABLE_V, TABLE_W);
+                        break;
                     case 'N': key = "tile_notice"; break;
-                    case 'M': key = "tile_machine"; break;
+                    case 'M': key = Variant("tile_machine", x, y, salt + 3, MACH_V, MACH_W); break;
                     case 'C': key = "tile_console"; break;
                     case 'E': key = "tile_lift"; break;
                     case '>': case '<': key = "tile_stairs"; break;
                 }
                 if (key != null) Tile(tileRoot, key, x, y, L_WALL);
+
+                // 4) 벽 테두리: 바닥과 맞닿은 면에 라벤더 선, 안쪽 모서리 조각
+                if (wallish)
+                {
+                    if (inside(x, y - 1) && !wall(x, y - 1)) Trim(tileRoot, "wall_trim_n", x, y);
+                    if (inside(x, y + 1) && !wall(x, y + 1)) Trim(tileRoot, "wall_trim_s", x, y);
+                    if (inside(x + 1, y) && !wall(x + 1, y)) Trim(tileRoot, "wall_trim_e", x, y);
+                    if (inside(x - 1, y) && !wall(x - 1, y)) Trim(tileRoot, "wall_trim_w", x, y);
+                    if (inside(x + 1, y + 1) && wall(x + 1, y) && wall(x, y + 1) && !wall(x + 1, y + 1)) Trim(tileRoot, "wall_corner_se", x, y);
+                    if (inside(x - 1, y + 1) && wall(x - 1, y) && wall(x, y + 1) && !wall(x - 1, y + 1)) Trim(tileRoot, "wall_corner_sw", x, y);
+                    if (inside(x + 1, y - 1) && wall(x + 1, y) && wall(x, y - 1) && !wall(x + 1, y - 1)) Trim(tileRoot, "wall_corner_ne", x, y);
+                    if (inside(x - 1, y - 1) && wall(x - 1, y) && wall(x, y - 1) && !wall(x - 1, y - 1)) Trim(tileRoot, "wall_corner_nw", x, y);
+                }
             }
             // 큰 설비 (실외기, 탱크): 영역 크기에 맞춰 늘린다
             foreach (var f in g.def.fill)
@@ -162,7 +194,7 @@ namespace Specimen07
                 else if (f.ch == 'W') Stretch(root, "big_tank", f.x, f.y, f.w, f.h, L_BIG);
             }
             if (g.def.pad.HasValue) { var p = g.def.pad.Value; Stretch(root, "helipad", p.x, p.y, p.w, p.h, L_DECAL); }
-            if (g.def.tank.HasValue) { var sr = Spr(root, "tank_broken", L_DECAL); sr.transform.position = U.W(g.def.tank.Value.x, g.def.tank.Value.y); }
+            if (g.def.tank.HasValue) { var sr = Spr(root, "tank_broken", L_DECAL); sr.transform.position = U.W(g.def.tank.Value.x, g.def.tank.Value.y); FitTo(sr, 4, 4); }
             // 바닥 글씨 (방 이름, 계단)
             foreach (var z in g.zones)
             {
@@ -172,6 +204,38 @@ namespace Specimen07
             foreach (var s in g.def.stairs) Label(root, (s.dir == '>' ? "▲ " : "▼ ") + s.to, s.x + s.w / 2f, s.y + s.h / 2f, 0.4f, Data.Hex("#7fe0b0"));
 
         }
+
+        /* ===== 타일 변형 고르기 ===== */
+        // 가구·바닥은 같은 이름 뒤에 _2, _3 … 을 붙인 그림이 있으면 칸마다 섞어서 쓴다 (없으면 기본 그림만).
+        const string FACE_OK = ".STVMCN";
+        static readonly string[] FLOOR_V = { "", "_2", "_3", "_4", "_5" }; static readonly int[] FLOOR_W = { 82, 8, 5, 3, 2 };
+        static readonly string[] SHELF_V = { "", "_2", "_3" }; static readonly int[] SHELF_W = { 50, 25, 25 };
+        static readonly string[] TABLE_V = { "", "_2", "_3", "_4" }; static readonly int[] TABLE_W = { 55, 20, 15, 10 };
+        static readonly string[] INNER_V = { "", "_2", "_3" }; static readonly int[] INNER_W = { 60, 20, 20 };
+        static readonly string[] MACH_V = { "", "_2" }; static readonly int[] MACH_W = { 50, 50 };
+
+        // 칸 좌표로 정해지는 0~99 (매번 같은 결과 → 맵이 실행할 때마다 똑같이 보임)
+        public static int Hash(int x, int y, int s)
+        {
+            unchecked
+            {
+                uint h = (uint)(x * 73856093) ^ (uint)(y * 19349663) ^ (uint)(s * 83492791);
+                h = (h ^ (h >> 13)) * 1274126177u;
+                return (int)((h ^ (h >> 16)) % 100);
+            }
+        }
+        static string Variant(string baseKey, int x, int y, int salt, string[] suffix, int[] weight)
+        {
+            int r = Hash(x, y, salt), acc = 0;
+            for (int i = 0; i < suffix.Length; i++)
+            {
+                acc += weight[i];
+                if (r < acc) return suffix[i] == "" ? baseKey : Pick(baseKey + suffix[i], baseKey);
+            }
+            return baseKey;
+        }
+        static string Pick(string key, string fallback) { return Art.Has(key) ? key : fallback; }
+        static void Trim(Transform parent, string key, int x, int y) { if (Art.Has(key)) Tile(parent, key, x, y, L_TRIM); }
 
         public static SpriteRenderer Spr(Transform parent, string key, int order)
         {
@@ -193,7 +257,7 @@ namespace Specimen07
             sr.transform.position = U.W(x + w / 2f, y + h / 2f);
             FitTo(sr, w, h);
         }
-        static void FitTo(SpriteRenderer sr, float w, float h)
+        public static void FitTo(SpriteRenderer sr, float w, float h)
         {
             var b = sr.sprite.bounds.size;
             if (b.x <= 0 || b.y <= 0) return;
@@ -242,7 +306,8 @@ namespace Specimen07
             go.transform.position = Vector3.zero; // 맵 왼쪽 위 = (0,0)
             prevPlayerBox = new RectInt(0, 0, 0, 0);
         }
-        static Color32 DarkPx(float a) { return new Color32(3, 5, 8, (byte)Mathf.Clamp(Mathf.RoundToInt(a * 255), 0, 255)); }
+        // 어둠: 남색 계열, 세기는 Cfg.darkScale (아트가 보이도록 프로토타입보다 약하게)
+        static Color32 DarkPx(float a) { return new Color32(4, 5, 24, (byte)Mathf.Clamp(Mathf.RoundToInt(a * Cfg.darkScale * 255), 0, 255)); }
         // 텍스처 행 인덱스: y=0이 아래쪽이므로 게임 y(아래쪽)를 뒤집는다
         int Idx(int px, int py) { return (dH - 1 - py) * dW + px; }
         static float LightA(float d, float r, float lv)
@@ -344,7 +409,8 @@ namespace Specimen07
             {
                 var d = G.def.doors[i]; var st = F.doors[i]; var v = doors[i];
                 bool open = st.open || st.temp > 0;
-                v.baseR.sprite = Art.Get(open ? "door_open" : "door_closed");
+                var want = Art.Get(open ? "door_open" : "door_closed");
+                if (v.baseR.sprite != want) { v.baseR.sprite = want; FitTo(v.baseR, 1, 1); }
                 v.stripes.enabled = !open;
                 if (open) { v.led.color = st.open ? Data.Hex("#7fe0b0") : Data.Cards[d.req].color; v.led.transform.position = U.W(d.x + 0.17f, d.y + 0.17f); }
                 else { v.led.color = game.HasCard(d.req) ? Data.Hex("#7fe0b0") : Data.Hex("#ff5148"); v.led.transform.position = U.W(d.x + 0.5f, d.y + 0.5f); }
