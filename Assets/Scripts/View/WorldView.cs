@@ -607,6 +607,14 @@ namespace Specimen07
         }
 
         bool faceLeft;
+        // player_<동작>_<방향>_N → 없으면 옆모습(side) → 없으면 player_<동작>_N
+        static List<Sprite> PlayerFrames(string anim, string dir)
+        {
+            var l = Art.Frames("player_" + anim + "_" + dir);
+            if (l.Count == 0) l = Art.Frames("player_" + anim + "_side");
+            if (l.Count == 0) l = Art.Frames("player_" + anim);
+            return l;
+        }
         const float TILE_PX = 16f; // 타일 그림 1칸의 픽셀 수 (캐릭터 크기 기준)
 
         void DrawPlayer(float t)
@@ -618,18 +626,19 @@ namespace Specimen07
             Color col = new Color(1, 1, 1, hidden ? 0.45f : 1f);
             Vector2 j = Vector2.zero;
             player.flipX = false;
-            var idleF = Art.Frames("player_idle");
+            // 방향: 0 오른쪽, 1 아래(앞모습), 2 왼쪽(옆모습 반전), 3 위(뒷모습)
+            int dir = Art.DirIndex(p.face);
+            string dn = dir == 1 ? "down" : dir == 3 ? "up" : "side";
+            if (dir == 0) faceLeft = false; else if (dir == 2) faceLeft = true;
+            var idleF = PlayerFrames("idle", dn);
             if ((p.eating != null || f.type == FormType.Body) && idleF.Count > 0)
             {
-                // 옆모습 지렁이: 왼쪽으로 가면 좌우 반전, 위아래로 갈 땐 마지막 방향 유지
-                float cs = Mathf.Cos(p.face);
-                if (cs < -0.2f) faceLeft = true; else if (cs > 0.2f) faceLeft = false;
-                var crawlF = Art.Frames("player_crawl"); var eatF = Art.Frames("player_eat");
+                var crawlF = PlayerFrames("crawl", dn); var eatF = PlayerFrames("eat", dn);
                 Sprite spr;
                 if (p.eating != null && eatF.Count > 0) spr = eatF[Mathf.Min(eatF.Count - 1, Mathf.FloorToInt(p.eating.t / Cfg.eatTime * eatF.Count))];
                 else if (p.speedNow > 0.3f && crawlF.Count > 0) spr = crawlF[Mathf.FloorToInt(t * 10) % crawlF.Count];
                 else spr = idleF[Mathf.FloorToInt(t * 2.5f) % idleF.Count];
-                player.sprite = spr; player.flipX = faceLeft; tr.rotation = Quaternion.identity;
+                player.sprite = spr; player.flipX = dn == "side" && faceLeft; tr.rotation = Quaternion.identity;
                 tr.localScale = Vector3.one * (spr.pixelsPerUnit / TILE_PX) * (hidden ? 0.8f : 1f);   // 16픽셀 = 1칸
                 if (!hidden && p.eating == null)
                 {

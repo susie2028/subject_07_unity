@@ -9,12 +9,13 @@
   (예: char_guard_right.png, char_guard_down.png, char_guard_left.png, char_guard_up.png)
   → 네 장이 다 있으면 회전 대신 방향 그림을 씀
 
-[주인공] — 옆모습, 오른쪽을 보는 그림 (왼쪽으로 가면 자동 좌우 반전). 16픽셀 = 1칸 크기로 표시
-player_idle_0, _1 …    가만히 (숨쉬기)
-player_crawl_0 ~ _3 …  기어가기 (초당 10장)
-player_eat_0 ~ _3 …    먹기 (먹는 0.8초 동안 순서대로, 입이 점점 크게)
-player_blob            HUD·미리보기용 한 장
-※ 프레임 수는 자유 — _0부터 이어지는 만큼 다 씀. Tools/make_player.py로 만든 임시 그림
+[주인공] — 눈 없는 보라색 지렁이. 16픽셀 = 1칸 크기로 표시. Tools/make_player.py로 만든 임시 그림
+이름: player_<동작>_<방향>_<번호>
+  동작: idle (숨쉬기) / crawl (기어가기, 초당 10장) / eat (먹는 0.8초 동안 순서대로, 입이 점점 크게)
+  방향: side (옆모습, 오른쪽을 보게 그림 → 왼쪽은 게임이 자동 좌우 반전) / down (앞모습) / up (뒷모습)
+  예) player_crawl_down_0 ~ player_crawl_down_3
+※ 프레임 수는 자유 — _0부터 이어지는 만큼 다 씀. 어떤 방향 그림이 없으면 옆모습(side)을 대신 씀
+player_blob            미리보기용 한 장
 
 [사람] — 먹으면 이 모습으로 변신함
 char_cleaner         늙은 청소부
