@@ -450,7 +450,7 @@ namespace Specimen07
                 ring.transform.parent.gameObject.SetActive(f.type != FormType.Body);
                 formIcon.sprite = Art.Get(f.type == FormType.Body ? "player_blob" : f.type == FormType.Human ? "char_" + p.form : "obj_" + p.form);
                 formIcon.rectTransform.localRotation = Quaternion.Euler(0, 0, f.type == FormType.Human ? -90 : 0);
-                if (f.type == FormType.Body) { var fr = Art.Frames("player_idle"); if (fr.Count > 0) formIcon.sprite = fr[0]; }
+                if (f.type == FormType.Body) { var fr = Art.Frames("player_idle_down"); if (fr.Count > 0) formIcon.sprite = fr[0]; }
             }
             if (f.type != FormType.Body)
             {
