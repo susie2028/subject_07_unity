@@ -1,11 +1,8 @@
 # 연구원 그림(영상에서 뽑은 걷기 walk_researcher_* + 서 있기 stand_researcher_*)으로 연구원들을 만든다.
-#  - 일반 연구원들: 안경 벗기고 점눈, 머리 모양·색을 사람마다 다르게
-#      researcher      갈색 부스스 (원래 머리)
-#      researcher_v2   주황 단발
-#      researcher_v3   금발 긴 머리
-#      researcher2     검은 머리 올림머리(똥머리), 어두운 피부
-#      researcher2_v2  짙은 갈색 아주 짧은 머리
-#  - 고위 연구원(senior): 안경 그대로, 회색 단정한 머리, 보라 넥타이, 금 배지
+#  - 일반 연구원들: 안경 벗기고 점눈, 머리색·넥타이를 사람마다 다르게 (머리 모양은 원래 그대로)
+#      researcher 갈색 / _v2 주황 / _v3 금발 / researcher2 검은 머리·어두운 피부 / researcher2_v2 짙은 갈색
+#  - 고위 연구원(senior): 안경 그대로, 회색 머리, 보라 넥타이, 금 배지
+#  (머리 깎기·늘이기 함수 trim_spikes / cut_short / add_long / add_bun 은 남겨 둠. 지금은 안 씀)
 # 원본(안경 쓴 연구원)은 Assets/Resources/Art 의 _src_researcher_* 로 따로 보관해 두고 거기서 다시 만든다.
 # 실행: python3 Tools/make_variant_walks.py   (영상에서 연구원 걷기를 다시 뽑았다면: --fresh)
 import colorsys
@@ -242,12 +239,14 @@ def rec(a, hair=None, tie=None, skin=None):
 
 
 LOOKS = {
+    # 머리 모양은 원래 그대로(깎거나 늘이면 깨져 보여서), 색만 다르게. 일반 연구원은 안경 벗기고 점눈
     'researcher':     lambda a, v: remove_glasses(a, v),
-    'researcher_v2':  lambda a, v: rec(add_long(cut_short(remove_glasses(a, v), 1), v, 2), hair=(222, 112, 48), tie=(64, 112, 200)),   # 단발
-    'researcher_v3':  lambda a, v: rec(add_long(trim_spikes(remove_glasses(a, v), 1), v, 6), hair=(252, 222, 120), tie=(150, 46, 60)),   # 긴 머리
-    'researcher2':    lambda a, v: rec(add_bun(trim_spikes(remove_glasses(a, v), 2), v), hair=(44, 38, 52), skin=(176, 118, 84), tie=(196, 54, 60)),
-    'researcher2_v2': lambda a, v: rec(cut_short(remove_glasses(a, v), 3), hair=(90, 60, 40), tie=(220, 160, 40)),
-    'senior':         lambda a, v: senior_badge(rec(trim_spikes(a, 3), hair=(196, 196, 204), tie=(122, 74, 184)), v),
+    'researcher_v2':  lambda a, v: rec(remove_glasses(a, v), hair=(222, 112, 48), tie=(64, 112, 200)),
+    'researcher_v3':  lambda a, v: rec(remove_glasses(a, v), hair=(252, 222, 120), tie=(150, 46, 60)),
+    'researcher2':    lambda a, v: rec(remove_glasses(a, v), hair=(44, 38, 52), skin=(176, 118, 84), tie=(196, 54, 60)),
+    'researcher2_v2': lambda a, v: rec(remove_glasses(a, v), hair=(90, 60, 40), tie=(220, 160, 40)),
+    # 고위 연구원만 안경 + 회색 머리 + 보라 넥타이 + 금 배지
+    'senior':         lambda a, v: senior_badge(rec(a, hair=(196, 196, 204), tie=(122, 74, 184)), v),
 }
 
 
