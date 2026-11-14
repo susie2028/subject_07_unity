@@ -688,14 +688,14 @@ namespace Specimen07
                 if (playing && !game.PlayerCanSee(n.x, n.y)) continue;
                 var sr = Pooled(npcPool, ni, () => Stand(dynRoot, "stand_researcher_front"));
                 var sh = Pooled(shadowPool, ni, () => Flat(dynRoot, "fx_dot", 0.8f)); ni++;
-                int dir = Art.DirIndex(n.face);
-                sr.sprite = Art.Get("stand_" + n.pal + "_" + (dir == 1 ? "front" : dir == 3 ? "back" : "side"));
-                sr.flipX = dir == 2;
+                bool moving = !n.frozen && ((n.path != null && n.path.Count > 0) || n.state == NpcState.Chase);
+                string kind = WorldView.Variant(n.pal, n.id);
+                float sc0;
+                WorldView.ApplyStand(sr, kind, n.face, out sc0, moving ? t * (n.state == NpcState.Chase ? 1.5f : 1f) + (n.id.Length % 4) * 0.13f : -1);
                 float s = 1;
                 if (p.eating != null && p.eating.target.isNpc && p.eating.target.npc == n) s = Mathf.Max(0.05f, 1 - p.eating.t / Cfg.eatTime);
-                bool moving = !n.frozen && ((n.path != null && n.path.Count > 0) || n.state == NpcState.Chase);
                 float ph = t * (n.state == NpcState.Chase ? 18 : 12) + n.id.GetHashCode() % 7;
-                float bob = moving ? Mathf.Abs(Mathf.Sin(ph)) * 0.07f : 0;
+                float bob = moving && !WorldView.HasWalk(kind) ? Mathf.Abs(Mathf.Sin(ph)) * 0.07f : 0;
                 PlaceStand(sr, n.x, n.y, s * sr.sprite.pixelsPerUnit / WorldView.CHAR_PX, bob);
                 sr.color = Tint(n.x, n.y);
                 sh.transform.position = P(n.x, 0.02f, n.y); sh.transform.localScale = new Vector3(0.75f, 0.45f, 1) * s; sh.color = new Color(0, 0, 0, 0.45f);
@@ -811,8 +811,7 @@ namespace Specimen07
             float scale = 1;
             if (f.type == FormType.Human)
             {
-                player.sprite = Art.Get("stand_" + p.form + "_" + (dir == 1 ? "front" : dir == 3 ? "back" : "side"));
-                player.flipX = dir == 2;
+                float sc0; WorldView.ApplyStand(player, p.form, p.face, out sc0, p.speedNow > 0.3f ? t : -1);
                 scale = player.sprite.pixelsPerUnit / WorldView.CHAR_PX;
                 bool warn = p.timer < f.dur * 0.25f;
                 player.color = warn ? Color.Lerp(Tint(p.x, p.y), new Color(1, 0.6f, 0.65f), 0.5f + 0.5f * Mathf.Sin(t * 8)) : Tint(p.x, p.y);

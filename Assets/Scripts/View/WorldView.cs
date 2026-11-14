@@ -494,17 +494,31 @@ namespace Specimen07
         static void HideFrom<T>(List<T> pool, int n) where T : Component { for (int i = n; i < pool.Count; i++) if (pool[i].gameObject.activeSelf) pool[i].gameObject.SetActive(false); }
 
         // 서 있는 사람 그림 (stand_<종류>_front/back/side). 있으면 true, sc = 크기 배율
-        public const float CHAR_PX = 22f;     // 사람 그림 몇 픽셀이 1칸인지
+        public const float CHAR_PX = 26f;     // 사람 그림 몇 픽셀이 1칸인지
         const float STAND_FOOT = 0.3f;        // 발 위치: 사람 좌표보다 이만큼 아래(화면상)
-        internal static bool ApplyStand(SpriteRenderer sr, string kind, float face, out float sc)
+        //   걸을 때 walk_<종류>_<방향>_0..3 그림이 있으면 그걸 순서대로 (walkT = 걸음 진행 시간)
+        internal static bool ApplyStand(SpriteRenderer sr, string kind, float face, out float sc, float walkT = -1)
         {
             sc = 1;
             if (!Art.Has("stand_" + kind + "_front")) { sr.flipX = false; return false; }
             int dir = Art.DirIndex(face);
-            sr.sprite = Art.Get("stand_" + kind + "_" + (dir == 1 ? "front" : dir == 3 ? "back" : "side"));
+            string view = dir == 1 ? "front" : dir == 3 ? "back" : "side";
+            var walk = walkT >= 0 ? Art.Frames("walk_" + kind + "_" + view) : null;
+            sr.sprite = walk != null && walk.Count > 0 ? walk[Mathf.FloorToInt(walkT * 8f) % walk.Count] : Art.Get("stand_" + kind + "_" + view);
             sr.flipX = dir == 2; sr.transform.rotation = Quaternion.identity;
             sc = sr.sprite.pixelsPerUnit / CHAR_PX;
             return true;
+        }
+
+        internal static bool HasWalk(string kind) { return Art.Has("walk_" + kind + "_front_0"); }
+        // 같은 종류라도 사람마다 다른 모습: stand_<종류>_v2, _v3 … 그림이 있으면 사람 id로 골라 씀
+        internal static string Variant(string pal, string id)
+        {
+            int n = 1; while (Art.Has("stand_" + pal + "_v" + (n + 1) + "_front")) n++;
+            if (n == 1) return pal;
+            int h = 0; foreach (char c in id) h = h * 31 + c;
+            int k = (h & 0x7fffffff) % n;
+            return k == 0 ? pal : pal + "_v" + (k + 1);
         }
 
         // 캐릭터 그림 적용: 4방향 그림이 있으면 방향 선택, 없으면 회전
@@ -599,14 +613,16 @@ namespace Specimen07
                 if (!n.alive || !InView(n.x, n.y, 1)) continue;
                 if (playing && !game.PlayerCanSee(n.x, n.y)) continue;       // 주인공이 못 보는 사람은 안 그림
                 var sr = Pooled(npcPool, ni++, () => Spr(dynRoot, "char_researcher", L_NPC));
-                float sc; bool standing = ApplyStand(sr, n.pal, n.face, out sc);
+                bool moving = !n.frozen && ((n.path != null && n.path.Count > 0) || n.state == NpcState.Chase);
+                string kind = Variant(n.pal, n.id);
+                float wt = moving ? t * (n.state == NpcState.Chase ? 1.5f : 1f) + (n.id.Length % 4) * 0.13f : -1;
+                float sc; bool standing = ApplyStand(sr, kind, n.face, out sc, wt);
                 if (!standing) ApplyFacing(sr, "char_" + n.pal, n.face);
                 float s = 1;
                 if (p.eating != null && p.eating.target.isNpc && p.eating.target.npc == n) s = Mathf.Max(0.05f, 1 - p.eating.t / Cfg.eatTime);
-                // 걸을 때 통통 흔들림
-                bool moving = !n.frozen && ((n.path != null && n.path.Count > 0) || n.state == NpcState.Chase);
+                // 걸을 때 통통 흔들림 (걷기 그림이 있으면 그림이 대신함)
                 float ph = t * (n.state == NpcState.Chase ? 18 : 12) + n.id.GetHashCode() % 7;
-                float bob = moving ? Mathf.Abs(Mathf.Sin(ph)) * 0.06f : 0;
+                float bob = moving && !(standing && HasWalk(kind)) ? Mathf.Abs(Mathf.Sin(ph)) * 0.06f : 0;
                 if (standing)
                 {
                     // 서 있는 그림: 발이 사람 위치보다 살짝 아래, 걸을 때 위아래로 통통
@@ -762,7 +778,7 @@ namespace Specimen07
                 if (f.type == FormType.Object && p.speedNow > 0.3f) j.y += Mathf.Sin(t * 22) * 0.8f / 32f;
                 tr.localScale = Vector3.one;
                 float sc;
-                if (f.type == FormType.Human && ApplyStand(player, p.form, p.face, out sc))
+                if (f.type == FormType.Human && ApplyStand(player, p.form, p.face, out sc, p.speedNow > 0.3f ? t : -1))
                 {
                     tr.localScale = Vector3.one * sc;
                     j.y += STAND_FOOT + player.sprite.bounds.min.y * sc;
