@@ -97,6 +97,7 @@ Assets/Resources/Art/tile_wall.png        ← 벽
 - 차이: Game 오브젝트의 **Use 25D** 체크 하나. 체크하면 `WorldView3D`, 끄면 `WorldView`(2D)로 그린다
 - 벽·가구 = 높이 있는 상자(윗면은 2D 타일 그림), 조명 = 진짜 점광원, 사람·주인공 = 세운 픽셀 그림
 - 사람 그림: `stand_<종류>_front/back/side` (2D 씬에서도 같은 그림. 걷기 `walk_<종류>_<방향>_0..3`, 변형 `<종류>_v2`. 참고 시트 `Tools/art_src/npc_sheet.png` → `Tools/make_people_from_sheet.py`). 사람 색은 그 자리에 닿는 실제 조명으로 계산
+- 실험용 수조: 실험실·격리실·냉동실의 벽 쪽 기계/실험대 칸 일부를 3D 수조로 (표본·기포·파란 빛, 가끔 깨진 수조). `WorldView3D.Tanks.cs`
 - 변신 물건(의자·쓰레기통·카트)은 3D 모형. `Assets/Resources/Models/obj_chair` 같은 이름의 프리팹을 넣으면 그 모형으로 바뀜 (바닥 가운데가 원점, 1칸 크기)
 - 카메라 각도·거리·벽 높이·빛 세기: `Assets/Scripts/View/WorldView3D.cs` 맨 위 "조절값"
 - 메인 메뉴에서 시작하면 2D 씬으로 간다. 2.5D 씬에서 "메인 화면으로" 나갔다가 다시 시작하면 2.5D로 돌아온다
