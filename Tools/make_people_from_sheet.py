@@ -445,6 +445,9 @@ def main():
     preview = []
     for (kind, view), a in sets.items():
         a = place(a)
+        researcher_family = kind.startswith('researcher') or kind == 'senior'
+        if researcher_family and os.path.isdir(os.path.join(HERE, 'art_src', 'researcher_frames')) and os.listdir(os.path.join(HERE, 'art_src', 'researcher_frames')):
+            continue   # 연구원들·고위 연구원은 make_variant_walks.py 가 영상 그림으로 만듦
         if not (kind == 'cleaner' and view == 'back'):   # 청소부 뒷모습은 영상(대걸레 든 모습)에서 뽑은 걷기 0번을 서 있기로 씀
             save(a, 'stand_%s_%s' % (kind, view))
         static = []
