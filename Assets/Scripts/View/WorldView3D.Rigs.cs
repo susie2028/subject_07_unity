@@ -208,57 +208,128 @@ namespace Specimen07
         }
 
         // ---------------------------------------------------------------- 지렁이 주인공
-        // 보라색, 눈 없음, 입은 늘 조금 벌림, 몸에 진한 줄무늬 2줄, 짧은 마디 몸통
+        // 2D 스프라이트 모양 그대로: 둥근 돔 머리 + 바닥에 깔리며 가늘어지는 꼬리, 앞면에 이빨 보이는 입,
+        // 몸 아래쪽에 진한 줄무늬 2줄, 왼쪽 위 반짝이. 각진 로우폴리(면마다 평평한 음영).
+        const float WH = 0.52f, WW = 0.29f, WZC = 0.06f, WFRONT = 0.3f, WTAIL = -0.66f;   // 높이, 반폭, 머리 중심 z, 앞 끝, 꼬리 끝
+        static float WormH(float z)
+        {
+            if (z >= WZC) { float u = (z - WZC) / (WFRONT - WZC); return u >= 1 ? 0 : WH * Mathf.Sqrt(1 - u * u); }
+            // 머리 뒤쪽은 둥글게 내려가고, 그 뒤는 바닥에 깔린 납작한 꼬리
+            float B = WZC - 0.24f;
+            if (z >= B) { float u = (WZC - z) / 0.24f; return 0.15f + (WH - 0.15f) * Mathf.Sqrt(Mathf.Max(0, 1 - u * u)); }
+            float t = Mathf.Min(1, (B - z) / (B - WTAIL));
+            return t < 1 ? 0.15f * (1 - t) + 0.03f * t : 0;
+        }
+        static float WormW(float z)
+        {
+            if (z >= WZC) { float u = (z - WZC) / (WFRONT - WZC + 0.02f); return u >= 1 ? 0 : WW * Mathf.Pow(1 - u * u, 0.45f); }
+            float B = WZC - 0.24f;
+            if (z >= B) { float u = (WZC - z) / 0.24f; return 0.22f + (WW - 0.22f) * Mathf.Sqrt(Mathf.Max(0, 1 - u * u)); }
+            float t = Mathf.Min(1, (B - z) / (B - WTAIL));
+            return t < 1 ? 0.22f * Mathf.Pow(1 - t, 0.8f) + 0.02f : 0;
+        }
+        // 단면 높이 비율 (0 = 바닥, 1 = 꼭대기). 1~2, 3~4 구간이 줄무늬
+        static readonly float[] RING = { 0f, 0.14f, 0.25f, 0.35f, 0.46f, 0.64f, 0.83f, 0.96f, 1f };
+        Mesh WormMesh(float[] zs, bool headPart, Material[] mats)
+        {
+            // mats: 0 몸, 1 줄무늬, 2 반짝이, 3 바닥 테두리
+            var v = new List<Vector3>(); var tris = new List<int>[4]; for (int i = 0; i < 4; i++) tris[i] = new List<int>();
+            int M = RING.Length;
+            System.Func<float, int, Vector3> pt = (z, j) =>
+            {
+                // j: 0..2M-2, 오른쪽 바닥 → 꼭대기 → 왼쪽 바닥
+                int k = j < M ? j : 2 * M - 2 - j; float sgn = j < M ? 1 : -1;
+                float sy = RING[k], th = Mathf.Asin(sy);
+                float w = WormW(z) * (k == 0 ? 1.08f : 1f), h = WormH(z);
+                return new Vector3(sgn * w * Mathf.Cos(th), h * sy, z);
+            };
+            int J = 2 * M - 2;
+            for (int a = 0; a < zs.Length - 1; a++)
+                for (int j = 0; j < J; j++)
+                {
+                    Vector3 p0 = pt(zs[a], j), p1 = pt(zs[a], j + 1), p2 = pt(zs[a + 1], j + 1), p3 = pt(zs[a + 1], j);
+                    int k = Mathf.Min(j < M ? j : J - j, j + 1 < M ? j + 1 : J - j - 1);   // 아래쪽 링 번호
+                    int mat = 0;
+                    if (k == 1 || k == 3) mat = 1;
+                    if (k == 0) mat = 3;
+                    float zm = (zs[a] + zs[a + 1]) / 2;
+                    if (headPart && k >= 5 && j >= M - 1 && zm > -0.02f && zm < 0.2f && j <= M + 1) mat = 2;   // 왼쪽 위 반짝
+                    AddTri(v, tris[mat], p0, p1, p2, new Vector3(0, 0.12f, zm));
+                    AddTri(v, tris[mat], p0, p2, p3, new Vector3(0, 0.12f, zm));
+                }
+            var m = new Mesh(); m.SetVertices(v); m.subMeshCount = 4;
+            for (int i = 0; i < 4; i++) m.SetTriangles(tris[i], i);
+            m.RecalculateNormals(); m.RecalculateBounds();
+            return m;
+        }
+        // 바깥(center에서 멀어지는 쪽)을 보게 감기 방향을 맞춘 삼각형 (면마다 꼭짓점을 따로 → 각진 음영)
+        static void AddTri(List<Vector3> v, List<int> t, Vector3 a, Vector3 b, Vector3 c, Vector3 center)
+        {
+            if ((a - b).sqrMagnitude < 1e-8f || (b - c).sqrMagnitude < 1e-8f || (a - c).sqrMagnitude < 1e-8f) return;
+            var n = Vector3.Cross(b - a, c - a); var mid = (a + b + c) / 3f;
+            if (Vector3.Dot(n, mid - center) < 0) { var tmp = b; b = c; c = tmp; }   // 유니티는 보는 쪽에서 시계 방향이 앞면 (Cross가 바깥을 향해야 함)
+            int i = v.Count; v.Add(a); v.Add(b); v.Add(c); t.Add(i); t.Add(i + 1); t.Add(i + 2);
+        }
+
         Rig BuildWorm()
         {
             var r = new Rig();
             r.root = new GameObject("worm3d").transform; r.root.SetParent(dynRoot, false);
             var prefab = Resources.Load<GameObject>("Models/player_worm");
             if (prefab != null) { Instantiate(prefab, r.root); return r; }
-            Material body = M("#9b6ae0"), stripe = M("#5e36a6"), light = M("#c4a2f4"), mouth = M("#2a0f24"), tongue = M("#e06a8a"), tooth = M("#f4f0f6");
-            // 머리: 아래턱 + 위턱(뒤쪽 경첩으로 열림)
-            r.head = Pivot(r.root, "head", 0, 0, 0.18f);
-            Part(r.head, body, 0, 0, 0, 0.42f, 0.15f, 0.38f);
-            Part(r.head, mouth, 0, 0.12f, 0.02f, 0.34f, 0.08f, 0.3f);
-            Part(r.head, tongue, 0, 0.15f, 0.06f, 0.2f, 0.03f, 0.2f);
-            Part(r.head, tooth, -0.11f, 0.15f, 0.17f, 0.05f, 0.04f, 0.03f); Part(r.head, tooth, 0.11f, 0.15f, 0.17f, 0.05f, 0.04f, 0.03f);
-            r.jawU = Pivot(r.head, "jawU", 0, 0.15f, -0.19f);
-            Part(r.jawU, body, 0, 0, 0.19f, 0.43f, 0.21f, 0.39f);
-            Part(r.jawU, light, -0.08f, 0.2f, 0.12f, 0.12f, 0.02f, 0.12f);          // 윗면 반짝
-            Part(r.jawU, tooth, -0.1f, -0.035f, 0.36f, 0.05f, 0.04f, 0.03f); Part(r.jawU, tooth, 0.1f, -0.035f, 0.36f, 0.05f, 0.04f, 0.03f); Part(r.jawU, tooth, 0, -0.035f, 0.37f, 0.05f, 0.035f, 0.03f);
-            // 몸 마디 (뒤로 갈수록 작아짐). 1·3번 마디가 진한 줄무늬
-            float[] size = { 0.38f, 0.34f, 0.28f, 0.2f };
-            r.segs = new Transform[size.Length];
-            for (int i = 0; i < size.Length; i++)
-            {
-                var s = Pivot(r.root, "seg" + i, 0, 0, -0.08f - i * 0.22f);
-                float w = size[i];
-                Part(s, i % 2 == 0 ? stripe : body, 0, 0, 0, w, w * 0.9f, 0.22f);
-                Part(s, light, -w * 0.2f, w * 0.9f, 0, w * 0.25f, 0.015f, 0.1f);
-                r.segs[i] = s;
-            }
-            r.height = 0.4f;
+            var mats = new[] { M("#9a68dc"), M("#6a40b4"), M("#c9a8f6"), M("#4e2c8c") };
+            // 머리 (돔) — 숨쉬기·덮치기에 따라 크기가 변함
+            r.head = Pivot(r.root, "head", 0, 0, 0);
+            var hz = new[] { WFRONT, 0.29f, 0.26f, 0.21f, 0.15f, WZC, -0.04f, -0.11f };
+            MeshObj(r.head, WormMesh(hz, true, mats), mats);
+            // 꼬리 (좌우로 살랑) — 머리 뒤끝에 경첩
+            var tail = Pivot(r.root, "tail", 0, 0, -0.11f);
+            var tz = new[] { -0.11f, -0.18f, -0.26f, -0.36f, -0.48f, -0.58f, WTAIL };
+            for (int i = 0; i < tz.Length; i++) tz[i] += 0.11f;   // 경첩 기준 좌표
+            var tm = WormMeshOffset(tz, -0.11f, mats);
+            MeshObj(tail, tm, mats);
+            r.segs = new[] { tail };
+            // 입: 앞면의 어두운 구멍 + 위쪽 이빨 + 분홍 혀 (먹을 때 크게 벌어짐)
+            float my = 0.21f, mz = WZC + (WFRONT - WZC) * Mathf.Sqrt(1 - (my / WH) * (my / WH)) - 0.055f;
+            r.jawU = Pivot(r.head, "mouth", 0, my, mz);
+            Part(r.jawU, M("#22091e"), 0, -0.065f, 0, 0.28f, 0.13f, 0.12f);
+            Part(r.jawU, M("#e06a8a"), 0, -0.058f, 0.035f, 0.15f, 0.03f, 0.06f);
+            var tooth = M("#f6f2f8");
+            foreach (var tx in new[] { -0.08f, 0f, 0.08f }) Part(r.jawU, tooth, tx, 0.02f, 0.06f, 0.045f, 0.035f, 0.02f);
+            r.height = WH;
             return r;
         }
+        Mesh WormMeshOffset(float[] zsLocal, float off, Material[] mats)
+        {
+            // 꼬리는 경첩(off) 기준 로컬 좌표로 만들되 모양은 원래 위치의 단면을 씀
+            var world = new float[zsLocal.Length]; for (int i = 0; i < world.Length; i++) world[i] = zsLocal[i] + off;
+            var m = WormMesh(world, false, mats);
+            var vs = new List<Vector3>(); m.GetVertices(vs);
+            for (int i = 0; i < vs.Count; i++) vs[i] = new Vector3(vs[i].x, vs[i].y, vs[i].z - off);
+            m.SetVertices(vs); m.RecalculateBounds();
+            return m;
+        }
+        void MeshObj(Transform parent, Mesh m, Material[] mats)
+        {
+            var go = new GameObject("mesh"); go.transform.SetParent(parent, false);
+            go.AddComponent<MeshFilter>().sharedMesh = m;
+            go.AddComponent<MeshRenderer>().sharedMaterials = mats;
+        }
 
-        // 기어가기(마디가 좌우로 물결), 먹기(입 크게 벌리고 앞으로 덮침), 가만히(숨쉬듯 들썩)
+        // 2D 스프라이트처럼: 가만히 있으면 숨쉬듯 들썩, 기어가면 꿀렁(앞뒤로 늘었다 줄었다) + 꼬리 살랑, 먹으면 입 쩍
         static void AnimateWorm(Rig r, float t, float move, float eatK)
         {
             if (r.segs == null) return;
-            float ph = t * 12f;
-            float open = 14f + 6f * Mathf.Sin(t * 2.5f);                     // 기본: 입을 조금 벌림
-            if (eatK >= 0) open = Mathf.Lerp(14f, 62f, Mathf.Sin(Mathf.Clamp01(eatK) * Mathf.PI));
-            r.jawU.localRotation = Quaternion.Euler(-open, 0, 0);
-            float lunge = eatK >= 0 ? Mathf.Sin(Mathf.Clamp01(eatK) * Mathf.PI) * 0.18f : 0;
-            r.head.localPosition = new Vector3(Mathf.Sin(ph) * 0.05f * move, Mathf.Abs(Mathf.Sin(ph)) * 0.04f * move, 0.18f + lunge);
-            for (int i = 0; i < r.segs.Length; i++)
-            {
-                float q = ph - (i + 1) * 0.9f;
-                float breathe = 1 + 0.04f * Mathf.Sin(t * 3f - i);
-                r.segs[i].localPosition = new Vector3(Mathf.Sin(q) * 0.07f * move, Mathf.Abs(Mathf.Sin(q)) * 0.035f * move, -0.08f - i * 0.22f * (1 - 0.12f * move * Mathf.Abs(Mathf.Sin(q))));
-                r.segs[i].localScale = new Vector3(breathe, breathe * (1 + 0.08f * move * Mathf.Sin(q)), 1);
-                r.segs[i].localRotation = Quaternion.Euler(0, Mathf.Cos(q) * 18f * move, 0);
-            }
+            float ph = t * 10f;
+            float breathe = 0.03f * Mathf.Sin(t * 2.5f);
+            float sq = move * 0.09f * Mathf.Sin(ph);
+            float eat = eatK >= 0 ? Mathf.Sin(Mathf.Clamp01(eatK) * Mathf.PI) : 0;
+            r.head.localScale = new Vector3(1 + sq * 0.4f + eat * 0.1f, 1 + breathe - sq + eat * 0.12f, 1 + sq + eat * 0.15f);
+            r.head.localPosition = new Vector3(0, 0, eat * 0.12f);
+            r.segs[0].localRotation = Quaternion.Euler(0, Mathf.Sin(ph * 0.5f) * 16f * move + Mathf.Sin(t * 1.7f) * 4f, 0);
+            r.segs[0].localScale = new Vector3(1, 1 + breathe * 0.5f, 1 - sq * 0.6f);
+            float open = 1f + 0.12f * Mathf.Sin(t * 2.5f) + eat * 1.6f;                    // 기본: 조금 벌림
+            r.jawU.localScale = new Vector3(1 + eat * 0.3f, open, 1);
         }
 
         // ---------------------------------------------------------------- 풀
