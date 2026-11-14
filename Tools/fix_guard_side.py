@@ -1,6 +1,7 @@
 # 경비원 옆모습 걷기에서 AI가 덧그린 '두 번째 팔'(배 앞에서 흔들리는 손과 소매 선)을 지운다.
 # 손전등을 든 앞쪽 팔(몸 앞 실루엣)은 그대로 두고, 배 위에 따로 붙은 피부색 손과 그 손가락 선만 몸통 색으로 메운다.
 # 바깥 외곽선은 그대로 두고, 끝나면 끊긴 외곽선을 다시 닫는다.
+# (지금은 안 씀: 경비원 옆모습은 영상에서 뽑은 그대로 사용)
 # 실행: python3 Tools/fix_guard_side.py   (extract_walk_video.py 로 guard side 를 뽑은 다음. 끝나면 walk_guard_side_0 을 stand_guard_side 로 복사)
 import glob
 import os
