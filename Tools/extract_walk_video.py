@@ -2,6 +2,7 @@
 # 사용: python3 Tools/extract_walk_video.py <영상.mp4> <종류> <방향 front|back|side> [프레임수=8] [한 걸음 주기 프레임=24] [시작 프레임=0]
 #   (영상 앞부분에 검은 선 같은 잡티가 있으면 시작 프레임을 뒤로)
 #   [좌우 흔들림 줄이기 0~1] [위아래 출렁임 줄이기 0~1]  예) 0.6 0.5 = 좌우 60%, 위아래 50% 덜 움직이게
+#   옵션: --flip (좌우 뒤집기)  --height N (그림 키를 N픽셀에 맞춤. 다른 스프라이트와 크기 맞출 때, 예: 37)
 #   예) python3 Tools/extract_walk_video.py Tools/art_src/walk_soldier_front.mp4 soldier front
 # 결과: Assets/Resources/Art/walk_<종류>_<방향>_0..N-1.png (40x42, 발이 맨 아래 줄)
 #  - 영상 속 그림을 원래 픽셀 격자(자동 추정)로 되돌리고, 몸 흔들림·위치는 그대로 유지
@@ -105,6 +106,15 @@ def close_outline(o):
 
 
 def main():
+    argv = [a for a in sys.argv if not a.startswith('--')]
+    flags = sys.argv[1:]
+    flip = '--flip' in flags
+    target_h = None
+    for i, a in enumerate(flags):
+        if a == '--height' and i + 1 < len(flags):
+            target_h = int(flags[i + 1])
+            argv = [x for x in argv if x != flags[i + 1]]
+    sys.argv = argv
     path, kind, view = sys.argv[1], sys.argv[2], sys.argv[3]
     n = int(sys.argv[4]) if len(sys.argv) > 4 else 8
     cycle = int(sys.argv[5]) if len(sys.argv) > 5 else 24
@@ -113,6 +123,12 @@ def main():
     dampy = float(sys.argv[8]) if len(sys.argv) > 8 else 0
     fr = frames_of(path)
     P = fit_period(fr)
+    if target_h:
+        # 원래 격자로 한 번 뽑아 키를 재고, 목표 키에 맞게 격자 크기를 조정
+        m = np.sqrt(((fr[start] - [255, 0, 255]) ** 2).sum(-1)) > 120
+        yy, _ = np.nonzero(m)
+        native_h = (yy.max() - yy.min() + 1) / P
+        P = P * native_h / target_h
     # 캐릭터 기준점: 전체 영상에서 그림의 가로 중심과 발 위치 (평균)
     xs, ys = [], []
     for f in fr[start:start + cycle]:
@@ -138,6 +154,8 @@ def main():
                 if last[x, 3] > 0:
                     o[-1, x] = (12, 8, 14, 255)
     outs = [close_outline(o) for o in outs]
+    if flip:
+        outs = [o[:, ::-1].copy() for o in outs]
     for k, o in enumerate(outs):
         Image.fromarray(o, 'RGBA').save(os.path.join(OUT, 'walk_%s_%s_%d.png' % (kind, view, k)))
     # 예전 4장짜리가 남아 있으면 번호가 겹치지 않게 지움

@@ -437,7 +437,8 @@ def main():
     preview = []
     for (kind, view), a in sets.items():
         a = place(a)
-        save(a, 'stand_%s_%s' % (kind, view))
+        if not (kind == 'cleaner' and view == 'back'):   # 청소부 뒷모습은 영상(대걸레 든 모습)에서 뽑은 걷기 0번을 서 있기로 씀
+            save(a, 'stand_%s_%s' % (kind, view))
         static = []
         if kind == 'cleaner':      # 대걸레는 걸을 때 바닥에 그대로
             g = feet_groups(a)
