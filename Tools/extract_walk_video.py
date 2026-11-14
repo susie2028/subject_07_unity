@@ -1,5 +1,7 @@
 # 걷기 영상(자홍색 배경, 한 캐릭터)에서 걷기 프레임을 뽑아 게임 스프라이트로 저장한다.
-# 사용: python3 Tools/extract_walk_video.py <영상.mp4> <종류> <방향 front|back|side> [프레임수=8] [한 걸음 주기 프레임=24]
+# 사용: python3 Tools/extract_walk_video.py <영상.mp4> <종류> <방향 front|back|side> [프레임수=8] [한 걸음 주기 프레임=24] [시작 프레임=0]
+#   (영상 앞부분에 검은 선 같은 잡티가 있으면 시작 프레임을 뒤로)
+#   [좌우 흔들림 줄이기 0~1] [위아래 출렁임 줄이기 0~1]  예) 0.6 0.5 = 좌우 60%, 위아래 50% 덜 움직이게
 #   예) python3 Tools/extract_walk_video.py Tools/art_src/walk_soldier_front.mp4 soldier front
 # 결과: Assets/Resources/Art/walk_<종류>_<방향>_0..N-1.png (40x42, 발이 맨 아래 줄)
 #  - 영상 속 그림을 원래 픽셀 격자(자동 추정)로 되돌리고, 몸 흔들림·위치는 그대로 유지
@@ -51,14 +53,14 @@ def phase(sig, P):
     return best[1]
 
 
-def grab(f, P, cx_v, foot_v):
+def grab(f, P, cx_v, foot_v, ox=0.0, oy=0.0):
     gx = np.abs(np.diff(f, axis=1)).sum(-1).sum(0); gy = np.abs(np.diff(f, axis=0)).sum(-1).sum(1)
     x0 = phase(gx, P) + 0.5; y0 = phase(gy, P) + 0.5
     H, W = f.shape[:2]
     out = np.zeros((CH, CW, 4), np.uint8)
     for j in range(CH):
         for i in range(CW):
-            vx = cx_v + (i - CW / 2 + 0.5) * P; vy = foot_v - (CH - j - 0.5) * P
+            vx = cx_v + ox + (i - CW / 2 + 0.5) * P; vy = foot_v + oy - (CH - j - 0.5) * P
             kx = round((vx - x0) / P - 0.5); ky = round((vy - y0) / P - 0.5)
             cx = x0 + (kx + 0.5) * P; cy = y0 + (ky + 0.5) * P
             a, b = int(cy - P * 0.2), int(cy + P * 0.2) + 1; c, d = int(cx - P * 0.2), int(cx + P * 0.2) + 1
@@ -66,26 +68,78 @@ def grab(f, P, cx_v, foot_v):
                 continue
             col = np.median(f[a:b, c:d].reshape(-1, 3), axis=0)
             if is_bg(col):
+                if col.max() < 150 and np.sqrt(((col - [255, 0, 255]) ** 2).sum()) > 110:
+                    out[j, i] = (12, 8, 14, 255)      # 배경과 섞인 어두운 가장자리 = 외곽선
                 continue
             out[j, i, :3] = col; out[j, i, 3] = 255
     return out
+
+
+def close_outline(o):
+    # 1) 안쪽 구멍(사방 중 3곳 이상이 그림) 메우기  2) 외곽선이 끊긴 곳을 검은 선으로 닫기
+    h, w = o.shape[:2]
+    for _ in range(2):
+        fill = []
+        for y in range(h):
+            for x in range(w):
+                if o[y, x, 3]:
+                    continue
+                nb = [o[y + dy, x + dx] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)) if 0 <= x + dx < w and 0 <= y + dy < h and o[y + dy, x + dx, 3]]
+                if len(nb) >= 3:
+                    fill.append((y, x, np.median(np.array(nb)[:, :3], axis=0)))
+        for y, x, c in fill:
+            o[y, x, :3] = c; o[y, x, 3] = 255
+    dark = lambda p: int(p[:3].max()) < 50
+    add = []
+    for y in range(h):
+        for x in range(w):
+            if o[y, x, 3]:
+                continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                xx, yy = x + dx, y + dy
+                if 0 <= xx < w and 0 <= yy < h and o[yy, xx, 3] and not dark(o[yy, xx]):
+                    add.append((y, x)); break
+    for y, x in add:
+        o[y, x] = (12, 8, 14, 255)
+    return o
 
 
 def main():
     path, kind, view = sys.argv[1], sys.argv[2], sys.argv[3]
     n = int(sys.argv[4]) if len(sys.argv) > 4 else 8
     cycle = int(sys.argv[5]) if len(sys.argv) > 5 else 24
+    start = int(sys.argv[6]) if len(sys.argv) > 6 else 0
+    dampx = float(sys.argv[7]) if len(sys.argv) > 7 else 0
+    dampy = float(sys.argv[8]) if len(sys.argv) > 8 else 0
     fr = frames_of(path)
     P = fit_period(fr)
     # 캐릭터 기준점: 전체 영상에서 그림의 가로 중심과 발 위치 (평균)
     xs, ys = [], []
-    for f in fr[:cycle]:
+    for f in fr[start:start + cycle]:
         m = np.sqrt(((f - [255, 0, 255]) ** 2).sum(-1)) > 120
         yy, xx = np.nonzero(m); xs.append(xx.mean()); ys.append(yy.max())
     cx_v = float(np.mean(xs)); foot_v = float(np.max(ys)) + 1
-    picks = [int(round(k * cycle / n)) for k in range(n)]
-    for k, i in enumerate(picks):
-        Image.fromarray(grab(fr[i], P, cx_v, foot_v), 'RGBA').save(os.path.join(OUT, 'walk_%s_%s_%d.png' % (kind, view, k)))
+    picks = [start + int(round(k * cycle / n)) for k in range(n)]
+    # 프레임마다 머리 위치(가로 중심, 맨 위)를 재서 흔들림을 일부 상쇄
+    heads = []
+    for i in picks:
+        m = np.sqrt(((fr[i] - [255, 0, 255]) ** 2).sum(-1)) > 120
+        yy, xx = np.nonzero(m); top = yy.min(); hsel = yy < top + (yy.max() - top) * 0.35
+        heads.append((xx[hsel].mean(), top))
+    mx = np.mean([h[0] for h in heads]); my = np.mean([h[1] for h in heads])
+    outs = [grab(fr[i], P, cx_v, foot_v, (hx - mx) * dampx, (ty - my) * dampy) for i, (hx, ty) in zip(picks, heads)]
+    # 영상 아래에서 발이 잘렸으면 (맨 아래 줄이 외곽선이 아니면) 한 줄 올리고 외곽선을 붙임
+    if any((o[-1, :, 3] > 0).any() and (o[-1, :, :3].max(-1)[o[-1, :, 3] > 0] > 60).any() for o in outs):
+        for o in outs:
+            o[:-1] = o[1:].copy()
+            last = o[-2]
+            o[-1] = 0
+            for x in range(CW):
+                if last[x, 3] > 0:
+                    o[-1, x] = (12, 8, 14, 255)
+    outs = [close_outline(o) for o in outs]
+    for k, o in enumerate(outs):
+        Image.fromarray(o, 'RGBA').save(os.path.join(OUT, 'walk_%s_%s_%d.png' % (kind, view, k)))
     # 예전 4장짜리가 남아 있으면 번호가 겹치지 않게 지움
     k = n
     while os.path.exists(os.path.join(OUT, 'walk_%s_%s_%d.png' % (kind, view, k))):

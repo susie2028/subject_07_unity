@@ -10,7 +10,7 @@ using UnityEngine.Rendering;
 
 namespace Specimen07
 {
-    public partial class WorldView3D : MonoBehaviour, IGameView
+    public class WorldView3D : MonoBehaviour, IGameView
     {
         /* ===== 조절값 (보면서 바꾸기) ===== */
         const float PITCH = 50f;          // 카메라 내려다보는 각도 (90 = 바로 위)
@@ -22,7 +22,7 @@ namespace Specimen07
         const float PLAYER_LIGHT_I = 1.1f, PLAYER_LIGHT_R = 7.5f;   // 주인공 주변(시야 안)을 밝혀 주는 빛. 이 빛만 그림자를 만든다
         static readonly Color AMBIENT = new Color(0.17f, 0.18f, 0.3f);    // 전체 바탕 밝기 (시야 밖은 어둠 판이 덮음)
         static readonly float BB_Y = 1f / Mathf.Cos(PITCH * Mathf.Deg2Rad);   // 세운 그림이 비스듬히 보여 납작해지는 만큼 세로로 늘림
-        const float HeadH = 1.45f;   // 말풍선 높이 (3D 사람 머리 위)
+        static float HeadH { get { return 1.45f * BB_Y; } }
 
         Game game; Camera cam; FloorGeo G;
         Transform floorRoot, dynRoot;
@@ -189,7 +189,6 @@ namespace Specimen07
             objPool.Clear(); npcPool.Clear(); shadowPool.Clear(); trailPool.Clear(); fxPool.Clear(); aimRingPool.Clear(); conePool.Clear(); aimPool.Clear();
             doors.Clear(); traps.Clear(); consoleLeds.Clear(); liftLeds.Clear(); lamps.Clear();
             models.Clear(); modelUsed.Clear(); playerModel = null;
-            rigs.Clear(); rigUsed.Clear(); playerHuman = null;
 
             BuildStatic();
             BuildLights();
@@ -237,7 +236,7 @@ namespace Specimen07
             heli = Flat(dynRoot, "heli", 1); heliRotor = Flat(dynRoot, "heli_rotor", 1);
             var lgo = new GameObject("PlayerLight"); lgo.transform.SetParent(dynRoot, false);
             playerLight = lgo.AddComponent<Light>(); playerLight.type = LightType.Point; playerLight.range = PLAYER_LIGHT_R; playerLight.intensity = PLAYER_LIGHT_I;
-            playerLight.color = new Color(0.78f, 0.62f, 1f); playerLight.shadows = LightShadows.Soft; playerLight.shadowStrength = 0.85f;
+            playerLight.color = new Color(0.78f, 0.62f, 1f); playerLight.shadows = LightShadows.None;   // 길게 늘어지는 그림자 없음 (캐릭터 발밑 그림자만)
             fog = NewMesh("Fog", fogMat);
             shotLine = NewLine(); shotLine.startColor = shotLine.endColor = new Color(1, 230 / 255f, 160 / 255f, 0.9f); shotLine.widthMultiplier = 0.06f;
         }
@@ -682,29 +681,30 @@ namespace Specimen07
             }
             EndModels();
 
-            // 사람 (로우폴리 3D: 걷기 동작 + 발밑 그림자)
+            // 사람 (세운 그림 + 발밑 그림자)
             int ni = 0;
-            BeginRigs();
             foreach (var n in F.npcs)
             {
                 if (!n.alive || !InView(n.x, n.y, 1)) continue;
                 if (playing && !game.PlayerCanSee(n.x, n.y)) continue;
-                var rig = NpcRig(WorldView.Variant(n.pal, n.id));
-                var sh = Pooled(shadowPool, ni++, () => Flat(dynRoot, "fx_dot", 0.8f));
+                var sr = Pooled(npcPool, ni, () => Stand(dynRoot, "stand_researcher_front"));
+                var sh = Pooled(shadowPool, ni, () => Flat(dynRoot, "fx_dot", 0.8f)); ni++;
+                bool moving = !n.frozen && ((n.path != null && n.path.Count > 0) || n.state == NpcState.Chase);
+                string kind = WorldView.Variant(n.pal, n.id);
+                float sc0;
+                WorldView.ApplyStand(sr, kind, n.face, out sc0, moving ? t * (n.state == NpcState.Chase ? 1.5f : 1f) + (n.id.Length % 4) * 0.13f : -1);
                 float s = 1;
                 if (p.eating != null && p.eating.target.isNpc && p.eating.target.npc == n) s = Mathf.Max(0.05f, 1 - p.eating.t / Cfg.eatTime);
-                bool moving = !n.frozen && ((n.path != null && n.path.Count > 0) || n.state == NpcState.Chase);
-                float ph = t * (n.state == NpcState.Chase ? 13 : 8.5f) + (n.id.Length % 5);
-                rig.root.position = P(n.x, 0, n.y); rig.root.rotation = Facing(n.face); rig.root.localScale = Vector3.one * s;
-                AnimateHuman(rig, ph, moving ? 1 : 0);
-                sh.transform.position = P(n.x, 0.02f, n.y); sh.transform.localScale = new Vector3(0.7f, 0.5f, 1) * s; sh.color = new Color(0, 0, 0, 0.4f);
+                float ph = t * (n.state == NpcState.Chase ? 18 : 12) + n.id.GetHashCode() % 7;
+                float bob = moving && !WorldView.HasWalk(kind) ? Mathf.Abs(Mathf.Sin(ph)) * 0.07f : 0;
+                PlaceStand(sr, n.x, n.y, s * sr.sprite.pixelsPerUnit / WorldView.CHAR_PX, bob, WorldView.LastPose);
+                sr.color = Tint(n.x, n.y);
+                sh.transform.position = P(n.x, 0.02f, n.y); sh.transform.localScale = new Vector3(0.75f, 0.45f, 1) * s; sh.color = new Color(0, 0, 0, 0.45f);
             }
-            EndRigs();
-            HideFrom(shadowPool, ni);
+            HideFrom(npcPool, ni); HideFrom(shadowPool, ni);
 
             // 주인공
             player.gameObject.SetActive(playing); playerShadow.gameObject.SetActive(playing); playerXray.gameObject.SetActive(false);
-            if (!playing && playerHuman != null) playerHuman.root.gameObject.SetActive(false);
             if (playing) DrawPlayer(t);
 
             DrawHeli(t);
@@ -729,7 +729,7 @@ namespace Specimen07
                 if (!(n.alive && n.aim > 0.02f && n.seesPlayer)) continue;
                 float k2 = Mathf.Min(1, n.aim / Cfg.aimTime);
                 var lr = Pooled(aimPool, ai, NewLine); lr.enabled = true;
-                lr.SetPosition(0, P(n.x, 0.75f, n.y)); lr.SetPosition(1, P(p.x, 0.4f, p.y));
+                lr.SetPosition(0, P(n.x, 1.0f * BB_Y, n.y)); lr.SetPosition(1, P(p.x, 0.4f, p.y));
                 lr.widthMultiplier = (1 + 2 * k2) / 32f;
                 lr.startColor = lr.endColor = new Color(1, 40 / 255f, 40 / 255f, 0.25f + 0.65f * k2);
                 var ring = Pooled(aimRingPool, ai, () => Flat(dynRoot, "fx_ring", 1));
@@ -740,7 +740,7 @@ namespace Specimen07
             HideFrom(aimPool, ai); HideFrom(aimRingPool, ai);
             bool shot = game.mode == Mode.Dying && S.deathKind == "shot" && S.shotFrom.HasValue;
             shotLine.enabled = shot;
-            if (shot) { shotLine.SetPosition(0, P(S.shotFrom.Value.x, 0.75f, S.shotFrom.Value.y)); shotLine.SetPosition(1, P(p.x, 0.4f, p.y)); }
+            if (shot) { shotLine.SetPosition(0, P(S.shotFrom.Value.x, 1.0f * BB_Y, S.shotFrom.Value.y)); shotLine.SetPosition(1, P(p.x, 0.4f, p.y)); }
 
             // 먹을 대상 표시
             var tgt = game.mode == Mode.Play && p.eating == null ? game.NearestEdible() : null;
@@ -795,8 +795,6 @@ namespace Specimen07
 
             bool asObj = f.type == FormType.Object;
             if (playerModel != null && (!asObj || playerModelForm != p.form)) { Destroy(playerModel.gameObject); playerModel = null; }
-            if (playerHuman != null && (f.type != FormType.Human || playerHumanKind != p.form)) { Destroy(playerHuman.root.gameObject); playerHuman = null; }
-            player.enabled = f.type != FormType.Human;
             if (asObj)
             {
                 // 물건으로 변신: 3D 모형 (변신이 거의 풀리면 덜덜 떨림, 움직이면 덜컹)
@@ -834,26 +832,6 @@ namespace Specimen07
                 player.color = lit;
             }
             PlaceStand(player, p.x, p.y, scale, 0, f.type == FormType.Human ? humanPose : WorldView.Still);
-            if (f.type == FormType.Human)
-            {
-                // 사람으로 변신: 그 사람의 3D 모습으로 걷기 (세운 그림은 벽 뒤 실루엣용으로만)
-                if (playerHuman == null) { playerHuman = BuildHuman(p.form); playerHumanKind = p.form; }
-                playerHuman.root.gameObject.SetActive(true);
-                bool warnH = p.timer < f.dur * 0.25f;
-                Vector2 jh = warnH ? new Vector2(Mathf.Sin(t * 43) * 1.2f, Mathf.Cos(t * 37)) / 32f : Vector2.zero;
-                playerHuman.root.position = P(p.x + jh.x, 0, p.y + jh.y); playerHuman.root.rotation = Facing(p.face);
-                AnimateHuman(playerHuman, t * 10f, p.speedNow > 0.3f ? 1 : 0);
-            }
-            // 벽 뒤(또는 환기구 안)에 있으면 실루엣을 겹쳐 그린다
-            int tx = U.Floor(p.x), ty = U.Floor(p.y);
-            bool behind = hidden || Tall(G.Tile(tx, ty + 1)) || Tall(G.Tile(tx, ty + 2));   // 남쪽(카메라 쪽) 1~2칸에 높은 것이 있으면
-            if (behind && xrayMat != null)
-            {
-                playerXray.gameObject.SetActive(true);
-                playerXray.sprite = player.sprite; playerXray.flipX = player.flipX;
-                playerXray.transform.position = player.transform.position; playerXray.transform.rotation = player.transform.rotation; playerXray.transform.localScale = player.transform.localScale;
-                playerXray.color = new Color(0.78f, 0.6f, 1f, 0.38f);
-            }
             if (hidden) playerShadow.gameObject.SetActive(false);
         }
 
