@@ -1,0 +1,183 @@
+# 걷기 영상(자홍색 배경, 한 캐릭터)에서 걷기 프레임을 뽑아 게임 스프라이트로 저장한다.
+# 사용: python3 Tools/extract_walk_video.py <영상.mp4> <종류> <방향 front|back|side> [프레임수=8] [한 걸음 주기 프레임=24] [시작 프레임=0]
+#   (영상 앞부분에 검은 선 같은 잡티가 있으면 시작 프레임을 뒤로)
+#   [좌우 흔들림 줄이기 0~1] [위아래 출렁임 줄이기 0~1]  예) 0.6 0.5 = 좌우 60%, 위아래 50% 덜 움직이게
+#   옵션: --flip (좌우 뒤집기)  --height N (그림 키를 N픽셀에 맞춤. 다른 스프라이트와 크기 맞출 때, 예: 37)
+#   예) python3 Tools/extract_walk_video.py Tools/art_src/walk_soldier_front.mp4 soldier front
+# 결과: Assets/Resources/Art/walk_<종류>_<방향>_0..N-1.png (40x42, 발이 맨 아래 줄)
+#  - 영상 속 그림을 원래 픽셀 격자(자동 추정)로 되돌리고, 몸 흔들림·위치는 그대로 유지
+#  - 프레임이 6장 이상이면 게임은 이 그림을 그대로 재생 (코드로 만든 출렁임을 덧붙이지 않음)
+import os
+import subprocess
+import sys
+
+import numpy as np
+from PIL import Image
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+OUT = os.path.join(HERE, '..', 'Assets', 'Resources', 'Art')
+CW, CH = 40, 42
+
+
+def frames_of(path):
+    probe = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', path], capture_output=True, text=True).stdout.strip().split(',')
+    w, h = int(probe[0]), int(probe[1])
+    raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', path, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], capture_output=True).stdout
+    fr = np.frombuffer(raw, np.uint8).reshape(-1, h, w, 3).astype(float).copy()
+    # 영상 가장자리의 흰 띠(녹화 테두리)는 배경으로
+    white = (fr.min(-1) > 200).mean(axis=(0, 2))           # 줄마다 흰 비율
+    for y in list(range(h - 1, h - 40, -1)) + list(range(0, 40)):
+        if white[y] > 0.85:
+            fr[:, y] = (255, 0, 255)
+    wcol = (fr.min(-1) > 200).mean(axis=(0, 1))
+    for x in list(range(w - 1, w - 40, -1)) + list(range(0, 40)):
+        if wcol[x] > 0.85:
+            fr[:, :, x] = (255, 0, 255)
+    return fr
+
+
+def is_bg(col):
+    r, g, b = col
+    return np.sqrt(((col - [255, 0, 255]) ** 2).sum()) < 130 or (r > 150 and b > 150 and g < 120) or (r > g + 35 and b > g + 35)
+
+
+def fit_period(fr):
+    best = None
+    f = fr[0]
+    gx = np.abs(np.diff(f, axis=1)).sum(-1).sum(0)
+    for P in np.arange(8, 20, 0.02):
+        for x0 in np.arange(0, P, 0.5):
+            idx = np.round(np.arange(x0, len(gx) - 1, P)).astype(int)
+            sc = gx[idx].mean()
+            if best is None or sc > best[0]:
+                best = (sc, P)
+    return best[1]
+
+
+def phase(sig, P):
+    best = None
+    for x0 in np.arange(0, P, 0.25):
+        idx = np.round(np.arange(x0, len(sig) - 1, P)).astype(int)
+        sc = sig[idx].mean()
+        if best is None or sc > best[0]:
+            best = (sc, x0)
+    return best[1]
+
+
+def grab(f, P, cx_v, foot_v, ox=0.0, oy=0.0):
+    gx = np.abs(np.diff(f, axis=1)).sum(-1).sum(0); gy = np.abs(np.diff(f, axis=0)).sum(-1).sum(1)
+    x0 = phase(gx, P) + 0.5; y0 = phase(gy, P) + 0.5
+    H, W = f.shape[:2]
+    out = np.zeros((CH, CW, 4), np.uint8)
+    for j in range(CH):
+        for i in range(CW):
+            vx = cx_v + ox + (i - CW / 2 + 0.5) * P; vy = foot_v + oy - (CH - j - 0.5) * P
+            kx = round((vx - x0) / P - 0.5); ky = round((vy - y0) / P - 0.5)
+            cx = x0 + (kx + 0.5) * P; cy = y0 + (ky + 0.5) * P
+            a, b = int(cy - P * 0.2), int(cy + P * 0.2) + 1; c, d = int(cx - P * 0.2), int(cx + P * 0.2) + 1
+            if a < 0 or c < 0 or b > H or d > W:
+                continue
+            col = np.median(f[a:b, c:d].reshape(-1, 3), axis=0)
+            if is_bg(col):
+                if col.max() < 150 and np.sqrt(((col - [255, 0, 255]) ** 2).sum()) > 110:
+                    out[j, i] = (12, 8, 14, 255)      # 배경과 섞인 어두운 가장자리 = 외곽선
+                continue
+            out[j, i, :3] = col; out[j, i, 3] = 255
+    return out
+
+
+def close_outline(o):
+    # 1) 안쪽 구멍(사방 중 3곳 이상이 그림) 메우기  2) 외곽선이 끊긴 곳을 검은 선으로 닫기
+    h, w = o.shape[:2]
+    for _ in range(2):
+        fill = []
+        for y in range(h):
+            for x in range(w):
+                if o[y, x, 3]:
+                    continue
+                nb = [o[y + dy, x + dx] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)) if 0 <= x + dx < w and 0 <= y + dy < h and o[y + dy, x + dx, 3]]
+                if len(nb) >= 3:
+                    fill.append((y, x, np.median(np.array(nb)[:, :3], axis=0)))
+        for y, x, c in fill:
+            o[y, x, :3] = c; o[y, x, 3] = 255
+    dark = lambda p: int(p[:3].max()) < 50
+    add = []
+    for y in range(h):
+        for x in range(w):
+            if o[y, x, 3]:
+                continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                xx, yy = x + dx, y + dy
+                if 0 <= xx < w and 0 <= yy < h and o[yy, xx, 3] and not dark(o[yy, xx]):
+                    add.append((y, x)); break
+    for y, x in add:
+        o[y, x] = (12, 8, 14, 255)
+    return o
+
+
+def main():
+    argv = [a for a in sys.argv if not a.startswith('--')]
+    flags = sys.argv[1:]
+    flip = '--flip' in flags
+    target_h = None
+    for i, a in enumerate(flags):
+        if a == '--height' and i + 1 < len(flags):
+            target_h = int(flags[i + 1])
+            argv = [x for x in argv if x != flags[i + 1]]
+    sys.argv = argv
+    path, kind, view = sys.argv[1], sys.argv[2], sys.argv[3]
+    n = int(sys.argv[4]) if len(sys.argv) > 4 else 8
+    cycle = int(sys.argv[5]) if len(sys.argv) > 5 else 24
+    start = int(sys.argv[6]) if len(sys.argv) > 6 else 0
+    dampx = float(sys.argv[7]) if len(sys.argv) > 7 else 0
+    dampy = float(sys.argv[8]) if len(sys.argv) > 8 else 0
+    fr = frames_of(path)
+    P = fit_period(fr)
+    if target_h:
+        # 원래 격자로 한 번 뽑아 키를 재고, 목표 키에 맞게 격자 크기를 조정
+        m = np.sqrt(((fr[start] - [255, 0, 255]) ** 2).sum(-1)) > 120
+        yy, _ = np.nonzero(m)
+        native_h = (yy.max() - yy.min() + 1) / P
+        P = P * native_h / target_h
+    # 캐릭터 기준점: 전체 영상에서 그림의 가로 중심과 발 위치 (평균)
+    xs, ys = [], []
+    for f in fr[start:start + cycle]:
+        m = np.sqrt(((f - [255, 0, 255]) ** 2).sum(-1)) > 120
+        yy, xx = np.nonzero(m); xs.append(xx.mean()); ys.append(yy.max())
+    cx_v = float(np.mean(xs)); foot_v = float(np.max(ys)) + 1
+    picks = [start + int(round(k * cycle / n)) for k in range(n)]
+    # 프레임마다 머리 위치(가로 중심, 맨 위)를 재서 흔들림을 일부 상쇄
+    heads = []
+    for i in picks:
+        m = np.sqrt(((fr[i] - [255, 0, 255]) ** 2).sum(-1)) > 120
+        yy, xx = np.nonzero(m); top = yy.min(); hsel = yy < top + (yy.max() - top) * 0.35
+        heads.append((xx[hsel].mean(), top))
+    mx = np.mean([h[0] for h in heads]); my = np.mean([h[1] for h in heads])
+    outs = [grab(fr[i], P, cx_v, foot_v, (hx - mx) * dampx, (ty - my) * dampy) for i, (hx, ty) in zip(picks, heads)]
+    # 영상 아래에서 발이 잘렸으면 (맨 아래 줄이 외곽선이 아니면) 한 줄 올리고 외곽선을 붙임
+    if any((o[-1, :, 3] > 0).any() and (o[-1, :, :3].max(-1)[o[-1, :, 3] > 0] > 60).any() for o in outs):
+        for o in outs:
+            o[:-1] = o[1:].copy()
+            last = o[-2]
+            o[-1] = 0
+            for x in range(CW):
+                if last[x, 3] > 0:
+                    o[-1, x] = (12, 8, 14, 255)
+    outs = [close_outline(o) for o in outs]
+    if flip:
+        outs = [o[:, ::-1].copy() for o in outs]
+    for k, o in enumerate(outs):
+        Image.fromarray(o, 'RGBA').save(os.path.join(OUT, 'walk_%s_%s_%d.png' % (kind, view, k)))
+    # 예전 4장짜리가 남아 있으면 번호가 겹치지 않게 지움
+    k = n
+    while os.path.exists(os.path.join(OUT, 'walk_%s_%s_%d.png' % (kind, view, k))):
+        os.remove(os.path.join(OUT, 'walk_%s_%s_%d.png' % (kind, view, k)))
+        meta = os.path.join(OUT, 'walk_%s_%s_%d.png.meta' % (kind, view, k))
+        if os.path.exists(meta):
+            os.remove(meta)
+        k += 1
+    print('ok', kind, view, n, 'frames (pixel %.2f)' % P)
+
+
+if __name__ == '__main__':
+    main()

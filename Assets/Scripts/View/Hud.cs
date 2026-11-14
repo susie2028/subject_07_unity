@@ -11,7 +11,16 @@ namespace Specimen07
 {
     public static class Fonts
     {
-        static Font main;
+        static Font main, bold;
+        // 굵은 글씨는 가짜 굵게(FontStyle.Bold) 대신 진짜 Bold 글꼴 파일을 쓴다 → 뭉개지지 않음
+        public static Font Bold
+        {
+            get
+            {
+                if (bold == null) { bold = Resources.Load<Font>("Fonts/Bold"); if (bold == null) bold = Main; }
+                return bold;
+            }
+        }
         public static Font Main
         {
             get
@@ -35,10 +44,11 @@ namespace Specimen07
         RectTransform canvasRt;
         // HUD
         GameObject hudRoot;
-        Image formIcon, ring; Text formName, ringText;
+        Image formIcon; Text formName;
+        RectTransform formCard, timerBox; Image timerFill, timerBg; Text timerLabel, timerNum, countdown; float heartT;
         readonly List<Image> cardBoxes = new List<Image>(); readonly List<Text> cardTexts = new List<Text>();
         GameObject pillSeen, pillOdd, pillVent;
-        Text floorTag, objective, alarmText, meta; GameObject alarmBox; Text muteText;
+        Text floorTag, objective, alarmText, meta; GameObject alarmBox;
         RawImage mini; Texture2D miniTex; Color32[] miniBase, miniPx; int miniTick;
         Image hintBg; Text hint;
         Text toast; float toastT = -1; Text bannerTitle, bannerSub; float bannerT = -1;
@@ -63,7 +73,7 @@ namespace Specimen07
                 var es = new GameObject("EventSystem"); es.AddComponent<EventSystem>(); es.AddComponent<StandaloneInputModule>();
             }
             var cgo = new GameObject("UI");
-            var canvas = cgo.AddComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 10;
+            var canvas = cgo.AddComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 10; canvas.pixelPerfect = true;   // 글자 또렷하게
             var scaler = cgo.AddComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution = new Vector2(1920, 1080); scaler.matchWidthOrHeight = 0.5f;
             cgo.AddComponent<GraphicRaycaster>();
             canvasRt = cgo.GetComponent<RectTransform>();
@@ -88,15 +98,16 @@ namespace Specimen07
             var rt = R(parent, name, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(400, size * 1.6f));
             var t = rt.gameObject.AddComponent<Text>();
             t.font = Fonts.Main; t.text = text; t.fontSize = size; t.color = c; t.alignment = align; t.supportRichText = true; t.raycastTarget = false;
-            t.fontStyle = bold ? FontStyle.Bold : FontStyle.Normal; t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow;
+            if (bold) { t.font = Fonts.Bold; t.fontStyle = Fonts.Bold == Fonts.Main ? FontStyle.Bold : FontStyle.Normal; }
+            t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow;
             return t;
         }
-        static void Shadow(Graphic g) { var s = g.gameObject.AddComponent<Shadow>(); s.effectColor = new Color(0, 0, 0, 0.9f); s.effectDistance = new Vector2(0, -3); }
+        static void Shadow(Graphic g) { var s = g.gameObject.AddComponent<Shadow>(); s.effectColor = new Color(0, 0, 0, 0.6f); s.effectDistance = new Vector2(0, -2); }
         Button Btn(Transform parent, string label, Color bg, Color fg, UnityEngine.Events.UnityAction onClick, float w = 360, float h = 64)
         {
             var rt = R(parent, "Btn_" + label, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(w, h));
             var im = Img(rt, bg); im.raycastTarget = true;
-            var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = im; b.onClick.AddListener(onClick);
+            var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = im; b.onClick.AddListener(UiSound.Click); b.onClick.AddListener(onClick);
             var nav = b.navigation; nav.mode = Navigation.Mode.None; b.navigation = nav; // 키보드 Space/Enter가 게임 조작과 겹치지 않게
             var cb = b.colors; cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f, 1); cb.disabledColor = new Color(1, 1, 1, 0.45f); b.colors = cb;
             var t = Txt(rt, "Label", label, 28, fg, TextAnchor.MiddleCenter, true);
@@ -120,70 +131,94 @@ namespace Specimen07
         static void Fixed(Component c, float w, float h) { var le = c.gameObject.GetComponent<LayoutElement>(); if (le == null) le = c.gameObject.AddComponent<LayoutElement>(); if (w > 0) le.preferredWidth = w; if (h > 0) le.preferredHeight = h; }
 
         /* ================= HUD ================= */
+        // ★ HUD 배치 (1920x1080 기준). 위치를 바꾸려면 여기 숫자만 고치면 된다.
+        //   왼쪽 아래: 현재 형태 카드 + 변신 해제까지 남은 시간 / 오른쪽 위: 설정 / 오른쪽 아래: 현재 층 + 목표 / 왼쪽 위: 지도
         void BuildHud()
         {
             hudRoot = Stretch(canvasRt, "HUD").gameObject;
             var hr = hudRoot.transform;
+            Color panel = new Color(10 / 255f, 12 / 255f, 34 / 255f, 0.86f);
 
             dangerVig = Img(Stretch(hr, "DangerVignette"), new Color(1, 40 / 255f, 40 / 255f, 0), "ui_vignette");
             timerVig = Img(Stretch(hr, "TimerVignette"), new Color(1, 125 / 255f, 140 / 255f, 0), "ui_vignette");
             bubbleLayer = Stretch(hr, "Bubbles");
 
-            // 왼쪽 위: 현재 형태
-            var left = R(hr, "Left", new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(26, -22), new Vector2(560, 300));
-            VStack(left, 10).childForceExpandWidth = false;
-            var chip = Row(left, "Chip", 14);
-            Img(chip, new Color(BG.r, BG.g, BG.b, 0.82f));
-            chip.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(8, 22, 8, 8);
-            var iconBg = R(chip, "IconBg", Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(64, 64)); Img(iconBg, Data.Hex("#1b242b"), "fx_dot"); Fixed(iconBg, 64, 64);
-            formIcon = Img(R(iconBg, "Icon", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(-6, -6)), Color.white, "player_blob"); formIcon.preserveAspect = true;
-            var col = R(chip, "Col", Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(160, 64)); VStack(col, 0); Fixed(col, 170, 64);
-            Txt(col, "Label", "현재 형태", 17, MUTED);
-            formName = Txt(col, "Name", "본모습", 30, FG, TextAnchor.UpperLeft, true);
-            var ringRt = R(chip, "Ring", Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(60, 60)); Fixed(ringRt, 60, 60);
-            Img(R(ringRt, "Bg", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero), Data.Hex("#26313a"), "ui_ring");
-            ring = Img(R(ringRt, "Fg", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero), FLESH, "ui_ring");
-            ring.type = Image.Type.Filled; ring.fillMethod = Image.FillMethod.Radial360; ring.fillOrigin = (int)Image.Origin360.Top; ring.fillClockwise = true;
-            ringText = Txt(ringRt, "T", "0", 22, FG, TextAnchor.MiddleCenter, true);
-            ringText.rectTransform.anchorMin = Vector2.zero; ringText.rectTransform.anchorMax = Vector2.one; ringText.rectTransform.sizeDelta = Vector2.zero;
+            // ── 왼쪽 아래: 현재 형태 카드
+            formCard = R(hr, "FormCard", Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(60, 104), new Vector2(230, 190));
+            var cardImg = Img(formCard, panel, "ui_round"); cardImg.type = Image.Type.Sliced;
+            var lab = Txt(formCard, "Label", "현재 형태", 22, MUTED, TextAnchor.UpperCenter, true);
+            lab.rectTransform.anchorMin = new Vector2(0, 1); lab.rectTransform.anchorMax = new Vector2(1, 1); lab.rectTransform.pivot = new Vector2(0.5f, 1);
+            lab.rectTransform.anchoredPosition = new Vector2(0, -14); lab.rectTransform.sizeDelta = new Vector2(0, 30);
+            formIcon = Img(R(formCard, "Icon", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 4), new Vector2(120, 90)), Color.white, "player_blob");
+            formIcon.preserveAspect = true;
+            formName = Txt(formCard, "Name", "본모습", 26, FG, TextAnchor.LowerCenter, true);
+            formName.rectTransform.anchorMin = Vector2.zero; formName.rectTransform.anchorMax = new Vector2(1, 0); formName.rectTransform.pivot = new Vector2(0.5f, 0);
+            formName.rectTransform.anchoredPosition = new Vector2(0, 12); formName.rectTransform.sizeDelta = new Vector2(0, 36);
 
-            var cards = Row(left, "Cards", 6);
-            foreach (var c in Data.CardOrder)
+            // ── 왼쪽 아래: 변신 해제까지 남은 시간 (카드 바로 아래, 크게)
+            timerBox = R(hr, "Timer", Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(60, 34), new Vector2(330, 62));
+            timerBg = Img(timerBox, panel, "ui_round"); timerBg.type = Image.Type.Sliced;
+            var fillRt = R(timerBox, "Fill", Vector2.zero, Vector2.one, new Vector2(0, 0.5f), Vector2.zero, new Vector2(-12, -12));
+            timerFill = Img(fillRt, FLESH, "ui_panel"); timerFill.type = Image.Type.Filled; timerFill.fillMethod = Image.FillMethod.Horizontal; timerFill.fillOrigin = 0;
+            timerLabel = Txt(timerBox, "Label", "변신 해제까지", 20, Color.white, TextAnchor.MiddleLeft, true); Shadow(timerLabel);
+            timerLabel.rectTransform.anchorMin = Vector2.zero; timerLabel.rectTransform.anchorMax = Vector2.one; timerLabel.rectTransform.sizeDelta = new Vector2(-36, 0);
+            timerNum = Txt(timerBox, "Num", "", 36, Color.white, TextAnchor.MiddleRight, true); Shadow(timerNum);
+            timerNum.rectTransform.anchorMin = Vector2.zero; timerNum.rectTransform.anchorMax = Vector2.one; timerNum.rectTransform.sizeDelta = new Vector2(-30, 0);
+
+            // ── 카드 위: 출입 카드 / 오른쪽: 상태 표시
+            // 출입 카드: 6장을 한 줄로 (가진 카드는 카드 색으로 밝게, 없는 카드는 어둡게)
+            const float CW = 62, CH = 46, CG = 7;
+            var cards = R(hr, "Cards", Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(60, 306), new Vector2(6 * CW + 5 * CG, CH + 26));
+            var cardsLab = Txt(cards, "Label", "출입 카드", 17, MUTED, TextAnchor.UpperLeft, true);
+            cardsLab.rectTransform.anchorMin = new Vector2(0, 1); cardsLab.rectTransform.anchorMax = new Vector2(1, 1); cardsLab.rectTransform.pivot = new Vector2(0, 1);
+            cardsLab.rectTransform.anchoredPosition = Vector2.zero; cardsLab.rectTransform.sizeDelta = new Vector2(0, 22);
+            for (int i = 0; i < Data.CardOrder.Length; i++)
             {
-                var box = R(cards, "Card_" + c, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(58, 28)); Fixed(box, 58, 28);
-                var im = Img(box, new Color(BG.r, BG.g, BG.b, 0.85f));
-                var t = Txt(box, "T", Data.Cards[c].name, 17, Data.Hex("#4d5a62"), TextAnchor.MiddleCenter, true);
+                var c = Data.CardOrder[i];
+                var box = R(cards, "Card_" + c, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(i * (CW + CG), 0), new Vector2(CW, CH));
+                var im = Img(box, panel, "ui_card"); im.type = Image.Type.Sliced;      // 모서리만 살짝 둥근 사각형
+                var t = Txt(box, "T", Data.Cards[c].name, 19, MUTED, TextAnchor.MiddleCenter, true);
                 t.rectTransform.anchorMin = Vector2.zero; t.rectTransform.anchorMax = Vector2.one; t.rectTransform.sizeDelta = Vector2.zero;
+                t.horizontalOverflow = HorizontalWrapMode.Overflow;
                 cardBoxes.Add(im); cardTexts.Add(t);
             }
-            var pills = Row(left, "Pills", 8);
+            var pills = R(hr, "Pills", Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(304, 110), new Vector2(200, 120));
+            var pv = VStack(pills, 8); pv.childForceExpandWidth = false; pv.childAlignment = TextAnchor.LowerLeft;
             pillSeen = Pill(pills, "시야 안", HAZARD); pillOdd = Pill(pills, "어색한 위치", ALARM); pillVent = Pill(pills, "환풍구 안", Data.Hex("#b9a6ff"));
 
-            // 오른쪽 위
-            var right = R(hr, "Right", new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1), new Vector2(-26, -22), new Vector2(640, 400));
-            var rv = VStack(right, 8); rv.childAlignment = TextAnchor.UpperRight; rv.childForceExpandWidth = false;
-            floorTag = Txt(right, "Floor", "", 36, FG, TextAnchor.UpperRight, true); Shadow(floorTag);
-            objective = Txt(right, "Objective", "", 21, FG, TextAnchor.UpperRight); Shadow(objective); Fixed(objective, 640, -1);
-            alarmBox = R(right, "Alarm", Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(320, 40)).gameObject; Fixed(alarmBox.transform, 320, 40);
-            Img((RectTransform)alarmBox.transform, ALARM);
-            alarmText = Txt(alarmBox.transform, "T", "", 24, Color.white, TextAnchor.MiddleCenter, true);
-            alarmText.rectTransform.anchorMin = Vector2.zero; alarmText.rectTransform.anchorMax = Vector2.one; alarmText.rectTransform.sizeDelta = Vector2.zero;
-            meta = Txt(right, "Meta", "", 18, MUTED, TextAnchor.UpperRight); Fixed(meta, 640, -1);
-            var mute = Btn(right, "소리 켜짐", new Color(BG.r, BG.g, BG.b, 0.85f), FG, ToggleMute, 140, 36);
-            muteText = mute.GetComponentInChildren<Text>(); muteText.fontSize = 18;
-
-            // 오른쪽 아래: 미니맵
-            var mrt = R(hr, "Minimap", new Vector2(1, 0), new Vector2(1, 0), new Vector2(1, 0), new Vector2(-26, 26), new Vector2(300, 170));
+            // ── 왼쪽 위: 지도 (본 곳만)
+            var mrt = R(hr, "Minimap", new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(26, -26), new Vector2(300, 170));
             mini = mrt.gameObject.AddComponent<RawImage>(); mini.raycastTarget = false;
 
-            // 아래 가운데: 안내
-            var hrt = R(hr, "Hint", new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(800, 60));
-            hintBg = Img(hrt, new Color(10 / 255f, 14 / 255f, 17 / 255f, 0.88f));
-            hint = Txt(hrt, "T", "", 24, FG, TextAnchor.MiddleCenter);
+            // ── 오른쪽 위: 설정 버튼 + 기록
+            var setBtn = Btn(hr, "설정", panel, FG, () => game.Pause(), 128, 58);
+            var srt = (RectTransform)setBtn.transform; srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(1, 1); srt.anchoredPosition = new Vector2(-30, -30);
+            setBtn.GetComponent<Image>().sprite = Art.Get("ui_round"); setBtn.GetComponent<Image>().type = Image.Type.Sliced;
+            meta = Txt(hr, "Meta", "", 17, MUTED, TextAnchor.UpperRight);
+            meta.rectTransform.anchorMin = meta.rectTransform.anchorMax = meta.rectTransform.pivot = new Vector2(1, 1); meta.rectTransform.anchoredPosition = new Vector2(-30, -96); meta.rectTransform.sizeDelta = new Vector2(500, 26);
+
+            // ── 위 가운데: 경보
+            alarmBox = R(hr, "Alarm", new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -28), new Vector2(440, 50)).gameObject;
+            Img((RectTransform)alarmBox.transform, ALARM, "ui_round").type = Image.Type.Sliced;
+            alarmText = Txt(alarmBox.transform, "T", "", 26, Color.white, TextAnchor.MiddleCenter, true);
+            alarmText.rectTransform.anchorMin = Vector2.zero; alarmText.rectTransform.anchorMax = Vector2.one; alarmText.rectTransform.sizeDelta = Vector2.zero;
+
+            // ── 오른쪽 아래: 현재 층 + 목표 (글 길이에 맞춰 늘어나는 상자)
+            floorTag = AutoBox(hr, "Floor", new Vector2(-30, 100), 30, panel);
+            objective = AutoBox(hr, "Objective", new Vector2(-30, 34), 21, panel);
+
+            // ── 아래 가운데: 안내
+            var hrt = R(hr, "Hint", new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(40, 34), new Vector2(700, 60));
+            hintBg = Img(hrt, new Color(10 / 255f, 12 / 255f, 34 / 255f, 0.88f), "ui_round"); hintBg.type = Image.Type.Sliced;
+            hint = Txt(hrt, "T", "", 22, FG, TextAnchor.MiddleCenter);
             hint.rectTransform.anchorMin = Vector2.zero; hint.rectTransform.anchorMax = Vector2.one; hint.rectTransform.sizeDelta = new Vector2(-40, -16);
 
+            // ── 화면 가운데: 변신 풀리기 직전 카운트다운
+            countdown = Txt(hr, "Countdown", "", 220, new Color(1, 0.35f, 0.42f, 0), TextAnchor.MiddleCenter, true); Shadow(countdown);
+            Center(countdown.rectTransform, new Vector2(0.5f, 0.56f), new Vector2(600, 300));
+
             toast = Txt(canvasRt, "Toast", "", 46, FG, TextAnchor.MiddleCenter, true); Shadow(toast);
-            Center(toast.rectTransform, new Vector2(0.5f, 0.82f), new Vector2(1600, 80)); toast.gameObject.SetActive(false);
+            Center(toast.rectTransform, new Vector2(0.5f, 0.8f), new Vector2(1600, 80)); toast.gameObject.SetActive(false);
             bannerTitle = Txt(canvasRt, "BannerTitle", "", 120, Color.white, TextAnchor.MiddleCenter, true); Shadow(bannerTitle);
             Center(bannerTitle.rectTransform, new Vector2(0.5f, 0.62f), new Vector2(1800, 160)); bannerTitle.gameObject.SetActive(false);
             bannerSub = Txt(canvasRt, "BannerSub", "", 32, HAZARD, TextAnchor.MiddleCenter); Shadow(bannerSub);
@@ -191,6 +226,19 @@ namespace Specimen07
             fadeImg = Img(Stretch(canvasRt, "Fade"), new Color(0, 0, 0, 0)); fadeImg.gameObject.SetActive(false);
 
             hudRoot.SetActive(false);
+        }
+
+        // 오른쪽 아래에 붙는, 글 길이에 맞춰 늘어나는 상자
+        Text AutoBox(Transform parent, string name, Vector2 pos, int size, Color bg)
+        {
+            var rt = R(parent, name, new Vector2(1, 0), new Vector2(1, 0), new Vector2(1, 0), pos, new Vector2(200, 56));
+            var im = Img(rt, bg, "ui_round"); im.type = Image.Type.Sliced;
+            var h = rt.gameObject.AddComponent<HorizontalLayoutGroup>(); h.padding = new RectOffset(22, 22, 12, 12);
+            h.childControlWidth = true; h.childControlHeight = true; h.childForceExpandWidth = false; h.childForceExpandHeight = false; h.childAlignment = TextAnchor.MiddleRight;
+            var fit = rt.gameObject.AddComponent<ContentSizeFitter>(); fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize; fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var t = Txt(rt, "T", "", size, FG, TextAnchor.MiddleRight, size >= 28);
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            return t;
         }
         static void Center(RectTransform rt, Vector2 anchor, Vector2 size) { rt.anchorMin = rt.anchorMax = anchor; rt.pivot = new Vector2(0.5f, 0.5f); rt.anchoredPosition = Vector2.zero; rt.sizeDelta = size; }
         GameObject Pill(Transform parent, string text, Color c)
@@ -202,13 +250,6 @@ namespace Specimen07
             Fixed(rt, t.preferredWidth + 24, 32);
             rt.gameObject.SetActive(false);
             return rt.gameObject;
-        }
-
-        void ToggleMute()
-        {
-            game.sfx.SetMuted(!game.sfx.muted);
-            muteText.text = game.sfx.muted ? "소리 꺼짐" : "소리 켜짐";
-            if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
         }
 
         /* ================= 오버레이 ================= */
@@ -354,7 +395,7 @@ namespace Specimen07
         public void OnFloorChanged()
         {
             var G = game.G;
-            floorTag.text = "<color=#ff7d8c>" + G.id + "</color> " + G.name;
+            floorTag.text = "<color=#b48cf0>" + G.id + "</color>  " + G.name;
             BuildMini();
         }
 
@@ -437,16 +478,14 @@ namespace Specimen07
             {
                 lastForm = p.form;
                 formName.text = f.name;
-                ring.transform.parent.gameObject.SetActive(f.type != FormType.Body);
-                formIcon.sprite = Art.Get(f.type == FormType.Body ? "player_blob" : f.type == FormType.Human ? "char_" + p.form : "obj_" + p.form);
-                formIcon.rectTransform.localRotation = Quaternion.Euler(0, 0, f.type == FormType.Human ? -90 : 0);
+                timerBox.gameObject.SetActive(f.type != FormType.Body);
+                bool stand = f.type == FormType.Human && Art.Has("stand_" + p.form + "_front");
+                formIcon.sprite = Art.Get(f.type == FormType.Body ? "player_blob" : stand ? "stand_" + p.form + "_front" : f.type == FormType.Human ? "char_" + p.form : "obj_" + p.form);
+                formIcon.rectTransform.localRotation = Quaternion.Euler(0, 0, f.type == FormType.Human && !stand ? -90 : 0);
+                formIcon.preserveAspect = true;
+                if (f.type == FormType.Body) { var fr = Art.Frames("player_idle_down"); if (fr.Count > 0) formIcon.sprite = fr[0]; }
             }
-            if (f.type != FormType.Body)
-            {
-                float frac = Mathf.Max(0, p.timer / f.dur);
-                ring.fillAmount = frac; ring.color = frac < 0.25f ? ALARM : FLESH;
-                ringText.text = Mathf.CeilToInt(Mathf.Max(0, p.timer)).ToString();
-            }
+            UpdateTimer(p, f, mode);
             string ck = string.Join(",", S.cards.ToArray());
             if (force || ck != lastCards)
             {
@@ -454,12 +493,13 @@ namespace Specimen07
                 for (int i = 0; i < Data.CardOrder.Length; i++)
                 {
                     var c = Data.CardOrder[i]; bool on = S.cards.Contains(c);
-                    cardBoxes[i].color = on ? Data.Cards[c].color : new Color(BG.r, BG.g, BG.b, 0.85f);
-                    cardTexts[i].color = on ? BG : Data.Hex("#4d5a62");
+                    var cc = Data.Cards[c].color;
+                    cardBoxes[i].color = on ? cc : new Color(BG.r, BG.g, BG.b, 0.72f);
+                    cardTexts[i].color = on ? Data.Hex("#11151a") : new Color(1, 1, 1, 0.3f);
                 }
             }
             string ob = game.Objective();
-            if (ob != lastObj) { lastObj = ob; objective.text = "목표 · " + ob.Replace("<b>", "<color=#ff7d8c>").Replace("</b>", "</color>"); }
+            if (ob != lastObj) { lastObj = ob; objective.text = "목표  " + ob.Replace("<b>", "<color=#ff7d8c>").Replace("</b>", "</color>"); }
             if (S.alarm != null)
             {
                 alarmBox.SetActive(true);
@@ -477,8 +517,8 @@ namespace Specimen07
             float danger = mode == Mode.Dying ? 1 : Mathf.Max(Mathf.Min(1, S.spot / Cfg.grace), S.Fl.npcs.Exists(n => n.alive && n.lockT > 0) ? 0.6f + 0.3f * Mathf.Sin(S.time * 10) : 0);
             dangerVig.color = new Color(1, 40 / 255f, 40 / 255f, 0.45f * danger);
             float k3 = 0;
-            if (mode == Mode.Play && f.type != FormType.Body && p.timer < f.dur * 0.25f) k3 = (1 - p.timer / (f.dur * 0.25f)) * (0.6f + 0.4f * Mathf.Sin(S.time * 8));
-            timerVig.color = new Color(1, 125 / 255f, 140 / 255f, 0.22f * k3);
+            if (mode == Mode.Play && f.type != FormType.Body && p.timer < f.dur * 0.3f) k3 = (1 - p.timer / (f.dur * 0.3f)) * (0.6f + 0.4f * Mathf.Sin(S.time * 8));
+            timerVig.color = new Color(1, 90 / 255f, 120 / 255f, 0.45f * k3);
 
             UpdateBubbles();
             if (game.showMini && ++miniTick % 4 == 0) DrawMini();
@@ -493,7 +533,6 @@ namespace Specimen07
                 var hg = hint.transform.parent.gameObject;
                 hg.SetActive(!string.IsNullOrEmpty(h));
                 hint.text = h;
-                hint.font = Fonts.Main;
                 hint.alignment = note ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter;
                 hint.color = note ? Data.Hex("#f1e3c4") : FG;
                 hintBg.color = note ? new Color(36 / 255f, 30 / 255f, 20 / 255f, 0.94f) : new Color(10 / 255f, 14 / 255f, 17 / 255f, 0.88f);
@@ -506,6 +545,38 @@ namespace Specimen07
             }
         }
 
+        // 변신 해제까지 남은 시간: 30% 아래로 떨어지면 빨갛게 맥박 치고 흔들리며 심장 소리, 5초부터는 화면 가운데 큰 숫자
+        void UpdateTimer(Player p, FormDef f, Mode mode)
+        {
+            bool disguised = f.type != FormType.Body && mode == Mode.Play;
+            if (!disguised) { countdown.color = new Color(1, 0.35f, 0.42f, 0); timerBox.localScale = Vector3.one; return; }
+            float frac = Mathf.Clamp01(p.timer / f.dur), time = Time.time;
+            bool urgent = frac < 0.3f;
+            timerFill.fillAmount = frac;
+            timerFill.color = urgent ? Color.Lerp(ALARM, Color.white, Mathf.PingPong(time * 4, 0.35f)) : Color.Lerp(Data.Hex("#b48cf0"), FLESH, 1 - frac);
+            timerNum.text = Mathf.CeilToInt(Mathf.Max(0, p.timer)) + "초";
+            if (urgent)
+            {
+                float beat = 1 - Mathf.Clamp01(p.timer / (f.dur * 0.3f));                // 0 → 1 (점점 빨라짐)
+                float pulse = 1 + 0.08f * Mathf.Abs(Mathf.Sin(time * (6 + beat * 10)));
+                timerBox.localScale = Vector3.one * pulse;
+                timerBox.anchoredPosition = new Vector2(60, 34) + new Vector2(Mathf.Sin(time * 47), Mathf.Cos(time * 39)) * (2 + beat * 4);
+                timerNum.fontSize = 36 + Mathf.RoundToInt(beat * 10);
+                heartT -= Time.deltaTime;
+                if (heartT <= 0) { heartT = Mathf.Lerp(1.0f, 0.35f, beat); if (game.sfx != null) game.sfx.Play("heart"); }
+            }
+            else { timerBox.localScale = Vector3.one; timerBox.anchoredPosition = new Vector2(60, 34); timerNum.fontSize = 36; }
+            // 5, 4, 3, 2, 1
+            if (p.timer <= 5.0f && p.timer > 0)
+            {
+                int n = Mathf.CeilToInt(p.timer); float part = n - p.timer;               // 0 → 1 (숫자가 바뀐 뒤 흐른 시간)
+                if (countdown.text != n.ToString()) { countdown.text = n.ToString(); if (game.sfx != null) game.sfx.Play("tick"); }
+                countdown.color = new Color(1, 0.35f, 0.42f, 0.55f * (1 - part));
+                countdown.rectTransform.localScale = Vector3.one * (1.25f - 0.25f * part);
+            }
+            else countdown.color = new Color(1, 0.35f, 0.42f, 0);
+        }
+
         // 말풍선과 머리 위 ! ? 표시
         void UpdateBubbles()
         {
@@ -515,12 +586,11 @@ namespace Specimen07
             foreach (var n in S.Fl.npcs)
             {
                 if (!n.alive) continue;
-                var c = S.cam;
-                bool inView = n.x > c.x && n.x < c.x + Cfg.VTW && n.y > c.y && n.y < c.y + Cfg.VTH;
-                if (!inView) continue;
-                Vector2 local;
-                RectTransformUtility.ScreenPointToLocalPointInRectangle(bubbleLayer, cam.WorldToScreenPoint(U.W(n.x, n.y)), null, out local);
-                float unit = bubbleLayer.rect.height / Cfg.VTH; // 1칸의 UI 픽셀 크기
+                if (game.view == null || !game.view.InView(n.x, n.y, 0)) continue;
+                if ((game.mode == Mode.Play || game.mode == Mode.Dying || game.mode == Mode.Pause) && !game.PlayerCanSee(n.x, n.y)) continue;   // 안 보이는 사람은 말풍선도 없음
+                Vector2 bubblePos, markPos;   // 머리 위 위치 (2D/2.5D 화면이 각자 계산)
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(bubbleLayer, game.view.HeadScreen(n.x, n.y, 0.55f), null, out bubblePos);
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(bubbleLayer, game.view.HeadScreen(n.x, n.y, 0.3f), null, out markPos);
                 if (n.bubble != null)
                 {
                     while (bubbleBgs.Count <= bi)
@@ -536,7 +606,7 @@ namespace Specimen07
                     if (tx.text != n.bubble.text) tx.text = n.bubble.text;
                     float w = Mathf.Min(420, tx.preferredWidth + 26);
                     bg.rectTransform.sizeDelta = new Vector2(w, 34);
-                    bg.rectTransform.anchoredPosition = local + new Vector2(0, unit * 0.55f);
+                    bg.rectTransform.anchoredPosition = bubblePos;
                     float a = Mathf.Min(1, n.bubble.t * 3);
                     bg.color = new Color(236 / 255f, 240 / 255f, 238 / 255f, 0.95f * a); tx.color = new Color(26 / 255f, 32 / 255f, 36 / 255f, a);
                 }
@@ -548,7 +618,7 @@ namespace Specimen07
                     while (marks.Count <= mi) { var t = Txt(bubbleLayer, "Mark", "", 40, HAZARD, TextAnchor.LowerCenter, true); Shadow(t); t.rectTransform.anchorMin = t.rectTransform.anchorMax = new Vector2(0.5f, 0.5f); t.rectTransform.pivot = new Vector2(0.5f, 0); t.rectTransform.sizeDelta = new Vector2(80, 70); marks.Add(t); }
                     var m = marks[mi++]; m.gameObject.SetActive(true);
                     m.text = mark; m.color = col; m.fontSize = size;
-                    m.rectTransform.anchoredPosition = local + new Vector2(0, unit * 0.3f);
+                    m.rectTransform.anchoredPosition = markPos;
                 }
             }
             for (int i = bi; i < bubbleBgs.Count; i++) bubbleBgs[i].gameObject.SetActive(false);
@@ -579,7 +649,7 @@ namespace Specimen07
             }
             miniTex.SetPixels32(miniBase); miniTex.Apply();
             mini.texture = miniTex;
-            float scale = Mathf.Min(300f / w, 230f / h);
+            float scale = Mathf.Min(300f / w, 200f / h);
             mini.rectTransform.sizeDelta = new Vector2(w * scale, h * scale);
         }
         void MiniRect(Color32[] buf, int x, int y, int w, int h, Color32 c)
@@ -588,24 +658,32 @@ namespace Specimen07
             for (int yy = y; yy < y + h; yy++) for (int xx = x; xx < x + w; xx++)
                 if (xx >= 0 && yy >= 0 && xx < W && yy < H) buf[(H - 1 - yy) * W + xx] = c;
         }
+        // 지도: 주인공이 본 칸만 보인다 (피드백 2). 사람은 표시하지 않음.
         void DrawMini()
         {
             if (miniTex == null) return;
             var S = game.S; var G = game.G; var F = S.Fl;
-            System.Array.Copy(miniBase, miniPx, miniBase.Length);
-            for (int i = 0; i < G.def.doors.Length; i++) { var d = G.def.doors[i]; MiniRect(miniPx, d.x * MS - 1, d.y * MS - 1, MS + 2, MS + 2, F.doors[i].open ? (Color32)EXIT : (Color32)Data.Cards[d.req].color); }
+            var ex = game.Explored(S.floorId);
+            var dark = (Color32)Data.Hex("#07090b");
+            int W = G.w * MS, H = G.h * MS;
+            for (int ty = 0; ty < G.h; ty++) for (int tx = 0; tx < G.w; tx++)
+            {
+                bool seen = ex[ty * G.w + tx];
+                for (int yy = 0; yy < MS; yy++)
+                {
+                    int row = (H - 1 - (ty * MS + yy)) * W;
+                    for (int xx = 0; xx < MS; xx++) { int i = row + tx * MS + xx; miniPx[i] = seen ? miniBase[i] : dark; }
+                }
+            }
+            System.Func<int, int, bool> seenAt = (x, y) => x >= 0 && y >= 0 && x < G.w && y < G.h && ex[y * G.w + x];
+            for (int i = 0; i < G.def.doors.Length; i++) { var d = G.def.doors[i]; if (seenAt(d.x, d.y)) MiniRect(miniPx, d.x * MS - 1, d.y * MS - 1, MS + 2, MS + 2, F.doors[i].open ? (Color32)EXIT : (Color32)Data.Cards[d.req].color); }
             foreach (var tr in G.def.traps)
             {
                 if (S.trapsOff.Contains(tr.id)) continue;
                 var c = tr.kind == "gas" ? new Color32(150, 230, 90, 180) : new Color32(255, 60, 60, 190);
-                foreach (var r in tr.rects) MiniRect(miniPx, r.x * MS, r.y * MS, r.w * MS, r.h * MS, c);
+                foreach (var r in tr.rects) if (seenAt(r.x, r.y)) MiniRect(miniPx, r.x * MS, r.y * MS, r.w * MS, r.h * MS, c);
             }
-            foreach (var c in G.def.consoles) MiniRect(miniPx, c.x * MS - 1, c.y * MS - 1, MS + 2, MS + 2, (c.heli ? S.heli != null : S.trapsOff.Contains(c.trap)) ? (Color32)EXIT : (Color32)ALARM);
-            if (S.alarm != null) foreach (var n in F.npcs) if (n.alive && n.state == NpcState.Chase) MiniRect(miniPx, Mathf.RoundToInt(n.x * MS) - 1, Mathf.RoundToInt(n.y * MS) - 1, 3, 3, (Color32)ALARM);
-            // 카메라 범위
-            var cv = new Color32(220, 230, 228, 90);
-            int cx = Mathf.RoundToInt(S.cam.x * MS), cy = Mathf.RoundToInt(S.cam.y * MS), cw = Mathf.RoundToInt(Cfg.VTW * MS), chh = Mathf.RoundToInt(Cfg.VTH * MS);
-            MiniRect(miniPx, cx, cy, cw, 1, cv); MiniRect(miniPx, cx, cy + chh - 1, cw, 1, cv); MiniRect(miniPx, cx, cy, 1, chh, cv); MiniRect(miniPx, cx + cw - 1, cy, 1, chh, cv);
+            foreach (var c in G.def.consoles) if (seenAt(c.x, c.y)) MiniRect(miniPx, c.x * MS - 1, c.y * MS - 1, MS + 2, MS + 2, (c.heli ? S.heli != null : S.trapsOff.Contains(c.trap)) ? (Color32)EXIT : (Color32)ALARM);
             if (Mathf.Sin(S.time * 8) > -0.4f) MiniRect(miniPx, Mathf.RoundToInt(S.player.x * MS) - 2, Mathf.RoundToInt(S.player.y * MS) - 2, 5, 5, (Color32)FLESH);
             miniTex.SetPixels32(miniPx); miniTex.Apply();
         }

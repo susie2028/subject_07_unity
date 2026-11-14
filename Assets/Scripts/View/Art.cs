@@ -20,7 +20,28 @@ namespace Specimen07
         public const int PPU = Cfg.PPU;
 
         // 에디터에서 PNG를 새로 넣거나 바꿨을 때 다시 불러오도록 비운다
-        public static void ClearCache() { cache.Clear(); dirCache.Clear(); }
+        public static void ClearCache() { cache.Clear(); dirCache.Clear(); has.Clear(); frames.Clear(); }
+
+        // 애니메이션 프레임: 이름_0, 이름_1, … 이 있는 만큼 (없으면 빈 목록)
+        static readonly Dictionary<string, List<Sprite>> frames = new Dictionary<string, List<Sprite>>();
+        public static List<Sprite> Frames(string key)
+        {
+            List<Sprite> l;
+            if (frames.TryGetValue(key, out l)) return l;
+            l = new List<Sprite>();
+            for (int i = 0; i < 64; i++) { var s = Resources.Load<Sprite>("Art/" + key + "_" + i); if (s == null) break; l.Add(s); }
+            frames[key] = l;
+            return l;
+        }
+
+        // Resources/Art에 그 이름의 그림이 있는지 (변형 타일·테두리 조각용)
+        static readonly Dictionary<string, bool> has = new Dictionary<string, bool>();
+        public static bool Has(string key)
+        {
+            bool b;
+            if (!has.TryGetValue(key, out b)) { b = Resources.Load<Sprite>("Art/" + key) != null; has[key] = b; }
+            return b;
+        }
 
         // Resources/Art에 그림이 있을 때만 돌려준다 (임시 그림은 만들지 않음)
         public static Sprite TryLoad(string key) { return Resources.Load<Sprite>("Art/" + key); }
@@ -77,6 +98,8 @@ namespace Specimen07
                 return p.ToSprite(key);
             }
             if (key.StartsWith("char_")) return Human(key, key.Substring(5));
+            if (key.StartsWith("stand_")) return Standing(key);
+            if (key.StartsWith("wall_face")) { var f = new Painter(16, 16); f.Rect(0, 0, 16, 11, H("#393d7d")); f.Rect(0, 11, 16, 2, H("#1c1e4c")); return f.ToSprite(key, 16); }
             Painter q;
             switch (key)
             {
@@ -200,6 +223,10 @@ namespace Specimen07
                         q.Px(x, y, new Color(1, 1, 1, Mathf.Clamp01((d - 0.55f) / 0.6f)));
                     }
                     return q.ToSprite(key, 64, true);
+                case "ui_round": // 둥근 모서리 패널 (9-slice)
+                    q = new Painter(32, 32); q.RoundRect(0, 0, 32, 32, 11, Color.white); return q.ToSprite(key, 32, true, null, new Vector4(12, 12, 12, 12));
+                case "ui_card": // 모서리만 살짝 둥근 사각형 (출입 카드). 화면에서 모서리 반지름 약 5픽셀
+                    q = new Painter(24, 24); q.RoundRect(0, 0, 24, 24, 4, Color.white); return q.ToSprite(key, 80, true, null, new Vector4(5, 5, 5, 5));
                 case "ui_panel":
                     q = new Painter(16, 16); q.Rect(0, 0, 16, 16, Color.white); return q.ToSprite(key, 16);
             }
@@ -244,6 +271,42 @@ namespace Specimen07
             }
             if (p.glasses) q.Rect(cx + 7, cy - 4.5f, 1.4f, 9, H("#1b1b1b"));
             return q.ToSprite(key, PPU, false, new Vector2(cx / q.w, 1 - cy / q.h));
+        }
+
+        // 2.5D용 서 있는 사람: stand_<종류>_<front|back|side> (16×24 픽셀, 발밑 기준, 16픽셀 = 1칸). side는 오른쪽을 본다.
+        static Sprite Standing(string key)
+        {
+            string rest = key.Substring(6); int us = rest.LastIndexOf('_');
+            string kind = us > 0 ? rest.Substring(0, us) : rest, view = us > 0 ? rest.Substring(us + 1) : "front";
+            Pal p; if (!PAL.TryGetValue(kind, out p)) p = PAL["researcher"];
+            bool front = view == "front", back = view == "back", side = view == "side";
+            var q = new Painter(16, 24);
+            Color coat = H(p.coat), trim = H(p.trim), skin = H(p.skin), hair = H(p.hair), dark = H("#16181c");
+            if (p.mop && !back) { q.Rect(side ? 2 : 13, 9, 1, 13, H("#a9865a")); q.Rect(side ? 1 : 12, 21, 3, 2, H("#d7d2c4")); }
+            // 다리·신발
+            if (side) { q.Rect(6, 17, 2, 5, trim); q.Rect(8.5f, 17, 2, 5, trim); q.Rect(6, 22, 3, 2, dark); q.Rect(8.5f, 22, 3, 2, dark); }
+            else { q.Rect(5, 17, 2.5f, 5, trim); q.Rect(8.5f, 17, 2.5f, 5, trim); q.Rect(5, 22, 2.5f, 2, dark); q.Rect(8.5f, 22, 2.5f, 2, dark); }
+            // 몸통
+            if (side) { q.Rect(5, 10, 6, 8, coat); q.Rect(5, 10, 1, 8, trim); q.Rect(7, 11, 2, 6, trim); q.Rect(7, 17, 2, 1, skin); }
+            else
+            {
+                q.Rect(4, 10, 8, 8, coat); q.Rect(4, 10, 1, 8, trim); q.Rect(11, 10, 1, 8, trim);
+                q.Rect(3, 11, 1, 6, trim); q.Rect(12, 11, 1, 6, trim); q.Rect(3, 17, 1, 1, skin); q.Rect(12, 17, 1, 1, skin);
+                if (front && p.tie != null) { q.Rect(7, 10, 2, 2, H("#e8e8e8")); q.Rect(7.5f, 11, 1, 4, H(p.tie)); }
+                if (front && p.badge != null) q.Rect(10, 12, 1, 1, H(p.badge));
+            }
+            // 머리
+            q.Rect(5, 3, 6, 7, skin);
+            if (back) q.Rect(5, 2, 6, 7, hair);
+            else if (side) { q.Rect(5, 2, 6, 2, hair); q.Rect(5, 3, 3, 5, hair); q.Rect(9, 6, 1, 1, dark); }
+            else { q.Rect(5, 2, 6, 2, hair); q.Rect(5, 3, 1, 3, hair); q.Rect(10, 3, 1, 3, hair); q.Rect(6, 6, 1, 1, dark); q.Rect(9, 6, 1, 1, dark); }
+            if (p.glasses && !back) { if (side) q.Rect(8, 5.5f, 3, 1, dark); else q.Rect(5.5f, 5.5f, 5, 1, dark); }
+            if (p.cap != null) { q.Rect(4.5f, 1, 7, 2.5f, H(p.cap)); if (!back) q.Rect(side ? 8 : 4.5f, 3, side ? 4 : 7, 1, H(p.cap)); }
+            if (p.helmet != null) { q.Rect(4, 1, 8, 4, H(p.helmet)); q.Rect(4, 4, 8, 1, H("#26301b")); }
+            if (p.rifle && !back) q.Rect(side ? 6 : 2, 13, side ? 9 : 12, 1.5f, H("#16190f"));
+            var s = q.ToSprite(key, 16, false, new Vector2(0.5f, 0));
+            s.texture.filterMode = FilterMode.Point;
+            return s;
         }
 
         /* 간단한 픽셀 붓. 좌표는 왼쪽 위 (0,0), y 아래쪽. */
@@ -303,12 +366,14 @@ namespace Specimen07
                     px[(h - 1 - y) * w + x] = Color.Lerp(inner, outer, Mathf.Clamp01(d));
                 }
             }
-            public Sprite ToSprite(string name, int ppu = PPU, bool smooth = false, Vector2? pivot = null)
+            public Sprite ToSprite(string name, int ppu = PPU, bool smooth = false, Vector2? pivot = null, Vector4? border = null)
             {
                 var t = new Texture2D(w, h, TextureFormat.RGBA32, false);
                 t.name = name; t.filterMode = smooth || ppu != PPU ? FilterMode.Bilinear : FilterMode.Point; t.wrapMode = TextureWrapMode.Clamp;
                 t.SetPixels(px); t.Apply();
-                var s = Sprite.Create(t, new Rect(0, 0, w, h), pivot ?? new Vector2(0.5f, 0.5f), ppu);
+                var s = border.HasValue
+                    ? Sprite.Create(t, new Rect(0, 0, w, h), pivot ?? new Vector2(0.5f, 0.5f), ppu, 0, SpriteMeshType.FullRect, border.Value)
+                    : Sprite.Create(t, new Rect(0, 0, w, h), pivot ?? new Vector2(0.5f, 0.5f), ppu);
                 s.name = name;
                 return s;
             }

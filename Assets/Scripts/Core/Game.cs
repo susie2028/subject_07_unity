@@ -21,7 +21,9 @@ namespace Specimen07
         public bool showMini = true;
         SaveData checkpoint;
 
-        public WorldView view;
+        public IGameView view;
+        [Tooltip("켜면 2.5D(비스듬한 3D 카메라) 화면으로 그린다. Main_2_5D 씬에서 켜져 있음")]
+        public bool use25D;
         public Hud hud;
         public Sfx sfx;
 
@@ -33,13 +35,14 @@ namespace Specimen07
             I = this;
             Application.targetFrameRate = 60;
             sfx = gameObject.AddComponent<Sfx>();
-            view = gameObject.AddComponent<WorldView>();
+            if (use25D) view = gameObject.AddComponent<WorldView3D>();
+            else view = gameObject.AddComponent<WorldView>();
             hud = gameObject.AddComponent<Hud>();
         }
 
         void Start()
         {
-            AudioListener.volume = Settings.Volume;
+            AudioListener.volume = 1f;   // 크기는 배경음악·효과음 설정이 따로 맡음
             showMini = Settings.Minimap;
             NewGame();
             EnterFloorVisual();
@@ -163,9 +166,12 @@ namespace Specimen07
 
         public void GoToMenu()
         {
+            if (mode == Mode.Pause && hud != null) hud.HidePause();
+            if (mode == Mode.Pause) mode = Mode.Play;
             if (Launch.MenuSceneInBuild)
             {
-                // 진행은 마지막 층 도착 시점에 저장되어 있다
+                // 진행은 마지막 층 도착 시점에 저장되어 있다. 메뉴에서 다시 시작하면 지금 씬(2D/2.5D)으로 돌아온다
+                Launch.GameScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
                 UnityEngine.SceneManagement.SceneManager.LoadScene(Launch.MenuScene);
                 return;
             }
@@ -330,7 +336,12 @@ namespace Specimen07
             var c = n.C;
             float dx = x - n.x, dy = y - n.y, d = Mathf.Sqrt(dx * dx + dy * dy);
             if (d > ViewDist(n)) return false;
-            if (c.shape != ViewShape.Circle && d > 0.25f && Mathf.Abs(U.AngDiff(Mathf.Atan2(dy, dx), n.face)) > Data.ShapeHalf(c.shape)) return false;
+            if (d > 0.25f)
+            {
+                float diff = Mathf.Abs(U.AngDiff(Mathf.Atan2(dy, dx), n.face));
+                if (c.shape != ViewShape.Circle && diff > Data.ShapeHalf(c.shape)) return false;
+                if (c.shape == ViewShape.Circle && diff > Data.Rad(Cfg.rearBlindFrom) && d > Cfg.rearRange) return false;   // 군인 등 뒤 사각지대
+            }
             return LineClear(n.x, n.y, x, y);
         }
         bool SeesPlayer(Npc n) { return n.alive && !PlayerHidden() && Sees(n, S.player.x, S.player.y); }
@@ -691,7 +702,7 @@ namespace Specimen07
             bool fresh = S.alarm == null;
             if (fresh)
             {
-                S.alarm = new Alarm { t = Cfg.alarmTime, lx = p.x, ly = p.y, mark = p.form, spawnT = 1.6f, spawned = false };
+                S.alarm = new Alarm { t = Cfg.alarmTime, lx = p.x, ly = p.y, mark = p.form, spawnT = 1.6f, spawned = false, started = S.time };
                 S.alarms++;
                 S.sirenT = 0;
                 Toast("경보 발령!");
@@ -891,6 +902,12 @@ namespace Specimen07
             Tick(dt);
             if (view != null) view.Render();
             if (hud != null) hud.Refresh(false);
+            // 배경음악: 게임 플레이 중에만 (메인 메뉴·인트로 제외), 일시정지·결과 화면에선 작게, 탈출 성공 후엔 끔
+            if (sfx != null)
+            {
+                if (mode == Mode.Title || mode == Mode.Intro || mode == Mode.Clear) sfx.SetMusic(null);
+                else sfx.SetMusic("bgm_play", mode == Mode.Pause || mode == Mode.Over ? 0.4f : 1f);
+            }
         }
 
         void HandleKeys()
@@ -909,13 +926,13 @@ namespace Specimen07
                 for (int i = 1; i <= 5; i++) if (Inp.Down(KeyCode.Alpha0 + i)) ChooseLift(i + "F");
                 return;
             }
-            if (mode == Mode.Pause) { if (Inp.Down(KeyCode.Escape)) Resume(); return; }
+            if (mode == Mode.Pause) { if (Inp.Down(KeyCode.Escape)) { if (hud != null && hud.HowToOpen) hud.CloseHowTo(); else Resume(); } return; }
             if (mode == Mode.Over) { if (Inp.Down(KeyCode.R) || Inp.Down(KeyCode.Return) || Inp.Down(KeyCode.Space)) Retry(); else if (Inp.Down(KeyCode.Escape)) GoToMenu(); return; }
             if (mode == Mode.Clear) { if (Inp.Down(KeyCode.Return)) NewRun(); else if (Inp.Down(KeyCode.Escape)) GoToMenu(); return; }
             if (mode == Mode.Play)
             {
                 if (Inp.Down(KeyCode.R)) { Retry(); return; }
-                if (Inp.Down(KeyCode.Escape)) { if (Launch.MenuSceneInBuild) Pause(); else GoToMenu(); return; }
+                if (Inp.Down(KeyCode.Escape)) { Pause(); return; }
                 if (Inp.Down(KeyCode.M)) { showMini = !showMini; if (hud != null) hud.SetMiniVisible(showMini); return; }
                 if (Inp.Down(KeyCode.E) || Inp.Down(KeyCode.Space)) Action();
             }
@@ -924,7 +941,7 @@ namespace Specimen07
         void Tick(float dt)
         {
             S.time += dt;
-            if (mode == Mode.Title || mode == Mode.Intro) { foreach (var n in Fl.npcs.ToArray()) UpdateNPC(n, dt); UpdateDoors(dt); return; }
+            if (mode == Mode.Title || mode == Mode.Intro) { visValid = false; foreach (var n in Fl.npcs.ToArray()) UpdateNPC(n, dt); UpdateDoors(dt); return; }
             if (mode == Mode.Dying)
             {
                 S.dieT -= dt;
@@ -975,9 +992,76 @@ namespace Specimen07
             }
             UpdateFx(dt);
             UpdateCamera(dt);
+            ComputeVision();
+            Footsteps(dt);
             var p = S.player; var f = Data.Forms[p.form];
             if (f.type != FormType.Body && p.timer < f.dur * 0.25f) if (sfx != null) sfx.SetHum(1.6f, Mathf.Sin(S.time * 9) * 120);
             else if (sfx != null) sfx.SetHum(1, 0);
+        }
+
+        /* ================= 주인공 시야 (피드백 1·2) ================= */
+        // 주인공 위치에서 사방으로 광선을 쏴서 벽에 막히는 곳까지만 보인다. 본 칸은 미니맵에 기록.
+        public const int VIS_RAYS = 240;
+        public readonly float[] visDist = new float[VIS_RAYS];
+        public float visR = Cfg.visionR, visAvg = 6f;
+        public bool visValid;
+
+        public bool[] Explored(string fid)
+        {
+            bool[] e;
+            if (!S.explored.TryGetValue(fid, out e)) { var g = FloorGeo.All[fid]; e = new bool[g.w * g.h]; S.explored[fid] = e; }
+            return e;
+        }
+
+        void ComputeVision()
+        {
+            var p = S.player;
+            visR = PlayerHidden() ? Cfg.ventVisionR : Cfg.visionR;
+            var ex = Explored(S.floorId);
+            float sum = 0;
+            for (int i = 0; i < VIS_RAYS; i++)
+            {
+                float a = i * Mathf.PI * 2 / VIS_RAYS, ca = Mathf.Cos(a), sa = Mathf.Sin(a), d = 0;
+                while (d < visR)
+                {
+                    float nd = d + 0.12f;
+                    int tx = U.Floor(p.x + ca * nd), ty = U.Floor(p.y + sa * nd);
+                    if (tx >= 0 && ty >= 0 && tx < G.w && ty < G.h) ex[ty * G.w + tx] = true;
+                    if (IsOpaque(tx, ty)) break;
+                    d = nd;
+                }
+                visDist[i] = d; sum += d;
+            }
+            visAvg = sum / VIS_RAYS;
+            visValid = true;
+        }
+
+        public bool PlayerCanSee(float x, float y)
+        {
+            if (!visValid) return true;
+            var p = S.player;
+            if (U.Dist(p.x, p.y, x, y) > visR + 0.4f) return false;
+            return LineClear(p.x, p.y, x, y);
+        }
+
+        // 안 보이는 곳에서 움직이는 NPC의 발소리 (방향·거리에 따라)
+        float stepT;
+        void Footsteps(float dt)
+        {
+            stepT -= dt;
+            if (stepT > 0 || sfx == null) return;
+            var p = S.player; Npc best = null; float bd = 7f;
+            foreach (var n in Fl.npcs)
+            {
+                if (!n.alive || n.frozen) continue;
+                bool moving = (n.path != null && n.path.Count > 0) || n.state == NpcState.Chase;
+                if (!moving) continue;
+                float d = U.Dist(p.x, p.y, n.x, n.y);
+                if (d < bd && !PlayerCanSee(n.x, n.y)) { bd = d; best = n; }
+            }
+            if (best == null) { stepT = 0.15f; return; }
+            stepT = best.state == NpcState.Chase ? 0.28f : 0.45f;
+            sfx.PlayAt("step", Mathf.Clamp01(1 - bd / 7f) * 0.9f, Mathf.Clamp((best.x - p.x) / 5f, -1, 1));
         }
 
         /* ================= HUD용 정보 ================= */

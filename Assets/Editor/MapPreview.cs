@@ -79,8 +79,8 @@ namespace Specimen07.EditorTools
             // 문, 함정, 콘솔·엘리베이터 표시등
             foreach (var d in g.def.doors)
             {
-                var b = WorldView.Spr(t, "door_closed", WorldView.L_DOOR); b.transform.position = U.W(d.x + 0.5f, d.y + 0.5f);
-                var s = WorldView.Spr(t, "door_stripes", WorldView.L_DOOR + 1); s.transform.position = b.transform.position; s.color = Data.Cards[d.req].color;
+                var b = WorldView.Spr(t, "door_closed", WorldView.L_DOOR); b.transform.position = U.W(d.x + 0.5f, d.y + 0.5f); WorldView.FitTo(b, 1, 1);
+                var s = WorldView.Spr(t, "door_stripes", WorldView.L_DOOR + 1); s.transform.position = b.transform.position; s.color = Data.Cards[d.req].color; WorldView.FitTo(s, 1, 1);
             }
             foreach (var tr in g.def.traps)
                 foreach (var r in tr.rects)

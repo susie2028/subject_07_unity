@@ -103,7 +103,7 @@ namespace Specimen07
     }
 
     public class Heli { public float t; public bool arrived; }
-    public class Alarm { public float t, lx, ly, spawnT; public string mark; public bool spawned; }
+    public class Alarm { public float t, lx, ly, spawnT, started; public string mark; public bool spawned; }
     public class Particle { public float x, y, vx, vy, life, max, r; public Color color; }
     public class Trail { public float x, y, t, r; }
 
@@ -115,6 +115,8 @@ namespace Specimen07
         public Player player;
         public List<string> cards = new List<string>(), trapsOff = new List<string>(), visited = new List<string>(), seenForm = new List<string>();
         public Heli heli;
+        // 미니맵: 주인공이 본 적 있는 칸 (층별)
+        public Dictionary<string, bool[]> explored = new Dictionary<string, bool[]>();
 
         public SaveData Clone()
         {
@@ -122,6 +124,7 @@ namespace Specimen07
             foreach (var kv in floors) s.floors[kv.Key] = kv.Value.Clone();
             s.cards = new List<string>(cards); s.trapsOff = new List<string>(trapsOff);
             s.visited = new List<string>(visited); s.seenForm = new List<string>(seenForm);
+            foreach (var kv in explored) s.explored[kv.Key] = (bool[])kv.Value.Clone();
             return s;
         }
     }
@@ -149,7 +152,7 @@ namespace Specimen07
         {
             var c = s.Clone();
             floorId = c.floorId; floors = c.floors; player = c.player; cards = c.cards; trapsOff = c.trapsOff;
-            visited = c.visited; seenForm = c.seenForm; heli = c.heli;
+            visited = c.visited; seenForm = c.seenForm; heli = c.heli; explored = c.explored;
             ResetTransient();
         }
     }
