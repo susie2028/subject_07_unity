@@ -134,7 +134,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      stand_soldier_front_0: -3559932394207481191
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
