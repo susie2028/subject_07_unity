@@ -696,7 +696,7 @@ namespace Specimen07
                 bool moving = !n.frozen && ((n.path != null && n.path.Count > 0) || n.state == NpcState.Chase);
                 float ph = t * (n.state == NpcState.Chase ? 18 : 12) + n.id.GetHashCode() % 7;
                 float bob = moving ? Mathf.Abs(Mathf.Sin(ph)) * 0.07f : 0;
-                PlaceStand(sr, n.x, n.y, s, bob);
+                PlaceStand(sr, n.x, n.y, s * sr.sprite.pixelsPerUnit / WorldView.CHAR_PX, bob);
                 sr.color = Tint(n.x, n.y);
                 sh.transform.position = P(n.x, 0.02f, n.y); sh.transform.localScale = new Vector3(0.75f, 0.45f, 1) * s; sh.color = new Color(0, 0, 0, 0.45f);
             }
@@ -813,6 +813,7 @@ namespace Specimen07
             {
                 player.sprite = Art.Get("stand_" + p.form + "_" + (dir == 1 ? "front" : dir == 3 ? "back" : "side"));
                 player.flipX = dir == 2;
+                scale = player.sprite.pixelsPerUnit / WorldView.CHAR_PX;
                 bool warn = p.timer < f.dur * 0.25f;
                 player.color = warn ? Color.Lerp(Tint(p.x, p.y), new Color(1, 0.6f, 0.65f), 0.5f + 0.5f * Mathf.Sin(t * 8)) : Tint(p.x, p.y);
             }

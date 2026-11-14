@@ -96,7 +96,7 @@ Assets/Resources/Art/tile_wall.png        ← 벽
 - 여는 법: 메뉴 **표본07 → 2.5D 씬 열기** → Play (씬이 없으면 이 메뉴가 새로 만든다)
 - 차이: Game 오브젝트의 **Use 25D** 체크 하나. 체크하면 `WorldView3D`, 끄면 `WorldView`(2D)로 그린다
 - 벽·가구 = 높이 있는 상자(윗면은 2D 타일 그림), 조명 = 진짜 점광원, 사람·주인공 = 세운 픽셀 그림
-- 사람 그림: `stand_<종류>_front/back/side` (이름표 파일 참고). 없으면 임시 그림. 사람 색은 그 자리에 닿는 실제 조명으로 계산
+- 사람 그림: `stand_<종류>_front/back/side` (2D 씬에서도 같은 그림을 씀. 만드는 스크립트: `Tools/make_people.py`, 22픽셀 = 1칸). 사람 색은 그 자리에 닿는 실제 조명으로 계산
 - 변신 물건(의자·쓰레기통·카트)은 3D 모형. `Assets/Resources/Models/obj_chair` 같은 이름의 프리팹을 넣으면 그 모형으로 바뀜 (바닥 가운데가 원점, 1칸 크기)
 - 카메라 각도·거리·벽 높이·빛 세기: `Assets/Scripts/View/WorldView3D.cs` 맨 위 "조절값"
 - 메인 메뉴에서 시작하면 2D 씬으로 간다. 2.5D 씬에서 "메인 화면으로" 나갔다가 다시 시작하면 2.5D로 돌아온다

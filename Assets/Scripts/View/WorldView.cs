@@ -493,6 +493,20 @@ namespace Specimen07
         }
         static void HideFrom<T>(List<T> pool, int n) where T : Component { for (int i = n; i < pool.Count; i++) if (pool[i].gameObject.activeSelf) pool[i].gameObject.SetActive(false); }
 
+        // 서 있는 사람 그림 (stand_<종류>_front/back/side). 있으면 true, sc = 크기 배율
+        public const float CHAR_PX = 22f;     // 사람 그림 몇 픽셀이 1칸인지
+        const float STAND_FOOT = 0.3f;        // 발 위치: 사람 좌표보다 이만큼 아래(화면상)
+        internal static bool ApplyStand(SpriteRenderer sr, string kind, float face, out float sc)
+        {
+            sc = 1;
+            if (!Art.Has("stand_" + kind + "_front")) { sr.flipX = false; return false; }
+            int dir = Art.DirIndex(face);
+            sr.sprite = Art.Get("stand_" + kind + "_" + (dir == 1 ? "front" : dir == 3 ? "back" : "side"));
+            sr.flipX = dir == 2; sr.transform.rotation = Quaternion.identity;
+            sc = sr.sprite.pixelsPerUnit / CHAR_PX;
+            return true;
+        }
+
         // 캐릭터 그림 적용: 4방향 그림이 있으면 방향 선택, 없으면 회전
         static void ApplyFacing(SpriteRenderer sr, string key, float face)
         {
@@ -585,16 +599,26 @@ namespace Specimen07
                 if (!n.alive || !InView(n.x, n.y, 1)) continue;
                 if (playing && !game.PlayerCanSee(n.x, n.y)) continue;       // 주인공이 못 보는 사람은 안 그림
                 var sr = Pooled(npcPool, ni++, () => Spr(dynRoot, "char_researcher", L_NPC));
-                ApplyFacing(sr, "char_" + n.pal, n.face);
+                float sc; bool standing = ApplyStand(sr, n.pal, n.face, out sc);
+                if (!standing) ApplyFacing(sr, "char_" + n.pal, n.face);
                 float s = 1;
                 if (p.eating != null && p.eating.target.isNpc && p.eating.target.npc == n) s = Mathf.Max(0.05f, 1 - p.eating.t / Cfg.eatTime);
                 // 걸을 때 통통 흔들림
                 bool moving = !n.frozen && ((n.path != null && n.path.Count > 0) || n.state == NpcState.Chase);
                 float ph = t * (n.state == NpcState.Chase ? 18 : 12) + n.id.GetHashCode() % 7;
                 float bob = moving ? Mathf.Abs(Mathf.Sin(ph)) * 0.06f : 0;
-                sr.transform.position = U.W(n.x, n.y - bob);
-                if (moving && Art.Dir("char_" + n.pal) == null) sr.transform.rotation = Quaternion.Euler(0, 0, U.Deg(n.face) + Mathf.Sin(ph) * 5f);
-                sr.transform.localScale = Vector3.one * s * (moving ? 1 + Mathf.Sin(ph * 2) * 0.03f : 1);
+                if (standing)
+                {
+                    // 서 있는 그림: 발이 사람 위치보다 살짝 아래, 걸을 때 위아래로 통통
+                    sr.transform.localScale = Vector3.one * sc * s;
+                    sr.transform.position = U.W(n.x, n.y + STAND_FOOT + sr.sprite.bounds.min.y * sc * s - bob);
+                }
+                else
+                {
+                    sr.transform.position = U.W(n.x, n.y - bob);
+                    if (moving && Art.Dir("char_" + n.pal) == null) sr.transform.rotation = Quaternion.Euler(0, 0, U.Deg(n.face) + Mathf.Sin(ph) * 5f);
+                    sr.transform.localScale = Vector3.one * s * (moving ? 1 + Mathf.Sin(ph * 2) * 0.03f : 1);
+                }
             }
             HideFrom(npcPool, ni);
 
@@ -736,9 +760,15 @@ namespace Specimen07
                 bool warn = p.timer < f.dur * 0.25f;
                 if (warn) { j = new Vector2(Mathf.Sin(t * 43) * 1.2f, Mathf.Cos(t * 37) * 1.0f) / 32f; col = Color.Lerp(col, new Color(1, 0.6f, 0.65f, col.a), 0.5f + 0.5f * Mathf.Sin(t * 8)); }
                 if (f.type == FormType.Object && p.speedNow > 0.3f) j.y += Mathf.Sin(t * 22) * 0.8f / 32f;
-                if (f.type == FormType.Human) ApplyFacing(player, "char_" + p.form, p.face);
-                else { player.sprite = Art.Get("obj_" + p.form); tr.rotation = Quaternion.identity; }
                 tr.localScale = Vector3.one;
+                float sc;
+                if (f.type == FormType.Human && ApplyStand(player, p.form, p.face, out sc))
+                {
+                    tr.localScale = Vector3.one * sc;
+                    j.y += STAND_FOOT + player.sprite.bounds.min.y * sc;
+                }
+                else if (f.type == FormType.Human) ApplyFacing(player, "char_" + p.form, p.face);
+                else { player.sprite = Art.Get("obj_" + p.form); tr.rotation = Quaternion.identity; }
             }
             tr.position = U.W(p.x + j.x, p.y + j.y);
             player.color = col;
