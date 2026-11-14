@@ -67,9 +67,40 @@ def grab(f, P, cx_v, foot_v):
                 continue
             col = np.median(f[a:b, c:d].reshape(-1, 3), axis=0)
             if is_bg(col):
+                if col.max() < 150 and np.sqrt(((col - [255, 0, 255]) ** 2).sum()) > 110:
+                    out[j, i] = (12, 8, 14, 255)      # 배경과 섞인 어두운 가장자리 = 외곽선
                 continue
             out[j, i, :3] = col; out[j, i, 3] = 255
     return out
+
+
+def close_outline(o):
+    # 1) 안쪽 구멍(사방 중 3곳 이상이 그림) 메우기  2) 외곽선이 끊긴 곳을 검은 선으로 닫기
+    h, w = o.shape[:2]
+    for _ in range(2):
+        fill = []
+        for y in range(h):
+            for x in range(w):
+                if o[y, x, 3]:
+                    continue
+                nb = [o[y + dy, x + dx] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)) if 0 <= x + dx < w and 0 <= y + dy < h and o[y + dy, x + dx, 3]]
+                if len(nb) >= 3:
+                    fill.append((y, x, np.median(np.array(nb)[:, :3], axis=0)))
+        for y, x, c in fill:
+            o[y, x, :3] = c; o[y, x, 3] = 255
+    dark = lambda p: int(p[:3].max()) < 50
+    add = []
+    for y in range(h):
+        for x in range(w):
+            if o[y, x, 3]:
+                continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                xx, yy = x + dx, y + dy
+                if 0 <= xx < w and 0 <= yy < h and o[yy, xx, 3] and not dark(o[yy, xx]):
+                    add.append((y, x)); break
+    for y, x in add:
+        o[y, x] = (12, 8, 14, 255)
+    return o
 
 
 def main():
@@ -96,6 +127,7 @@ def main():
             for x in range(CW):
                 if last[x, 3] > 0:
                     o[-1, x] = (12, 8, 14, 255)
+    outs = [close_outline(o) for o in outs]
     for k, o in enumerate(outs):
         Image.fromarray(o, 'RGBA').save(os.path.join(OUT, 'walk_%s_%s_%d.png' % (kind, view, k)))
     # 예전 4장짜리가 남아 있으면 번호가 겹치지 않게 지움
