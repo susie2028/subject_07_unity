@@ -11,6 +11,8 @@ namespace Specimen07
         public const float moveEps = 0.05f, turnRate = 5.0f, inspectCooldown = 6f, playerR = 0.3f;
         public const float alarmTime = 20f, aimTime = 1.1f, catchDist = 0.8f, arriveGrace = 1.2f;
         public const float missingDelay = 20f, respawn = 45f, heliTime = 15f, waryStep = 0.75f;
+        public const float eatCooldown = 2.5f;                // 먹고 나서 다음에 먹을 수 있을 때까지 (초)
+        public const float darkHide = 0.62f, darkSeeR = 1.7f;  // 이만큼 어두운 칸에 있으면 NPC가 이 거리 안에서만 알아챈다
         public const float patrolK = 0.36f, chaseK = 0.48f;   // NPC 속도 배율 (피드백: 전체적으로 빠르게)
         // 군인(원형 시야)의 등 뒤 사각지대: 정면 기준 ±140° 바깥(등 뒤 80°)은 이 거리까지만 보임
         public const float rearBlindFrom = 140f, rearRange = 0.6f;   // 먹기 사거리(1.15)보다 짧아서 등 뒤 0.6~1.15칸에서 먹을 수 있음
@@ -48,6 +50,8 @@ namespace Specimen07
         public string id, name, zone; // zone: "any" | "wall" (물건만)
         public FormType type;
         public float speed, dur, seenSpeed;
+        public float radius = Cfg.playerR;   // 충돌 반경. 큰 가구(책상·선반)는 0.5 이상이라 1칸짜리 문을 못 지나간다
+        public bool Big { get { return radius > 0.5f; } }
     }
 
     public class CardDef
@@ -86,19 +90,27 @@ namespace Specimen07
         public static readonly string[] CardOrder = { "clean", "lab", "sec", "senior", "mil", "dir" };
 
         public static readonly Dictionary<string, FormDef> Forms = BuildForms();
+        // 맵에 붙박인 가구 중 먹을 수 있는 것: 타일 글자 → 변신 모습
+        public static readonly Dictionary<char, string> TileForms = new Dictionary<char, string> { { 'T', "desk" }, { 'S', "shelf" } };
         static Dictionary<string, FormDef> BuildForms()
         {
             var d = new Dictionary<string, FormDef>
             {
-                { "body",  new FormDef { id = "body",  name = "본모습",    type = FormType.Body,   speed = 4.3f, dur = float.PositiveInfinity } },
-                { "chair", new FormDef { id = "chair", name = "의자",      type = FormType.Object, speed = 3.0f, dur = 25, seenSpeed = 0,  zone = "any" } },
-                { "trash", new FormDef { id = "trash", name = "쓰레기통",  type = FormType.Object, speed = 3.0f, dur = 20, seenSpeed = 0,  zone = "wall" } },
-                { "cart",  new FormDef { id = "cart",  name = "바퀴 카트", type = FormType.Object, speed = 3.6f, dur = 18, seenSpeed = 1.1f, zone = "wall" } },
+                { "body",  new FormDef { id = "body",  name = "본모습",    type = FormType.Body,   speed = 4.8f, dur = float.PositiveInfinity } },
+                { "chair", new FormDef { id = "chair", name = "의자",      type = FormType.Object, speed = 3.3f, dur = 25, seenSpeed = 0,  zone = "any" } },
+                { "trash", new FormDef { id = "trash", name = "쓰레기통",  type = FormType.Object, speed = 3.3f, dur = 20, seenSpeed = 0,  zone = "wall" } },
+                { "cart",  new FormDef { id = "cart",  name = "바퀴 카트", type = FormType.Object, speed = 3.9f, dur = 18, seenSpeed = 1.1f, zone = "wall" } },
+                { "plant", new FormDef { id = "plant", name = "화분",      type = FormType.Object, speed = 3.1f, dur = 24, seenSpeed = 0,  zone = "wall" } },
+                { "water", new FormDef { id = "water", name = "정수기",    type = FormType.Object, speed = 2.9f, dur = 22, seenSpeed = 0,  zone = "wall" } },
+                { "box",   new FormDef { id = "box",   name = "상자",      type = FormType.Object, speed = 3.4f, dur = 20, seenSpeed = 0,  zone = "any" } },
+                // 큰 가구: 느리고 오래가지만 덩치 때문에 문(1칸)을 못 지나간다 → 방 안에서 숨을 때 쓴다
+                { "desk",  new FormDef { id = "desk",  name = "책상",      type = FormType.Object, speed = 2.0f, dur = 35, seenSpeed = 0,  zone = "any",  radius = 0.56f } },
+                { "shelf", new FormDef { id = "shelf", name = "선반",      type = FormType.Object, speed = 1.8f, dur = 35, seenSpeed = 0,  zone = "wall", radius = 0.56f } },
             };
             foreach (var kv in Chars)
             {
                 var c = kv.Value;
-                d[c.id] = new FormDef { id = c.id, name = c.name, type = FormType.Human, speed = Mathf.Round((2.4f + c.speed * 0.08f) * 1.2f * 100f) / 100f, dur = c.dur };
+                d[c.id] = new FormDef { id = c.id, name = c.name, type = FormType.Human, speed = Mathf.Round((2.4f + c.speed * 0.08f) * 1.3f * 100f) / 100f, dur = c.dur };
             }
             return d;
         }

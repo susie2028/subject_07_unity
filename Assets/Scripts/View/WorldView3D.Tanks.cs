@@ -138,5 +138,62 @@ namespace Specimen07
                 b.t.localPosition = new Vector3(b.x + Mathf.Sin(t * 3 + b.phase * 9) * 0.02f, 0.3f + k * 0.95f, b.z);
             }
         }
+
+        /* ===== 소장실 소품: 큰 책상 위 스탠드·명패·서류, 뒤에 가죽 의자, 구석에 깃발 ===== */
+        void BuildDirectorProps(int salt)
+        {
+            var g = G;
+            foreach (var z in g.zones)
+            {
+                if (z.kind != "dir") continue;
+                // 방 위쪽에서 가장 긴 책상 줄 찾기
+                int bestY = -1, bx0 = 0, bx1 = -1;
+                for (int y = z.y0; y <= z.y1; y++)
+                {
+                    int run = 0, start = 0;
+                    for (int x = z.x0; x <= z.x1 + 1; x++)
+                    {
+                        if (x <= z.x1 && g.Tile(x, y) == 'T') { if (run == 0) start = x; run++; }
+                        else { if (run > bx1 - bx0 + 1) { bestY = y; bx0 = start; bx1 = start + run - 1; } run = 0; }
+                    }
+                }
+                Material gold = ColMat(Data.Hex("#c9a24a")), brass = ColMat(Data.Hex("#8a6a2a")), dark = ColMat(Data.Hex("#1e2329")), paper = ColMat(Data.Hex("#f2efe6")),
+                         leather = ColMat(Data.Hex("#3a1418")), shade = ColMat(new Color(1f, 0.86f, 0.55f), true), red = ColMat(Data.Hex("#7a2230")), wood = ColMat(Data.Hex("#4a2a1c"));
+                const float top = 0.5f;
+                if (bestY >= 0 && bx1 - bx0 >= 1)
+                {
+                    float cx = (bx0 + bx1 + 1) / 2f, cy = bestY + 0.5f;
+                    // 짙은 원목 상판을 한 겹 더 (다른 책상과 구분)
+                    Box(floorRoot, wood, cx, cy, bx1 - bx0 + 1.06f, 1.06f, 0.05f, top);
+                    // 스탠드 (왼쪽 끝)
+                    Box(floorRoot, brass, bx0 + 0.45f, cy - 0.15f, 0.16f, 0.16f, 0.03f, top + 0.05f);
+                    Box(floorRoot, brass, bx0 + 0.45f, cy - 0.15f, 0.04f, 0.04f, 0.32f, top + 0.08f);
+                    Box(floorRoot, shade, bx0 + 0.45f, cy - 0.1f, 0.26f, 0.2f, 0.12f, top + 0.36f);
+                    // 명패 (가운데 앞쪽) + 서류 더미 + 모니터 (오른쪽)
+                    Box(floorRoot, gold, cx, cy + 0.32f, 0.5f, 0.06f, 0.1f, top + 0.05f);
+                    Box(floorRoot, paper, cx - 0.35f, cy - 0.05f, 0.3f, 0.38f, 0.04f, top + 0.05f);
+                    Box(floorRoot, paper, cx - 0.32f, cy - 0.08f, 0.3f, 0.38f, 0.03f, top + 0.09f);
+                    Box(floorRoot, dark, bx1 + 0.4f, cy - 0.2f, 0.5f, 0.05f, 0.34f, top + 0.08f);
+                    Box(floorRoot, ColMat(new Color(0.37f, 0.75f, 0.91f), true), bx1 + 0.4f, cy - 0.17f, 0.44f, 0.01f, 0.28f, top + 0.11f);
+                    // 가죽 의자 (책상 뒤, 벽 쪽)
+                    float chy = cy - 1.05f;
+                    if (g.Tile(Mathf.FloorToInt(cx), Mathf.FloorToInt(chy)) == '.')
+                    {
+                        Box(floorRoot, dark, cx, chy, 0.1f, 0.1f, 0.34f, 0);
+                        Box(floorRoot, leather, cx, chy, 0.62f, 0.56f, 0.12f, 0.34f);
+                        Box(floorRoot, leather, cx, chy - 0.26f, 0.62f, 0.12f, 0.72f, 0.42f);
+                    }
+                }
+                // 깃발 (오른쪽 위 구석, 벽에 붙여서)
+                float fx = z.x1 + 0.55f, fy = z.y0 + 0.45f;
+                if (g.Tile(z.x1, z.y0) == '.')
+                {
+                    Box(floorRoot, ColMat(Data.Hex("#2a2f38")), fx, fy, 0.22f, 0.22f, 0.06f, 0);
+                    Box(floorRoot, gold, fx, fy, 0.04f, 0.04f, 1.55f, 0.06f);
+                    Box(floorRoot, red, fx - 0.3f, fy, 0.56f, 0.02f, 0.4f, 1.1f);
+                    Box(floorRoot, gold, fx - 0.3f, fy + 0.012f, 0.16f, 0.005f, 0.16f, 1.22f);
+                }
+            }
+        }
     }
 }

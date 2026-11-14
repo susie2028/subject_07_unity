@@ -51,6 +51,9 @@ namespace Specimen07
         Text floorTag, objective, alarmText, meta; GameObject alarmBox;
         RawImage mini; Texture2D miniTex; Color32[] miniBase, miniPx; int miniTick;
         Image hintBg; Text hint;
+        GameObject alertBox; Text alertText, alertSub; float alertT = -1;
+        GameObject pillDark, pillCd; Text pillCdText;
+        RectTransform miniLabels; readonly List<KeyValuePair<Zone, Text>> miniZoneLabels = new List<KeyValuePair<Zone, Text>>();
         Text toast; float toastT = -1; Text bannerTitle, bannerSub; float bannerT = -1;
         Image fadeImg, flashImg; float fadeT = -1, flashT = -1;
         Image dangerVig, timerVig;
@@ -185,10 +188,13 @@ namespace Specimen07
             var pills = R(hr, "Pills", Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(304, 110), new Vector2(200, 120));
             var pv = VStack(pills, 8); pv.childForceExpandWidth = false; pv.childAlignment = TextAnchor.LowerLeft;
             pillSeen = Pill(pills, "시야 안", HAZARD); pillOdd = Pill(pills, "어색한 위치", ALARM); pillVent = Pill(pills, "환풍구 안", Data.Hex("#b9a6ff"));
+            pillDark = Pill(pills, "어둠 속에 숨음", Data.Hex("#8fa2ff"));
+            pillCd = Pill(pills, "소화 중 3", Data.Hex("#ffb38a")); pillCdText = pillCd.GetComponentInChildren<Text>();
 
             // ── 왼쪽 위: 지도 (본 곳만)
-            var mrt = R(hr, "Minimap", new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(26, -26), new Vector2(300, 170));
+            var mrt = R(hr, "Minimap", new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(26, -26), new Vector2(MINI_W, MINI_H));
             mini = mrt.gameObject.AddComponent<RawImage>(); mini.raycastTarget = false;
+            miniLabels = Stretch(mrt, "Labels");   // 방 이름 (본 방만)
 
             // ── 오른쪽 위: 설정 버튼 + 기록
             var setBtn = Btn(hr, "설정", panel, FG, () => game.Pause(), 128, 58);
@@ -203,14 +209,24 @@ namespace Specimen07
             alarmText = Txt(alarmBox.transform, "T", "", 26, Color.white, TextAnchor.MiddleCenter, true);
             alarmText.rectTransform.anchorMin = Vector2.zero; alarmText.rectTransform.anchorMax = Vector2.one; alarmText.rectTransform.sizeDelta = Vector2.zero;
 
+            // ── 위 가운데: 군인 출동 같은 큰 경고 띠
+            alertBox = R(hr, "Alert", new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1), new Vector2(0, -96), new Vector2(0, 118)).gameObject;
+            Img((RectTransform)alertBox.transform, new Color(0.62f, 0.07f, 0.1f, 0.86f));
+            alertText = Txt(alertBox.transform, "T", "", 54, Color.white, TextAnchor.MiddleCenter, true); Shadow(alertText);
+            alertText.rectTransform.anchorMin = new Vector2(0, 0.38f); alertText.rectTransform.anchorMax = Vector2.one; alertText.rectTransform.sizeDelta = Vector2.zero;
+            alertSub = Txt(alertBox.transform, "S", "", 24, Data.Hex("#ffd9d0"), TextAnchor.MiddleCenter);
+            alertSub.rectTransform.anchorMin = Vector2.zero; alertSub.rectTransform.anchorMax = new Vector2(1, 0.4f); alertSub.rectTransform.sizeDelta = Vector2.zero;
+            alertBox.SetActive(false);
+
             // ── 오른쪽 아래: 현재 층 + 목표 (글 길이에 맞춰 늘어나는 상자)
             floorTag = AutoBox(hr, "Floor", new Vector2(-30, 100), 30, panel);
             objective = AutoBox(hr, "Objective", new Vector2(-30, 34), 21, panel);
 
             // ── 아래 가운데: 안내
-            var hrt = R(hr, "Hint", new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(40, 34), new Vector2(700, 60));
-            hintBg = Img(hrt, new Color(10 / 255f, 12 / 255f, 34 / 255f, 0.88f), "ui_round"); hintBg.type = Image.Type.Sliced;
-            hint = Txt(hrt, "T", "", 22, FG, TextAnchor.MiddleCenter);
+            // 자막처럼: 크고 굵게, 반투명 띠 위에
+            var hrt = R(hr, "Hint", new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 118), new Vector2(900, 80));
+            hintBg = Img(hrt, new Color(6 / 255f, 7 / 255f, 22 / 255f, 0.62f), "ui_round"); hintBg.type = Image.Type.Sliced;
+            hint = Txt(hrt, "T", "", 34, FG, TextAnchor.MiddleCenter, true); Shadow(hint);
             hint.rectTransform.anchorMin = Vector2.zero; hint.rectTransform.anchorMax = Vector2.one; hint.rectTransform.sizeDelta = new Vector2(-40, -16);
 
             // ── 화면 가운데: 변신 풀리기 직전 카운트다운
@@ -442,6 +458,7 @@ namespace Specimen07
             bannerTitle.text = "<color=#ff7d8c>" + fid + "</color> " + FloorGeo.All[fid].name; bannerSub.text = sub; bannerT = 0;
             bannerTitle.gameObject.SetActive(true); bannerSub.gameObject.SetActive(true);
         }
+        public void Alert(string title, string sub) { alertText.text = title; alertSub.text = sub; alertT = 0; alertBox.SetActive(true); }
         public void Fade() { fadeT = 0; fadeImg.gameObject.SetActive(true); }
         public void Flash() { flashT = 0; flashImg.gameObject.SetActive(true); }
 
@@ -460,6 +477,14 @@ namespace Specimen07
                 bannerT += dt; float a = bannerT < 0.3f ? bannerT / 0.3f : bannerT > 2.25f ? 1 - (bannerT - 2.25f) / 0.75f : 1;
                 bannerTitle.color = new Color(1, 1, 1, Mathf.Clamp01(a)); bannerSub.color = new Color(HAZARD.r, HAZARD.g, HAZARD.b, Mathf.Clamp01(a));
                 if (bannerT > 3f) { bannerT = -1; bannerTitle.gameObject.SetActive(false); bannerSub.gameObject.SetActive(false); }
+            }
+            if (alertT >= 0)
+            {
+                alertT += dt;
+                float a = alertT < 0.15f ? alertT / 0.15f : alertT > 3.2f ? 1 - (alertT - 3.2f) / 0.6f : 1;
+                var cg = alertBox.GetComponent<CanvasGroup>(); if (cg == null) cg = alertBox.AddComponent<CanvasGroup>();
+                cg.alpha = Mathf.Clamp01(a) * (alertT < 1.2f && Mathf.Repeat(alertT, 0.3f) < 0.12f ? 0.55f : 1f);   // 처음엔 깜빡깜빡
+                if (alertT > 3.8f) { alertT = -1; alertBox.SetActive(false); }
             }
             if (fadeT >= 0) { fadeT += dt; fadeImg.color = new Color(0, 0, 0, Mathf.Clamp01(1 - fadeT / 0.7f)); if (fadeT > 0.7f) { fadeT = -1; fadeImg.gameObject.SetActive(false); } }
             if (flashT >= 0) { flashT += dt; flashImg.color = new Color(1, 1, 1, Mathf.Clamp01(0.85f * (1 - flashT / 0.5f))); if (flashT > 0.5f) { flashT = -1; flashImg.gameObject.SetActive(false); } }
@@ -511,6 +536,9 @@ namespace Specimen07
             pillSeen.SetActive(mode == Mode.Play && S.anySee);
             pillOdd.SetActive(mode == Mode.Play && f.type == FormType.Object && !game.IsNatural(p));
             pillVent.SetActive(mode == Mode.Play && hidden);
+            pillDark.SetActive(mode == Mode.Play && !hidden && game.PlayerInDark());
+            bool cd = mode == Mode.Play && p.eatCd > 0;
+            pillCd.SetActive(cd); if (cd) pillCdText.text = "소화 중 " + Mathf.CeilToInt(p.eatCd);
             meta.text = "재시도 " + game.deaths + "회 · 경보 " + S.alarms + "회 · " + Data.FmtTime(S.elapsed);
 
             // 위험 테두리
@@ -535,12 +563,12 @@ namespace Specimen07
                 hint.text = h;
                 hint.alignment = note ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter;
                 hint.color = note ? Data.Hex("#f1e3c4") : FG;
-                hintBg.color = note ? new Color(36 / 255f, 30 / 255f, 20 / 255f, 0.94f) : new Color(10 / 255f, 14 / 255f, 17 / 255f, 0.88f);
-                float maxW = 1100;
+                hintBg.color = note ? new Color(36 / 255f, 30 / 255f, 20 / 255f, 0.9f) : new Color(6 / 255f, 7 / 255f, 22 / 255f, 0.62f);
+                float maxW = 1240;
                 var settings = hint.GetGenerationSettings(new Vector2(maxW - 40, 0));
-                float pw = Mathf.Min(maxW, hint.cachedTextGeneratorForLayout.GetPreferredWidth(h, settings) / hint.pixelsPerUnit + 44);
+                float pw = Mathf.Min(maxW, hint.cachedTextGeneratorForLayout.GetPreferredWidth(h, settings) / hint.pixelsPerUnit + 64);
                 settings = hint.GetGenerationSettings(new Vector2(pw - 40, 0));
-                float ph = hint.cachedTextGeneratorForLayout.GetPreferredHeight(h, settings) / hint.pixelsPerUnit + 22;
+                float ph = hint.cachedTextGeneratorForLayout.GetPreferredHeight(h, settings) / hint.pixelsPerUnit + 28;
                 hintBg.rectTransform.sizeDelta = new Vector2(pw, ph);
             }
         }
@@ -627,6 +655,7 @@ namespace Specimen07
 
         /* ================= 미니맵 ================= */
         const int MS = 3;
+        const float MINI_W = 380, MINI_H = 240;
         void BuildMini()
         {
             var G = game.G;
@@ -649,8 +678,21 @@ namespace Specimen07
             }
             miniTex.SetPixels32(miniBase); miniTex.Apply();
             mini.texture = miniTex;
-            float scale = Mathf.Min(300f / w, 200f / h);
+            float scale = Mathf.Min(MINI_W / w, MINI_H / h);
             mini.rectTransform.sizeDelta = new Vector2(w * scale, h * scale);
+            // 방 이름: 방 가운데에 작은 글씨. 그 방을 본 적이 있어야 보인다
+            foreach (Transform c in miniLabels) Destroy(c.gameObject);
+            miniZoneLabels.Clear();
+            float px = w * scale / G.w;   // 칸 하나의 픽셀 크기
+            foreach (var z in G.zones)
+            {
+                if (!z.label || z.kind == "hall") continue;
+                var t = Txt(miniLabels, "Z", z.name, 15, new Color(1, 1, 1, 0.92f), TextAnchor.MiddleCenter, true); Shadow(t);
+                t.horizontalOverflow = HorizontalWrapMode.Overflow; t.raycastTarget = false;
+                var rt = t.rectTransform; rt.anchorMin = rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.anchoredPosition = new Vector2((z.x0 + z.x1 + 1) / 2f * px, -(z.y0 + z.y1 + 1) / 2f * px); rt.sizeDelta = new Vector2(120, 20);
+                miniZoneLabels.Add(new KeyValuePair<Zone, Text>(z, t));
+            }
         }
         void MiniRect(Color32[] buf, int x, int y, int w, int h, Color32 c)
         {
@@ -684,6 +726,12 @@ namespace Specimen07
                 foreach (var r in tr.rects) if (seenAt(r.x, r.y)) MiniRect(miniPx, r.x * MS, r.y * MS, r.w * MS, r.h * MS, c);
             }
             foreach (var c in G.def.consoles) if (seenAt(c.x, c.y)) MiniRect(miniPx, c.x * MS - 1, c.y * MS - 1, MS + 2, MS + 2, (c.heli ? S.heli != null : S.trapsOff.Contains(c.trap)) ? (Color32)EXIT : (Color32)ALARM);
+            foreach (var kv in miniZoneLabels)
+            {
+                var z = kv.Key; bool any = false;
+                for (int yy = z.y0; yy <= z.y1 && !any; yy++) for (int xx = z.x0; xx <= z.x1; xx++) if (ex[yy * G.w + xx]) { any = true; break; }
+                kv.Value.gameObject.SetActive(any);
+            }
             if (Mathf.Sin(S.time * 8) > -0.4f) MiniRect(miniPx, Mathf.RoundToInt(S.player.x * MS) - 2, Mathf.RoundToInt(S.player.y * MS) - 2, 5, 5, (Color32)FLESH);
             miniTex.SetPixels32(miniPx); miniTex.Apply();
         }

@@ -56,6 +56,110 @@ namespace Specimen07
             return s;
         }
 
+        /* ===== 층·방마다 다른 바닥 =====
+           원래 바닥 그림(Resources/Art/tile_floor_<방>) 위에 방 종류별 무늬를 얹고, 층마다 색을 살짝 바꾼다.
+           원래 그림을 바꾸면 그대로 반영된다 (무늬만 위에 덧칠). */
+        public static readonly Dictionary<string, Color> FloorTint = new Dictionary<string, Color>
+        {
+            { "B1", new Color(0.92f, 1.12f, 1.04f) }, { "1F", new Color(1.04f, 1.04f, 1.14f) }, { "2F", new Color(1.14f, 1.02f, 0.9f) },
+            { "3F", new Color(0.9f, 1.12f, 1.2f) }, { "4F", new Color(1.2f, 0.95f, 1.0f) }, { "5F", Color.white },
+        };
+        static readonly Dictionary<string, Sprite> floorCache = new Dictionary<string, Sprite>();
+        public static Sprite FloorTile(string baseKey, string kind, string floorId)
+        {
+            string ck = baseKey + "@" + floorId;
+            Sprite s;
+            if (floorCache.TryGetValue(ck, out s)) return s;
+            var src = Get(baseKey);
+            const int N = 32;
+            var outPx = ReadScaled(src, N);
+            if (outPx == null) { floorCache[ck] = src; return src; }
+            Color tint; if (!FloorTint.TryGetValue(floorId, out tint)) tint = Color.white;
+            var pat = FloorPattern(kind, N);
+            for (int i = 0; i < outPx.Length; i++)
+            {
+                var c = outPx[i];
+                c = new Color(Mathf.Clamp01(c.r * tint.r), Mathf.Clamp01(c.g * tint.g), Mathf.Clamp01(c.b * tint.b), c.a);
+                var o = pat[i];
+                if (o.a > 0) c = new Color(Mathf.Lerp(c.r, o.r, o.a), Mathf.Lerp(c.g, o.g, o.a), Mathf.Lerp(c.b, o.b, o.a), c.a);
+                outPx[i] = c;
+            }
+            var t = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = ck };
+            t.SetPixels(outPx); t.Apply();
+            s = Sprite.Create(t, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N); s.name = ck;
+            floorCache[ck] = s;
+            return s;
+        }
+        // 스프라이트 픽셀을 N×N으로 (읽기 금지 텍스처는 렌더 텍스처를 거쳐 읽는다)
+        static Color[] ReadScaled(Sprite sp, int N)
+        {
+            if (sp == null) return null;
+            var tex = sp.texture; var r = sp.textureRect;
+            int w = Mathf.RoundToInt(r.width), h = Mathf.RoundToInt(r.height);
+            Color[] px = null;
+            try { if (tex.isReadable) px = tex.GetPixels(Mathf.RoundToInt(r.x), Mathf.RoundToInt(r.y), w, h); } catch (System.Exception) { px = null; }
+            if (px == null)
+            {
+                var rt = RenderTexture.GetTemporary(tex.width, tex.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+                var prev = RenderTexture.active;
+                Graphics.Blit(tex, rt); RenderTexture.active = rt;
+                var t2 = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                t2.ReadPixels(new Rect(r.x, r.y, w, h), 0, 0); t2.Apply();
+                RenderTexture.active = prev; RenderTexture.ReleaseTemporary(rt);
+                px = t2.GetPixels(); UnityEngine.Object.Destroy(t2);
+            }
+            var o = new Color[N * N];
+            for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) o[y * N + x] = px[(y * h / N) * w + (x * w / N)];
+            return o;
+        }
+        // 방 종류별 무늬 (알파 = 덧칠 세기). Painter와 같은 행 순서(아래가 0)로 돌려준다
+        static Color[] FloorPattern(string kind, int N)
+        {
+            var q = new Painter(N, N);
+            switch (kind)
+            {
+                case "dir":     // 짙은 원목 마루: 가로 널 + 엇갈린 이음매
+                    q.Rect(0, 0, N, N, HA("#5a3324", 0.55f));
+                    for (int y = 0; y < N; y += 8) { q.Rect(0, y, N, 1, HA("#24130c", 0.55f)); q.Rect(((y / 8) % 2) * 16 + 6, y, 1, 8, HA("#24130c", 0.4f)); q.Rect(0, y + 2, N, 1, HA("#8a5a3c", 0.18f)); }
+                    break;
+                case "office":  // 카펫 타일 체크
+                    for (int y = 0; y < N; y += 16) for (int x = 0; x < N; x += 16) if (((x + y) / 16) % 2 == 0) q.Rect(x, y, 16, 16, HA("#3c4a7a", 0.22f));
+                    q.StrokeRect(0, 0, N, N, HA("#0c0f22", 0.25f));
+                    break;
+                case "lab": case "cold":   // 밝은 위생 타일 (줄눈)
+                    q.Rect(0, 0, N, N, HA(kind == "cold" ? "#9fd8ff" : "#c8d4ff", kind == "cold" ? 0.14f : 0.1f));
+                    q.Rect(0, 0, N, 1, HA("#e8f0ff", 0.18f)); q.Rect(0, 0, 1, N, HA("#e8f0ff", 0.18f)); q.Rect(0, 16, N, 1, HA("#e8f0ff", 0.12f)); q.Rect(16, 0, 1, N, HA("#e8f0ff", 0.12f));
+                    break;
+                case "rest":    // 따뜻한 마름모 리놀륨
+                    q.Rect(0, 0, N, N, HA("#7a4a3a", 0.18f));
+                    for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) if ((Mathf.Abs(x - 16) + Mathf.Abs(y - 16)) == 12) q.Rect(x, y, 1, 1, HA("#e0a080", 0.16f));
+                    break;
+                case "store": case "mech":   // 콘크리트 얼룩 + (기계실) 체크 철판
+                    q.Rect(0, 0, N, N, HA("#4a4640", 0.18f));
+                    for (int i = 0; i < 9; i++) q.Rect((i * 11 + 5) % N, (i * 7 + 3) % N, 2, 1, HA("#0d0d0c", 0.25f));
+                    if (kind == "mech") for (int y = 2; y < N; y += 6) for (int x = (y / 6 % 2) * 3 + 1; x < N; x += 6) q.Rect(x, y, 2, 1, HA("#9aa4b0", 0.22f));
+                    break;
+                case "iso":     // 배수구 격자
+                    q.Rect(0, 0, N, N, HA("#2c5048", 0.16f));
+                    for (int y = 4; y < N; y += 8) for (int x = 4; x < N; x += 8) q.Rect(x, y, 2, 2, HA("#071210", 0.4f));
+                    break;
+                case "sec":     // 어두운 철판 + 노란 테두리 선
+                    q.Rect(0, 0, N, N, HA("#20242e", 0.25f));
+                    q.Rect(0, 0, N, 1, HA("#d9b23a", 0.14f)); q.Rect(0, 0, 1, N, HA("#d9b23a", 0.14f));
+                    break;
+                case "wing":    // 보라빛 헤링본
+                    for (int y = 0; y < N; y += 4) for (int x = 0; x < N; x += 8) q.Rect(x + ((y / 4) % 2) * 4, y, 4, 1, HA("#b48cf0", 0.12f));
+                    break;
+                case "hall":    // 큰 타일
+                    q.StrokeRect(0, 0, N, N, HA("#9aa8ff", 0.08f));
+                    break;
+                case "exit": case "lift":  // 바닥 안내선
+                    q.Rect(0, 14, N, 3, HA("#7fe0b0", 0.12f));
+                    break;
+            }
+            return q.Pixels;
+        }
+
         // 4방향 스프라이트 (오른쪽, 아래, 왼쪽, 위). 없으면 null.
         public static Sprite[] Dir(string key)
         {
@@ -189,6 +293,42 @@ namespace Specimen07
                     q.RoundRect(ox - 13, oy - 9, 26, 18, 3, H("#86939c")); q.RoundRect(ox - 10, oy - 6, 20, 12, 2, H("#5b6870"));
                     q.Rect(ox - 17, oy - 8, 2.5f, 16, H("#cfd6da")); q.Rect(ox - 6, oy - 4, 7, 6, H("#e7d9a8")); q.Rect(ox + 3, oy - 3, 5, 5, H("#9fc6e0"));
                     return q.ToSprite(key);
+                case "obj_plant":   // 화분 (위에서 본 모습): 테라코타 화분 + 잎사귀
+                    q = new Painter(32, 32);
+                    q.Circle(17.5f, 18.5f, 10, new Color(0, 0, 0, 0.35f));
+                    q.Circle(16, 16, 9.5f, H("#5a2e1e")); q.Circle(16, 16, 8.3f, H("#b4603c")); q.Circle(16, 16, 6.6f, H("#3b2a20"));
+                    q.Ellipse(11, 12, 6, 3.2f, H("#2f7a45")); q.Ellipse(21, 13, 5.5f, 3, H("#3d9456")); q.Ellipse(15, 21, 3.2f, 6, H("#2f7a45"));
+                    q.Ellipse(20, 20, 4.5f, 3, H("#4fae68")); q.Ellipse(13, 15, 3.5f, 2.2f, H("#5cc277")); q.Circle(16, 16, 1.6f, H("#7fd88f"));
+                    return q.ToSprite(key);
+                case "obj_water":   // 정수기: 흰 몸통 + 파란 물통
+                    q = new Painter(32, 32);
+                    q.RoundRect(8, 9, 20, 20, 3, new Color(0, 0, 0, 0.35f));
+                    q.RoundRect(6, 6, 20, 20, 3, H("#3c4650")); q.RoundRect(7, 7, 18, 18, 2.5f, H("#e3e8ec"));
+                    q.Circle(16, 14.5f, 6.5f, H("#2b6fa8")); q.Circle(16, 14.5f, 5.4f, H("#5fb0e8")); q.Circle(14, 12.5f, 2, H("#bfe6ff"));
+                    q.Rect(11, 22, 3, 2, H("#e0505a")); q.Rect(18, 22, 3, 2, H("#4a8ee0"));
+                    return q.ToSprite(key);
+                case "obj_box":     // 골판지 상자: 테이프 십자
+                    q = new Painter(32, 32);
+                    q.Rect(8, 9, 21, 20, new Color(0, 0, 0, 0.35f));
+                    q.Rect(6, 6, 21, 20, H("#5e4026")); q.Rect(7, 7, 19, 18, H("#c08a52")); q.Rect(7, 7, 19, 3, H("#d6a066"));
+                    q.Rect(15, 7, 3, 18, H("#e3c79a")); q.Rect(9, 18, 5, 4, H("#f2efe6")); q.Rect(10, 19, 3, 1, H("#5e4026"));
+                    return q.ToSprite(key);
+                case "obj_desk":    // 책상: 나무 상판 + 모니터 + 서류 (변신하면 이 크기로 보인다)
+                    q = new Painter(40, 32);
+                    q.Rect(4, 6, 35, 24, new Color(0, 0, 0, 0.35f));
+                    q.Rect(2, 4, 35, 24, H("#4a3326")); q.Rect(3, 5, 33, 22, H("#9a6e4c")); q.Rect(3, 5, 33, 3, H("#b48460"));
+                    q.Rect(6, 8, 12, 8, H("#1e2329")); q.Rect(7, 9, 10, 6, H("#5fc0e8")); q.Rect(11, 16, 2, 2, H("#1e2329"));
+                    q.Rect(22, 10, 8, 10, H("#f2efe6")); q.Rect(24, 12, 5, 1, H("#9aa4ad")); q.Rect(24, 14, 4, 1, H("#9aa4ad"));
+                    q.Circle(31, 22, 2.2f, H("#e8e2d4")); q.Circle(31, 22, 1.3f, H("#6a3e24"));
+                    return q.ToSprite(key);
+                case "obj_shelf":   // 선반: 철제 틀 + 칸칸이 상자
+                    q = new Painter(40, 32);
+                    q.Rect(4, 8, 35, 20, new Color(0, 0, 0, 0.35f));
+                    q.Rect(2, 6, 35, 20, H("#20272d")); q.Rect(3, 7, 33, 18, H("#46535d"));
+                    q.Rect(5, 9, 8, 7, H("#c08a52")); q.Rect(14, 10, 6, 6, H("#7fb0d0")); q.Rect(22, 9, 9, 7, H("#d6a066")); q.Rect(31, 11, 3, 5, H("#e3e8ec"));
+                    q.Rect(3, 16, 33, 1, H("#20272d"));
+                    q.Rect(6, 18, 6, 6, H("#9fc6a0")); q.Rect(13, 18, 9, 6, H("#c08a52")); q.Rect(24, 19, 5, 5, H("#e0505a")); q.Rect(30, 18, 4, 6, H("#7fb0d0"));
+                    return q.ToSprite(key);
                 case "player_blob":
                     q = new Painter(32, 32);
                     q.Ellipse(16, 16.5f, 13.5f, 13.5f, H("#6e1f33"));
@@ -314,6 +454,7 @@ namespace Specimen07
         {
             public int w, h; Color[] px;
             public Painter(int w, int h) { this.w = w; this.h = h; px = new Color[w * h]; }
+            public Color[] Pixels { get { return px; } }
             public void Px(int x, int y, Color c)
             {
                 if (x < 0 || y < 0 || x >= w || y >= h) return;

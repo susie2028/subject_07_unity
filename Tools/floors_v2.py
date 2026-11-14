@@ -105,6 +105,7 @@ class Floor:
                     for x in range(x0 + 4, x0 + w - 4, 7):
                         for y in (y0 + 2, y0 + h - 3):
                             place('S', x, y, 2, 1, clear=0)
+                s.scatter(idx, r, free, used, seed)
                 continue
             ix0, iy0, ix1, iy1 = x0 + 2, y0 + 2, x0 + w - 3, y0 + h - 3      # 벽에서 2칸 띄운 안쪽
             # 1) 윗벽을 따라 가구 (벽면 조명 아래)
@@ -132,7 +133,11 @@ class Floor:
                 for y in range(y0 + 3, y0 + h - 1, 3):
                     for x in range(x0 + 2, x0 + w - 2):
                         if x not in (mid, mid + 1): place(ch, x, y, clear=0)
-            elif kind in ('office', 'wing', 'dir'):                         # 책상 묶음 (2x2)
+            elif kind == 'dir':                                            # 소장실: 가운데 큰 책상 하나 + 양옆 책장, 앞쪽은 비워 둔다 (러그)
+                cx = x0 + w // 2
+                place('T', cx - 2, y0 + 4, 4, 1, clear=0)
+                for xx in (x0 + 2, x0 + w - 3): place('S', xx, y0 + 2, 1, 2, clear=0)
+            elif kind in ('office', 'wing'):                               # 책상 묶음 (2x2)
                 for y in range(y0 + 3, y0 + h - 3, 4):
                     for x in range(x0 + 2, x0 + w - 3, 4):
                         place('T', x, y, 2, 2, clear=0)
@@ -142,12 +147,29 @@ class Floor:
                         place('T', x, y, 2, 1, clear=0); place('S', x + 3, y, clear=0)
             elif kind == 'iso':
                 for (x, y) in [(ix0 + 1, iy1), (ix1 - 1, iy1)]: place('M', x, y)
-            # 물건 (먹고 변신할 수 있는 것): 쓰레기통은 벽에, 의자는 책상 옆, 카트는 창고
-            k = 0
-            for _ in range(30):
-                if k >= max(2, (w * h) // 45): break
-                form = rnd.choice(['trash', 'trash', 'chair', 'chair'] + (['cart', 'cart'] if kind in ('store', 'mech') else []))
-                if form == 'trash' or form == 'cart':
+            s.scatter(idx, r, free, used, seed)
+
+    # 물건 (먹고 변신할 수 있는 것). 방 종류마다 어울리는 것: 벽에 붙는 것(쓰레기통·카트·화분·정수기)은 벽에, 나머지는 안쪽
+    # 가구 배치와 따로 굴리는 난수라 물건을 바꿔도 가구 배치는 그대로다
+    OBJ_BY_KIND = {
+        'office': ['chair', 'chair', 'plant', 'water', 'trash', 'box'], 'wing': ['chair', 'plant', 'water', 'trash', 'box'],
+        'dir': ['plant', 'plant', 'water', 'chair'], 'rest': ['plant', 'water', 'chair', 'chair', 'trash'],
+        'lab': ['chair', 'chair', 'trash', 'box', 'water'], 'sec': ['chair', 'trash', 'box', 'water'], 'cold': ['box', 'box', 'trash', 'cart'],
+        'store': ['box', 'box', 'box', 'cart', 'trash'], 'mech': ['box', 'box', 'cart', 'trash'], 'iso': ['trash', 'box', 'chair'],
+        'exit': ['box', 'trash'], 'hall': ['plant', 'plant', 'water', 'trash'],
+    }
+    WALL_FORMS = ('trash', 'cart', 'plant', 'water')
+    def scatter(s, idx, r, free, used, seed):
+        name, x0, y0, w, h, kind = r[:6]
+        rnd = random.Random(seed * 1000 + idx * 17 + 5)
+        forms = s.OBJ_BY_KIND.get(kind, ['trash', 'chair'])
+        want = max(2, (w * h) // 38) if kind != 'hall' else max(1, (w * h) // 90)
+        k = 0
+        for _ in range(60):
+            if k >= want: break
+            form = rnd.choice(forms)
+            if True:
+                if form in s.WALL_FORMS:
                     side = rnd.choice(['l', 'r', 'b'])
                     if side == 'l': ox, oy = x0, rnd.randint(y0 + 1, y0 + h - 2)
                     elif side == 'r': ox, oy = x0 + w - 1, rnd.randint(y0 + 1, y0 + h - 2)
@@ -196,6 +218,8 @@ f.npc('b1r2', 'researcher', '휴게실 연구원', [(20, 27, 2.6, 90), (20, 27, 
 f.npc('b1c', 'cleaner', '청소부 이 씨', [(6, 28, 1.8, 180), (6, 16, 1.0), (16, 16, 0.8), (40, 16, 0.6), (49, 16, 2.0, 0), (40, 16, 0.6), (24, 28, 1.5, 90), (13, 27, 0.6)])
 f.npc('b1r3', 'researcher', '격리실 B 연구원', [(45, 8, 2.0, 0), (52, 8, 1.4, -90), (52, 4, 1.2, 180), (44, 4, 1.4, 90)], pal='researcher2')
 f.npc('b1r4', 'researcher', '소독실 연구원', [(5, 17, 2.2, 0), (9, 14, 1.4, 90), (3, 14, 1.4, 90)])
+f.npc('b1r5', 'researcher', '보관실 연구원', [(31, 3, 2.0, 0), (38, 8, 1.6, 180), (31, 8, 1.2, 90)])
+f.npc('b1r6', 'researcher', '의무실 연구원', [(47, 14, 2.2, 0), (52, 18, 1.6, 180)], pal='researcher2')
 f.decorate(101); FLOORS.append(f)
 
 # ======================================================================= 1F 연구동 (들키면 끝, 사람 변신)
@@ -225,6 +249,8 @@ f.npc('f1r5', 'researcher', '연구원 윤', [(18, 14, 0.6), (44, 14, 0.6), (44,
 f.npc('f1r6', 'researcher', '연구실 2 연구원', [(4, 15, 1.8, 0), (11, 22, 1.6, 90), (4, 22, 1.2, -90)])
 f.npc('f1r7', 'researcher', '휴게실 연구원', [(30, 31, 2.4, 0), (36, 28, 1.6, 180), (30, 34, 1.4, 90)])
 f.npc('f1c', 'cleaner', '청소부 정 씨', [(18, 33, 2.0, 0), (19, 22, 1.0), (28, 30, 0.8), (45, 33, 1.6, 0), (28, 30, 0.6), (12, 18, 1.2)])
+f.npc('f1r8', 'researcher', '사무실 연구원', [(33, 3, 2.0, 0), (44, 8, 1.8, 180)], pal='researcher2')
+f.npc('f1c2', 'cleaner', '청소부 문 씨', [(50, 3, 2.0, 0), (60, 8, 1.6, 180), (55, 5, 1.0)])
 f.decorate(202); FLOORS.append(f)
 
 # ======================================================================= 2F 보안동 (경보, 검문소, 카트)
@@ -259,6 +285,8 @@ f.npc('f2r1', 'researcher', '대기실 연구원', [(63, 18, 2.4, 180), (63, 18,
 f.npc('f2r2', 'researcher', 'CCTV 담당', [(24, 33, 3.0, -90), (28, 31, 2.0, 0), (21, 35, 1.6, 90)])
 f.npc('f2r3', 'researcher', '취조실 연구원', [(51, 5, 2.4, 90), (54, 8, 1.6, 180), (49, 8, 1.4, 0)])
 f.npc('f2r4', 'researcher', '휴게실 연구원', [(47, 32, 2.6, 0), (53, 35, 1.8, 180)], pal='researcher2')
+f.npc('f2g8', 'guard', '장비실 경비', [(3, 3, 2.0, 0), (8, 9, 1.6, 180)])
+f.npc('f2r5', 'researcher', '샤워실 연구원', [(34, 30, 2.0, 0), (39, 36, 1.6, 180)], pal='researcher2')
 f.decorate(303); FLOORS.append(f)
 
 # ======================================================================= 3F 실험동 (레이저 + 환풍구)
@@ -295,6 +323,8 @@ f.npc('f3r6', 'researcher', '소독실 연구원', [(31, 26, 2.2, 90), (33, 38, 
 f.npc('f3r7', 'researcher', '배양실 연구원', [(41, 26, 2.0, 0), (49, 32, 1.8, 180), (42, 38, 1.4, 0)])
 f.npc('f3r8', 'researcher', '창고 연구원', [(4, 16, 2.0, 90), (7, 30, 1.6, -90), (4, 37, 1.4, 0)], pal='researcher2')
 f.npc('f3r9', 'researcher', '표본실 연구원', [(61, 23, 2.0, 0), (68, 37, 1.6, 180)])
+f.npc('f3g4', 'guard', '표본실 경비', [(60, 22, 1.8, 0), (68, 30, 1.4, 90), (60, 38, 1.6, 0)])
+f.npc('f3c', 'cleaner', '청소부 하 씨', [(20, 18, 1.2, 0), (44, 18, 1.2, 180)])
 f.decorate(404); FLOORS.append(f)
 
 # ======================================================================= 4F 소장실층 (군인, 가스)
@@ -333,6 +363,8 @@ f.npc('f4r3', 'researcher', '라운지 연구원', [(32, 34, 2.6, 0), (39, 40, 1
 f.npc('f4r4', 'researcher', '기록실 연구원', [(15, 34, 2.4, 0), (24, 40, 1.6, 180)], pal='researcher2')
 f.npc('f4r5', 'researcher', '서버실 연구원', [(47, 34, 2.4, 0), (54, 40, 1.8, 180)])
 f.npc('f4d', 'director', '연구소장', [(56, 22, 4.0, 180), (59, 18, 2.4, 90), (56, 22, 3.0, 0)])
+f.npc('f4r6', 'researcher', '비서실 연구원', [(31, 3, 2.2, 0), (38, 10, 1.6, 180)], pal='researcher2')
+f.npc('f4c', 'cleaner', '청소부 강 씨', [(3, 30, 2.0, 0), (8, 40, 1.6, 180)])
 f.decorate(505); FLOORS.append(f)
 
 # ======================================================================= 5F 옥상 (헬기)

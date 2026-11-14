@@ -152,7 +152,7 @@ namespace Specimen07
             S.elapsed = f.elapsed; S.alarms = f.alarms;
             if (f.floorId == "B1" && f.via == "start") { lastVia = "start"; EnterFloorVisual(); }
             else GoFloor(f.floorId, f.via);
-            if (Data.Forms.ContainsKey(f.form)) { S.player.form = f.form; S.player.timer = f.timer; }
+            if (Data.Forms.ContainsKey(f.form) && !Data.Forms[f.form].Big) { S.player.form = f.form; S.player.timer = f.timer; }
             SaveCheckpoint();
             BeginPlay();
             UpdateCamera(0, true);
@@ -197,6 +197,9 @@ namespace Specimen07
 
         void EnterFloorVisual()
         {
+            // 먹힌 책상·선반: 시간이 다 된 것은 이 층에 다시 들어올 때 제자리에 놓인다
+            Fl.tiles.RemoveAll(t => t.respawnT <= 0);
+            G.ApplyEaten(Fl.tiles); landCache.Clear();
             if (view != null) view.BuildFloor(G);
             var p = S.player;
             S.cam = new Vector2(p.x - Cfg.VTW / 2, p.y - Cfg.VTH / 2);
@@ -210,6 +213,7 @@ namespace Specimen07
             S.floorId = id; G = FloorGeo.All[id];
             var a = G.def.Arrive(via);
             p.x = a.x; p.y = a.y; p.eating = null;
+            if (Data.Forms[p.form].Big) { p.form = "body"; p.timer = 0; }   // 큰 가구 모습은 층을 옮기면 풀린다 (도착 자리가 좁을 수 있다)
             S.alarm = null; S.trail.Clear(); S.particles.Clear(); S.spot = 0; S.spotNpc = null; S.arriveT = Cfg.arriveGrace;
             foreach (var n in Fl.npcs) { n.state = NpcState.Patrol; n.path = null; n.lockT = 0; n.aim = 0; n.search = null; n.inspect = null; n.frozen = false; }
             Fl.npcs.RemoveAll(n => n.temp);
@@ -283,6 +287,7 @@ namespace Specimen07
             return FloorGeo.SOLID.Contains(c);
         }
         static bool Overlaps(float x, float y, float r, int tx, int ty) { return x + r > tx && x - r < tx + 1 && y + r > ty && y - r < ty + 1; }
+        public float PlayerR { get { return Data.Forms[S.player.form].radius; } }
         bool BoxBlocked(float x, float y, float r, float cx, float cy)
         {
             for (int ty = U.Floor(y - r); ty <= U.Floor(y + r); ty++)
@@ -344,7 +349,21 @@ namespace Specimen07
             }
             return LineClear(n.x, n.y, x, y);
         }
-        bool SeesPlayer(Npc n) { return n.alive && !PlayerHidden() && Sees(n, S.player.x, S.player.y); }
+        bool SeesPlayer(Npc n)
+        {
+            if (!n.alive || PlayerHidden()) return false;
+            var p = S.player;
+            if (PlayerInDark() && U.Dist(n.x, n.y, p.x, p.y) > Cfg.darkSeeR) return false;   // 어둠 속: 바로 옆이 아니면 못 알아챈다
+            return Sees(n, p.x, p.y);
+        }
+        // 어두운 칸에 숨어 있는가 (먹는 중엔 소리가 나서 안 됨)
+        public bool PlayerInDark()
+        {
+            var p = S.player;
+            if (p.eating != null || G.DarkAt(p.x, p.y) < Cfg.darkHide) return false;
+            var z = G.ZoneAt(p.x, p.y);
+            return z == null || z.kind != "roof";   // 옥상은 탁 트여 있어서 (군인 손전등) 어둠에 못 숨는다
+        }
 
         /* 격자 BFS 경로 (NPC별 출입 권한 반영) */
         int[] bfsPrev, bfsQ;
@@ -433,7 +452,55 @@ namespace Specimen07
                 float d = U.Dist(p.x, p.y, n.x, n.y);
                 if (d < bd) { bd = d; best = new EatTarget { isNpc = true, npc = n, form = n.ch }; }
             }
+            // 붙박이 가구 (책상·선반): 칸 가장자리까지의 거리로 잰다
+            int px = U.Floor(p.x), py = U.Floor(p.y);
+            for (int ty = py - 1; ty <= py + 1; ty++) for (int tx = px - 1; tx <= px + 1; tx++)
+            {
+                if (!EdibleTile(tx, ty)) continue;
+                float cx = Mathf.Clamp(p.x, tx, tx + 1), cy = Mathf.Clamp(p.y, ty, ty + 1);
+                float d = U.Dist(p.x, p.y, cx, cy) + 0.45f;   // 사람·물건이 가까이 있으면 그쪽이 먼저
+                if (d >= bd) continue;
+                var land = LandSpot(tx, ty);
+                if (!land.HasValue) continue;
+                bd = d; best = new EatTarget { tile = new EatenTile { x = tx, y = ty, ch = TileAt(tx, ty) }, form = Data.TileForms[TileAt(tx, ty)], land = land.Value };
+            }
             return best;
+        }
+        public bool EdibleTile(int tx, int ty)
+        {
+            char c = TileAt(tx, ty);
+            if (!Data.TileForms.ContainsKey(c)) return false;
+            return !WorldView3D.IsTankTile(G, tx, ty, G.Salt);   // 수조로 보이는 칸은 못 먹는다
+        }
+        // 큰 가구로 변신하면 덩치가 커지므로, 그 칸을 비운 뒤 몸이 들어갈 자리를 찾는다 (없으면 못 먹음)
+        readonly Dictionary<int, Vector2?> landCache = new Dictionary<int, Vector2?>();
+        Vector2? LandSpot(int tx, int ty)
+        {
+            int key = ty * G.w + tx; Vector2? res;
+            if (landCache.TryGetValue(key, out res)) return res;
+            float r = Data.Forms[Data.TileForms[TileAt(tx, ty)]].radius;
+            char keep = G.grid[ty, tx]; G.grid[ty, tx] = '.';
+            float cx0 = tx + 0.5f, cy0 = ty + 0.5f, bestD = 99;
+            for (int iy = -12; iy <= 12; iy++) for (int ix = -12; ix <= 12; ix++)
+            {
+                float x = cx0 + ix * 0.1f, y = cy0 + iy * 0.1f, d = U.Dist(x, y, cx0, cy0);
+                if (d > 1.2f || d >= bestD) continue;
+                if (BoxSolidAny(x, y, r)) continue;
+                bestD = d; res = new Vector2(x, y);
+            }
+            G.grid[ty, tx] = keep;
+            landCache[key] = res;
+            return res;
+        }
+        bool BoxSolidAny(float x, float y, float r)
+        {
+            for (int ty = U.Floor(y - r); ty <= U.Floor(y + r); ty++)
+                for (int tx = U.Floor(x - r); tx <= U.Floor(x + r); tx++)
+                {
+                    char c = TileAt(tx, ty);
+                    if (FloorGeo.SOLID.Contains(c) || c == '>' || c == '<' || ActiveTrapAt(tx + 0.5f, ty + 0.5f) != null) return true;
+                }
+            return false;
         }
         public int NearDoor()
         {
@@ -516,6 +583,7 @@ namespace Specimen07
             }
             var t = NearestEdible();
             if (t == null) return;
+            if (p.eatCd > 0) { Snd("deny"); Toast("아직 소화 중… " + Mathf.CeilToInt(p.eatCd) + "초"); return; }
             if (OthersSee(t.Ref)) { Snd("deny"); Toast("누가 보고 있다"); return; }
             if (t.isNpc && p.form == "body" && SeesPlayer(t.npc)) { Snd("deny"); Toast("눈이 마주쳤다 — 뒤로 돌아가거나 변장할 것"); return; }
             p.eating = new Eating { target = t, t = 0 };
@@ -541,9 +609,19 @@ namespace Specimen07
                         GainCards(n.ch);
                         if (!n.temp) Fl.missing.Add(new Missing { t = Cfg.missingDelay, x = n.x, y = n.y, label = n.label });
                     }
+                    else if (tg.IsTile)
+                    {
+                        // 책상·선반: 칸을 비우고 그 자리에 큰 몸으로 선다
+                        tg.tile.respawnT = Cfg.respawn;
+                        Fl.tiles.Add(tg.tile);
+                        G.ApplyEaten(Fl.tiles); landCache.Clear();
+                        foreach (var n in Fl.npcs) n.path = null;
+                        p.x = tg.land.x; p.y = tg.land.y;
+                        if (view != null) view.BuildFloor(G);
+                    }
                     else { tg.obj.alive = false; tg.obj.respawnT = Cfg.respawn; }
                     for (int i = 0; i < 16; i++) SpawnParticle(p.x, p.y, i % 2 != 0 ? Data.Hex("#ff8a98") : Data.Hex("#ffc2ca"), U.Rand(1.5f, 4), U.Rand(0.3f, 0.7f), U.Rand(1.5f, 3));
-                    p.eating = null;
+                    p.eating = null; p.eatCd = Cfg.eatCooldown;
                     SetForm(tg.form);
                     Snd("morph");
                 }
@@ -558,12 +636,13 @@ namespace Specimen07
                     p.moved = true;
                     p.face = Mathf.Atan2(v.y, v.x);
                     float nx = p.x + v.x * spd * dt;
-                    if (!BoxBlocked(nx, p.y, Cfg.playerR, p.x, p.y)) p.x = nx;
+                    if (!BoxBlocked(nx, p.y, f.radius, p.x, p.y)) p.x = nx;
                     float ny = p.y + v.y * spd * dt;
-                    if (!BoxBlocked(p.x, ny, Cfg.playerR, p.x, p.y)) p.y = ny;
+                    if (!BoxBlocked(p.x, ny, f.radius, p.x, p.y)) p.y = ny;
                 }
             }
             p.speedNow = dt > 0 ? U.Dist(ox, oy, p.x, p.y) / dt : 0;
+            if (p.eatCd > 0) p.eatCd -= dt;
 
             // 변신 타이머
             var fm = Data.Forms[p.form];
@@ -734,7 +813,7 @@ namespace Specimen07
                 Fl.npcs.Add(n);
                 k++;
             }
-            if (k > 0) Toast(Data.Chars[G.def.reinforce[0].ch].name + " " + k + "명 출동");
+            if (k > 0) { if (hud != null) hud.Alert("⚠ " + Data.Chars[G.def.reinforce[0].ch].name + " " + k + "명 출동", "출입구에서 진입 중 — 숨을 곳을 찾아라"); Snd("siren"); }
         }
 
         void EndAlarm()
@@ -981,6 +1060,7 @@ namespace Specimen07
                 o.respawnT -= dt;
                 if (o.respawnT <= 0) { if (U.Dist(o.x, o.y, S.player.x, S.player.y) > 4) o.alive = true; else o.respawnT = 3; }
             }
+            foreach (var t in F.tiles) if (t.respawnT > 0) t.respawnT -= dt;
             // 실종 신고
             foreach (var m in F.missing.ToArray()) { m.t -= dt; if (m.t <= 0 && !m.done) { m.done = true; ReportMissing(m); } }
             F.missing.RemoveAll(m => m.done);
@@ -1084,6 +1164,61 @@ namespace Specimen07
         public bool AnyLocked() { return Fl.npcs.Any(n => n.alive && n.state == NpcState.Chase && n.lockT > 0); }
 
         // 화면 아래 안내 문구. note=true면 게시물(종이) 스타일
+        /* ===== 상호작용 테두리: 먹을 수 있는 것·문·콘솔·엘리베이터 =====
+           strong = 지금 [E]를 누르면 반응할 대상 (굵게·맥박), 나머지는 가까이 있으면 옅게 */
+        public enum HiKind { Obj, Npc, Tile, Door, Console, Lift }
+        public struct Highlight { public HiKind kind; public object target; public int tx, ty; public bool strong; public Color color; }
+        static readonly Color HI_EAT = new Color(1f, 0.49f, 0.55f), HI_BLOCK = new Color(1f, 0.32f, 0.28f), HI_CONSOLE = new Color(1f, 0.83f, 0.42f), HI_LIFT = new Color(0.5f, 0.88f, 0.69f);
+        public void CollectHighlights(List<Highlight> list)
+        {
+            list.Clear();
+            if (S == null || mode != Mode.Play) return;
+            var p = S.player;
+            int dr = NearDoor(); var cn = dr < 0 ? NearConsole() : null; bool lift = dr < 0 && cn == null && NearLift();
+            var tgt = dr < 0 && cn == null && !lift && p.eating == null ? NearestEdible() : null;
+            bool blocked = tgt != null && (p.eatCd > 0 || (S.anySee && OthersSee(tgt.Ref)));
+            float pulse = 0.75f + 0.25f * Mathf.Sin(S.time * 7);
+            Func<Color, float, Color> A = (c, a) => new Color(c.r, c.g, c.b, a);
+            Color strongEat = A(blocked ? HI_BLOCK : HI_EAT, pulse), softEat = A(HI_EAT, 0.55f);
+
+            // 먹을 수 있는 물건 (4칸 안, 보이는 것)
+            foreach (var o in Fl.objects)
+            {
+                if (!o.alive || U.Dist(p.x, p.y, o.x, o.y) > 4f || !PlayerCanSee(o.x, o.y)) continue;
+                bool st = tgt != null && tgt.obj == o;
+                list.Add(new Highlight { kind = HiKind.Obj, target = o, strong = st, color = st ? strongEat : softEat });
+            }
+            if (tgt != null && tgt.isNpc) list.Add(new Highlight { kind = HiKind.Npc, target = tgt.npc, strong = true, color = strongEat });
+            // 책상·선반: 가까울 때만 (방마다 많아서)
+            int px = U.Floor(p.x), py = U.Floor(p.y);
+            for (int ty = py - 2; ty <= py + 2; ty++) for (int tx = px - 2; tx <= px + 2; tx++)
+            {
+                if (!EdibleTile(tx, ty)) continue;
+                bool st = tgt != null && tgt.IsTile && tgt.tile.x == tx && tgt.tile.y == ty;
+                if (!st && (U.Dist(p.x, p.y, tx + 0.5f, ty + 0.5f) > 2.2f || !PlayerCanSee(tx + 0.5f, ty + 0.5f) || !LandSpot(tx, ty).HasValue)) continue;
+                list.Add(new Highlight { kind = HiKind.Tile, tx = tx, ty = ty, strong = st, color = st ? strongEat : softEat });
+            }
+            // 문 (닫힌 것): 카드 색. 열 수 없으면 옅게
+            for (int i = 0; i < G.def.doors.Length; i++)
+            {
+                var d = G.def.doors[i];
+                if (Fl.doors[i].open || U.Dist(p.x, p.y, d.x + 0.5f, d.y + 0.5f) > 3f) continue;
+                bool st = i == dr; var c = Data.Cards[d.req].color;
+                list.Add(new Highlight { kind = HiKind.Door, target = d, tx = d.x, ty = d.y, strong = st, color = A(c, st ? pulse : HasCard(d.req) ? 0.6f : 0.35f) });
+            }
+            foreach (var c in G.def.consoles)
+            {
+                if (U.Dist(p.x, p.y, c.x + 0.5f, c.y + 0.5f) > 3f) continue;
+                bool st = ReferenceEquals(c, cn);
+                list.Add(new Highlight { kind = HiKind.Console, target = c, tx = c.x, ty = c.y, strong = st, color = A(HI_CONSOLE, st ? pulse : 0.55f) });
+            }
+            if (G.def.lift != null) foreach (var t in G.def.lift)
+            {
+                if (U.Dist(p.x, p.y, t.x + 0.5f, t.y + 0.5f) > 3f) continue;
+                list.Add(new Highlight { kind = HiKind.Lift, tx = t.x, ty = t.y, strong = lift, color = A(HI_LIFT, lift ? pulse : 0.55f) });
+            }
+        }
+
         public string Hint(out bool note)
         {
             note = false;
@@ -1108,8 +1243,11 @@ namespace Specimen07
             if (trap != null) return "<b>" + trap.label + "</b> 가동 중 — 닿으면 죽는다";
             if (notice != null) { note = true; return notice.text; }
             if (tgt != null) return S.anySee && OthersSee(tgt.Ref) ? "누가 보고 있어서 먹을 수 없다" :
-                    "[E] " + Data.Forms[tgt.form].name + " 먹기" + (tgt.isNpc ? (p.form == "body" ? " · 뒤에서 접근할 것" : " · 변장 중이라 덮칠 수 있다") : "");
+                    p.eatCd > 0 ? "소화 중… " + Mathf.CeilToInt(p.eatCd) + "초 뒤에 먹을 수 있다" :
+                    "[E] " + Data.Forms[tgt.form].name + " 먹기" + (tgt.isNpc ? (p.form == "body" ? " · 뒤에서 접근할 것" : " · 변장 중이라 덮칠 수 있다") : Data.Forms[tgt.form].Big ? " · 덩치가 커서 문은 못 지나간다" : "");
             if (PlayerHidden()) return "환풍구 안 — 아무도 볼 수 없다";
+            if (PlayerInDark() && !S.anySee) return "어둠 속 — 바로 옆까지 오지 않으면 못 알아챈다";
+            if (f.Big) return f.name + " — 방 안에 숨기 좋다 · 문은 너무 좁아서 못 나간다";
             if (f.type == FormType.Body) return G.def.lethal ? "본모습은 누구에게도 보이면 안 된다" : "본모습을 들키면 경보가 울린다";
             if (p.form == "cart") return "카트는 보는 앞에서도 천천히 굴러갈 수 있다";
             if (f.type == FormType.Object) return f.zone == "wall" ? "보는 앞에서는 멈출 것 · 벽에 붙어 있어야 자연스럽다" : "보는 앞에서는 멈출 것";

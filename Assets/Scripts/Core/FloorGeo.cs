@@ -89,6 +89,49 @@ namespace Specimen07
                 }
             }
             foreach (var l in d.extraLights) lights.Add(new LightSrc { x = l.x, y = l.y, r = l.r, i = l.i, flick = l.flick, tint = l.tint });
+            orig = (char[,])grid.Clone();
+        }
+
+        /* ===== 먹힌 가구: 원래 격자에서 칸을 비운다 ===== */
+        char[,] orig;
+        public int Salt { get { int s = 0; foreach (char c in id) s += c; return s; } }
+        public char OrigTile(int tx, int ty) { if (tx < 0 || ty < 0 || tx >= w || ty >= h) return '#'; return orig[ty, tx]; }
+        // 진행 상태(먹힌 칸 목록)를 격자에 반영. 층에 들어올 때·불러올 때·칸이 바뀔 때 부른다
+        public void ApplyEaten(List<EatenTile> eaten)
+        {
+            System.Array.Copy(orig, grid, orig.Length);
+            if (eaten != null) foreach (var t in eaten) if (t.x >= 0 && t.y >= 0 && t.x < w && t.y < h) grid[t.y, t.x] = '.';
+        }
+
+        /* ===== 어둠 지도 (칸 단위, 0 = 밝음 ~ 1 = 캄캄). 화면 어둠과 같은 계산이라 "어두워 보이는 곳 = 숨을 수 있는 곳" ===== */
+        float[] darkMap;
+        public float DarkAt(float x, float y)
+        {
+            int tx = Mathf.FloorToInt(x), ty = Mathf.FloorToInt(y);
+            if (tx < 0 || ty < 0 || tx >= w || ty >= h) return 1;
+            if (darkMap == null) BuildDark();
+            return darkMap[ty * w + tx];
+        }
+        void BuildDark()
+        {
+            darkMap = new float[w * h];
+            float baseDark = Mathf.Min(Cfg.maxDark, def.dark * Cfg.darkMul);
+            for (int i = 0; i < darkMap.Length; i++) darkMap[i] = baseDark;
+            var all = new List<LightSrc>();
+            foreach (var l in lights) all.Add(new LightSrc { x = l.x, y = l.y, r = l.r * Cfg.roomLightR, i = l.i * Cfg.roomLightI });
+            WorldView.CollectProps(this, all, new List<WorldView.Glow>());
+            foreach (var l in all)
+            {
+                int x0 = Mathf.Max(0, Mathf.FloorToInt(l.x - l.r)), x1 = Mathf.Min(w - 1, Mathf.CeilToInt(l.x + l.r));
+                int y0 = Mathf.Max(0, Mathf.FloorToInt(l.y - l.r)), y1 = Mathf.Min(h - 1, Mathf.CeilToInt(l.y + l.r));
+                for (int yy = y0; yy <= y1; yy++) for (int xx = x0; xx <= x1; xx++)
+                {
+                    float t = Mathf.Sqrt((xx + 0.5f - l.x) * (xx + 0.5f - l.x) + (yy + 0.5f - l.y) * (yy + 0.5f - l.y)) / l.r;
+                    if (t >= 1) continue;
+                    float a = t < 0.55f ? Mathf.Lerp(l.i, l.i * 0.7f, t / 0.55f) : Mathf.Lerp(l.i * 0.7f, 0, (t - 0.55f) / 0.45f);
+                    darkMap[yy * w + xx] *= 1 - a;
+                }
+            }
         }
 
         void Put(char ch, int x, int y, int fw, int fh)

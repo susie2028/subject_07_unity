@@ -186,6 +186,7 @@ namespace Specimen07
             if (dynRoot != null) Destroy(dynRoot.gameObject);
             floorRoot = new GameObject("Floor3D_" + g.id).transform;
             dynRoot = new GameObject("Dynamic3D").transform;
+            outlinePool.Clear(); framePool.Clear();
             objPool.Clear(); npcPool.Clear(); shadowPool.Clear(); trailPool.Clear(); fxPool.Clear(); aimRingPool.Clear(); conePool.Clear(); aimPool.Clear();
             doors.Clear(); traps.Clear(); consoleLeds.Clear(); liftLeds.Clear(); lamps.Clear(); bubbles.Clear();
             models.Clear(); modelUsed.Clear(); playerModel = null;
@@ -237,7 +238,7 @@ namespace Specimen07
             var lgo = new GameObject("PlayerLight"); lgo.transform.SetParent(dynRoot, false);
             playerLight = lgo.AddComponent<Light>(); playerLight.type = LightType.Point; playerLight.range = PLAYER_LIGHT_R; playerLight.intensity = PLAYER_LIGHT_I;
             playerLight.color = new Color(0.78f, 0.62f, 1f); playerLight.shadows = LightShadows.None;   // 길게 늘어지는 그림자 없음 (캐릭터 발밑 그림자만)
-            fog = NewMesh("Fog", fogMat);
+            fog = NewMesh("Fog", fogMat); fogD = null;
             shotLine = NewLine(); shotLine.startColor = shotLine.endColor = new Color(1, 230 / 255f, 160 / 255f, 0.9f); shotLine.widthMultiplier = 0.06f;
         }
 
@@ -279,7 +280,7 @@ namespace Specimen07
                         {
                             string fk; bool redFix;
                             if (WorldView.IsFixture(g, x, y + 1, out redFix)) fk = redFix ? "wall_face_alarm" : "wall_face_light";
-                            else { int r = WorldView.Hash(x, y + 1, salt + 5); fk = r < 6 ? "wall_face_poster" : r < 12 ? "wall_face_note" : "wall_face"; }
+                            else fk = WorldView.WallFace(zs != null ? zs.kind : "hall", x, y + 1, salt);
                             var spr = Art.Get(WorldView.Pick(fk, "wall_face"));
                             front = TexMat(spr, false); fuv = UV(spr);
                         }
@@ -295,7 +296,7 @@ namespace Specimen07
                 }
 
                 // 바닥
-                var fspr = Art.Get(WorldView.Variant("tile_floor_" + kind, x, y, salt, WorldView.FLOOR_V, WorldView.FLOOR_W));
+                var fspr = Art.FloorTile(WorldView.Variant("tile_floor_" + kind, x, y, salt, WorldView.FLOOR_V, WorldView.FLOOR_W), kind, g.id);   // 층·방마다 무늬와 색
                 Top(TexMat(fspr, false), x, y, x + 1, y + 1, 0, UV(fspr));
 
                 // 가구
@@ -350,6 +351,12 @@ namespace Specimen07
                     Sides(tank, tank, f.x + 0.15f, f.y + 0.15f, f.x + f.w - 0.15f, f.y + f.h - 0.15f, 0, 1.6f, true, true, true, FULL);
                 }
             }
+            foreach (var dc in WorldView.RoomDecals(g))
+            {
+                var spr = Art.Get(dc.key);
+                Top(TexMat(spr, true), dc.x, dc.y, dc.x + dc.w, dc.y + dc.h, 0.006f, UV(spr));
+            }
+            BuildDirectorProps(salt);
             if (g.def.pad.HasValue) { var p = g.def.pad.Value; var spr = Art.Get("helipad"); Top(TexMat(spr, true), p.x, p.y, p.x + p.w, p.y + p.h, 0.012f, UV(spr)); }
             if (g.def.tank.HasValue) { var t = g.def.tank.Value; var spr = Art.Get("tank_broken"); Top(TexMat(spr, true), t.x - 2, t.y - 2, t.x + 2, t.y + 2, 0.014f, UV(spr)); }
             Flush(floorRoot);
@@ -358,7 +365,7 @@ namespace Specimen07
             foreach (var z in g.zones)
             {
                 if (!z.label || z.x1 - z.x0 < 4) continue;
-                Label(z.name, (z.x0 + z.x1 + 1) / 2f, z.y1 + 0.35f, 0.6f, new Color(220 / 255f, 235 / 255f, 230 / 255f, 0.12f));
+                Label(z.name, (z.x0 + z.x1 + 1) / 2f, z.y1 + 0.3f, 0.85f, new Color(225 / 255f, 238 / 255f, 255 / 255f, 0.4f));   // 피드백: 방 이름이 읽히게
             }
             foreach (var s in g.def.stairs) Label((s.dir == '>' ? "▲ " : "▼ ") + s.to, s.x + s.w / 2f, s.y + s.h / 2f, 0.4f, Data.Hex("#7fe0b0"));
         }
@@ -487,6 +494,11 @@ namespace Specimen07
         // Resources/Models/obj_<이름> 프리팹이 있으면 그걸 쓰고, 없으면 상자로 만든 임시 모형.
         // 모형 기준: 바닥 가운데가 원점, 1칸 크기, 앞(+z)이 북쪽.
         readonly Dictionary<string, List<Transform>> models = new Dictionary<string, List<Transform>>();
+        readonly List<Game.Highlight> his = new List<Game.Highlight>();
+        readonly Dictionary<object, Game.Highlight> hiOf = new Dictionary<object, Game.Highlight>();
+        readonly List<SpriteOutline> outlinePool = new List<SpriteOutline>();
+        readonly List<BoxFrame> framePool = new List<BoxFrame>();
+        int oli;
         readonly Dictionary<string, int> modelUsed = new Dictionary<string, int>();
         Transform playerModel; string playerModelForm;
         Mesh prism;
@@ -527,6 +539,45 @@ namespace Specimen07
                 Cyl(root, rim, 0, 0.54f, 0, 0.235f, 0.06f);
                 Cyl(root, inside, 0, 0.6f, 0, 0.19f, 0.004f);
                 Part(root, rim, 0, 0.2f, -0.21f, 0.12f, 0.1f, 0.03f);                 // 앞 라벨
+            }
+            else if (form == "plant")   // 화분: 테라코타 화분 + 줄기 + 잎 뭉치
+            {
+                Material pot = ColMat(Data.Hex("#b4603c")), rim = ColMat(Data.Hex("#8a4429")), soil = ColMat(Data.Hex("#3b2a20")), leaf = ColMat(Data.Hex("#3d9456")), leaf2 = ColMat(Data.Hex("#2f7a45")), stem = ColMat(Data.Hex("#4b6b3a"));
+                Cyl(root, pot, 0, 0, 0, 0.19f, 0.36f); Cyl(root, rim, 0, 0.33f, 0, 0.22f, 0.07f); Cyl(root, soil, 0, 0.4f, 0, 0.18f, 0.005f);
+                Part(root, stem, 0, 0.38f, 0, 0.05f, 0.34f, 0.05f);
+                Part(root, leaf, -0.13f, 0.62f, 0.02f, 0.26f, 0.2f, 0.22f); Part(root, leaf2, 0.13f, 0.58f, -0.04f, 0.24f, 0.18f, 0.24f);
+                Part(root, leaf, 0.02f, 0.74f, 0.08f, 0.24f, 0.22f, 0.2f); Part(root, leaf2, 0.04f, 0.66f, -0.14f, 0.2f, 0.16f, 0.16f);
+            }
+            else if (form == "water")   // 정수기: 흰 몸통 + 위에 파란 물통
+            {
+                Material body = ColMat(Data.Hex("#e3e8ec")), dark = ColMat(Data.Hex("#3c4650")), bottle = ColMat(new Color(0.37f, 0.69f, 0.91f)), hot = ColMat(Data.Hex("#e0505a")), cold = ColMat(Data.Hex("#4a8ee0"));
+                Part(root, body, 0, 0, 0, 0.42f, 0.86f, 0.4f);
+                Part(root, dark, 0, 0.46f, -0.205f, 0.3f, 0.16f, 0.02f);                  // 꼭지 자리
+                Part(root, hot, -0.07f, 0.5f, -0.22f, 0.05f, 0.05f, 0.03f); Part(root, cold, 0.07f, 0.5f, -0.22f, 0.05f, 0.05f, 0.03f);
+                Part(root, dark, 0, 0.2f, -0.205f, 0.26f, 0.03f, 0.04f);                  // 물받이
+                Cyl(root, bottle, 0, 0.86f, 0, 0.17f, 0.4f); Cyl(root, bottle, 0, 1.26f, 0, 0.07f, 0.06f);
+            }
+            else if (form == "box")     // 골판지 상자 두 개 (위에 작은 것)
+            {
+                Material card = ColMat(Data.Hex("#c08a52")), tape = ColMat(Data.Hex("#e3c79a")), card2 = ColMat(Data.Hex("#a8763f"));
+                Part(root, card, 0, 0, 0, 0.56f, 0.4f, 0.5f); Part(root, tape, 0, 0.4f, 0, 0.1f, 0.006f, 0.5f);
+                Part(root, card2, 0.06f, 0.4f, 0.03f, 0.36f, 0.24f, 0.32f); Part(root, tape, 0.06f, 0.64f, 0.03f, 0.36f, 0.006f, 0.07f);
+            }
+            else if (form == "desk")    // 책상: 붙박이 책상과 같은 높이·색 + 모니터
+            {
+                Material top = ColMat(Data.Hex("#9a6e4c")), side = ColMat(Data.Hex("#4a3a30")), mon = ColMat(Data.Hex("#1e2329")), scr = ColMat(new Color(0.37f, 0.75f, 0.91f), true), paper = ColMat(Data.Hex("#f2efe6"));
+                Part(root, side, 0, 0, 0, 1.0f, 0.46f, 0.96f); Part(root, top, 0, 0.44f, 0, 1.04f, 0.06f, 1.0f);
+                Part(root, mon, -0.18f, 0.5f, 0.2f, 0.42f, 0.3f, 0.05f); Part(root, scr, -0.18f, 0.53f, 0.17f, 0.36f, 0.24f, 0.01f); Part(root, mon, -0.18f, 0.5f, 0.24f, 0.08f, 0.06f, 0.12f);
+                Part(root, paper, 0.25f, 0.5f, -0.1f, 0.24f, 0.01f, 0.3f);
+            }
+            else if (form == "shelf")   // 선반: 철제 틀 + 칸마다 상자
+            {
+                Material frame = ColMat(Data.Hex("#2a3238")), board = ColMat(Data.Hex("#46535d")), a1 = ColMat(Data.Hex("#c08a52")), a2 = ColMat(Data.Hex("#7fb0d0")), a3 = ColMat(Data.Hex("#9fc6a0"));
+                foreach (var sx in new[] { -0.47f, 0.47f }) foreach (var sz in new[] { -0.22f, 0.22f }) Part(root, frame, sx, 0, sz, 0.05f, 1.15f, 0.05f);
+                foreach (var hh in new[] { 0.05f, 0.42f, 0.79f, 1.12f }) Part(root, board, 0, hh, 0, 0.98f, 0.04f, 0.5f);
+                Part(root, a1, -0.24f, 0.09f, 0, 0.36f, 0.26f, 0.38f); Part(root, a2, 0.2f, 0.09f, 0, 0.3f, 0.2f, 0.34f);
+                Part(root, a3, 0.22f, 0.46f, 0, 0.36f, 0.24f, 0.38f); Part(root, a1, -0.22f, 0.46f, 0.02f, 0.28f, 0.3f, 0.34f);
+                Part(root, a2, -0.1f, 0.83f, 0, 0.5f, 0.22f, 0.36f);
             }
             else // cart
             {
@@ -622,6 +673,10 @@ namespace Specimen07
             UpdateLights(t, playing);
             UpdateFog(playing);
 
+            // 상호작용 테두리 대상
+            game.CollectHighlights(his); hiOf.Clear();
+            foreach (var h in his) if (h.target != null && (h.kind == Game.HiKind.Obj || h.kind == Game.HiKind.Npc)) hiOf[h.target] = h;
+
             // 문
             for (int i = 0; i < doors.Count; i++)
             {
@@ -681,11 +736,13 @@ namespace Specimen07
                 m.position = P(o.x, 0, o.y);
                 m.rotation = Quaternion.Euler(0, o.form == "chair" ? o.rot * Mathf.Rad2Deg - 90 : 0, 0);
                 m.localScale = Vector3.one * s;
+                Game.Highlight hl; bool lit = hiOf.TryGetValue(o, out hl);
+                Hull.Of(m).Set(lit, lit ? hl.color : Color.clear, lit && hl.strong ? 0.045f : 0.022f);
             }
             EndModels();
 
             // 사람 (세운 그림 + 발밑 그림자)
-            int ni = 0;
+            int ni = 0; oli = 0;
             foreach (var n in F.npcs)
             {
                 if (!n.alive || !InView(n.x, n.y, 1)) continue;
@@ -703,8 +760,22 @@ namespace Specimen07
                 PlaceStand(sr, n.x, n.y, s * sr.sprite.pixelsPerUnit / WorldView.CHAR_PX, bob, WorldView.LastPose);
                 sr.color = Tint(n.x, n.y);
                 sh.transform.position = P(n.x, 0.02f, n.y); sh.transform.localScale = new Vector3(0.75f, 0.45f, 1) * s; sh.color = new Color(0, 0, 0, 0.45f);
+                Game.Highlight nh;
+                if (hiOf.TryGetValue(n, out nh)) Pooled(outlinePool, oli++, () => SpriteOutline.Make(dynRoot)).Show(sr, nh.color, 1.6f, cam.transform.forward * 0.02f);
             }
-            HideFrom(npcPool, ni); HideFrom(shadowPool, ni);
+            HideFrom(npcPool, ni); HideFrom(shadowPool, ni); HideFrom(outlinePool, oli);
+
+            // 붙박이 테두리: 책상·선반·문·콘솔·엘리베이터
+            int hfi = 0;
+            foreach (var h in his)
+            {
+                if (h.kind == Game.HiKind.Obj || h.kind == Game.HiKind.Npc) continue;
+                if (!InView(h.tx + 0.5f, h.ty + 0.5f, 1)) continue;
+                float fh = h.kind == Game.HiKind.Door ? WALL_H : h.kind == Game.HiKind.Console ? 0.72f : h.kind == Game.HiKind.Lift ? 1.3f : G.Tile(h.tx, h.ty) == 'S' ? 1.15f : 0.5f;
+                const float inf = 0.03f;
+                Pooled(framePool, hfi++, () => BoxFrame.Make(dynRoot, unitBox)).Show(h.tx - inf, h.ty - inf, h.tx + 1 + inf, h.ty + 1 + inf, fh + inf, h.strong ? 0.055f : 0.03f, h.color);
+            }
+            HideFrom(framePool, hfi);
 
             // 주인공
             player.gameObject.SetActive(playing); playerShadow.gameObject.SetActive(playing); playerXray.gameObject.SetActive(false);
@@ -807,7 +878,7 @@ namespace Specimen07
                 if (warn) j = new Vector2(Mathf.Sin(t * 43) * 1.2f, Mathf.Cos(t * 37)) / 32f;
                 float bump = p.speedNow > 0.3f ? Mathf.Abs(Mathf.Sin(t * 22)) * 0.03f : 0;
                 playerModel.position = P(p.x + j.x, bump, p.y + j.y);
-                float yaw = p.form == "trash" ? 0 : p.face * Mathf.Rad2Deg + (p.form == "chair" ? -90 : 0);   // 카트는 손잡이가, 의자는 등받이가 뒤로
+                float yaw = p.form == "chair" || p.form == "cart" ? p.face * Mathf.Rad2Deg + (p.form == "chair" ? -90 : 0) : 0;   // 카트는 손잡이가, 의자는 등받이가 뒤로. 나머지는 그대로
                 playerModel.rotation = Quaternion.Euler(0, yaw, warn ? Mathf.Sin(t * 40) * 3f : 0);
                 player.gameObject.SetActive(false); playerShadow.gameObject.SetActive(false);
                 return;
@@ -863,22 +934,28 @@ namespace Specimen07
             var g = P(x, 0, y); float k = (camPos.y - FOG_H) / camPos.y;
             return camPos + (g - camPos) * k;
         }
+        float[] fogD;
         void UpdateFog(bool playing)
         {
             bool on = playing && game.visValid;
             fog.gameObject.SetActive(on);
             if (!on) return;
             var p = game.S.player; int N = Game.VIS_RAYS; var cp = cam.transform.position;
-            const float FOG_A = 0.86f;
+            const float FOG_A = 0.8f, EDGE = 1.8f;   // 피드백: 어지럽지 않게 — 가장자리를 넓고 부드럽게, 매 프레임 튀지 않게 따라가기
+            if (fogD == null || fogD.Length != N) { fogD = new float[N]; for (int i = 0; i < N; i++) fogD[i] = game.visDist[i]; }
+            float k = 1 - Mathf.Exp(-Time.deltaTime * 14f);
             Color inner = new Color(5 / 255f, 6 / 255f, 22 / 255f, 0f), outer = new Color(5 / 255f, 6 / 255f, 22 / 255f, FOG_A);
             fv.Clear(); fc.Clear(); ft.Clear();
             for (int i = 0; i < N; i++)
             {
                 float a = i * Mathf.PI * 2 / N, ca = Mathf.Cos(a), sa = Mathf.Sin(a);
-                float d = game.visDist[i];
-                float din = d < game.visR - 0.05f ? d + 1.4f : d;     // 벽에 막혔으면 벽 앞면까지 보이게
+                // 이웃 광선과 살짝 섞어 계단 모양을 없애고, 시간에 따라 부드럽게
+                float raw = game.visDist[i] * 0.6f + (game.visDist[(i + 1) % N] + game.visDist[(i + N - 1) % N]) * 0.2f;
+                fogD[i] += (raw - fogD[i]) * k;
+                float d = fogD[i];
+                float din = d < game.visR - 0.05f ? d + 1.2f : d;     // 벽에 막혔으면 벽 앞면까지 보이게
                 fv.Add(FogPt(cp, p.x + ca * din, p.y + sa * din)); fc.Add(inner);
-                fv.Add(FogPt(cp, p.x + ca * (din + 1.1f), p.y + sa * (din + 1.1f))); fc.Add(outer);
+                fv.Add(FogPt(cp, p.x + ca * (din + EDGE), p.y + sa * (din + EDGE))); fc.Add(outer);
                 fv.Add(FogPt(cp, p.x + ca * 60, p.y + sa * 60)); fc.Add(outer);
             }
             for (int i = 0; i < N; i++)
@@ -901,7 +978,7 @@ namespace Specimen07
             bool danger = (S.spotNpc == n && S.spot > 0) || n.lockT > 0;
             bool hunting = n.state == NpcState.Chase;
             Color col = danger ? new Color(1, 81 / 255f, 72 / 255f) : hunting ? new Color(1, 140 / 255f, 90 / 255f) : new Color(243 / 255f, 176 / 255f, 74 / 255f);
-            float a0 = danger ? 0.36f : n.seesPlayer ? 0.28f : (n.state == NpcState.Inspect || hunting) ? 0.24f : 0.16f;
+            float a0 = danger ? 0.34f : n.seesPlayer ? 0.26f : (n.state == NpcState.Inspect || hunting) ? 0.2f : 0.11f;   // 평소엔 옅게 (겹쳐도 어지럽지 않게)
             const float H = 0.03f;
             cv.Clear(); cc.Clear(); ct.Clear();
             cv.Add(P(n.x, H, n.y)); cc.Add(new Color(col.r, col.g, col.b, a0));

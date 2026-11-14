@@ -63,6 +63,8 @@ namespace Specimen07
     }
 
     public class DoorState { public bool open; public float temp; }
+    // 먹힌 붙박이 가구 칸 (책상·선반). 시간이 지나면 다시 놓인다
+    public class EatenTile { public int x, y; public char ch; public float respawnT; public EatenTile Clone() { return (EatenTile)MemberwiseClone(); } }
     public class Missing { public float t, x, y; public string label; public bool done; }
 
     public class FloorState
@@ -72,6 +74,7 @@ namespace Specimen07
         public List<DoorState> doors = new List<DoorState>();
         public int wary;
         public List<Missing> missing = new List<Missing>();
+        public List<EatenTile> tiles = new List<EatenTile>();
 
         public static FloorState New(FloorGeo g)
         {
@@ -89,16 +92,26 @@ namespace Specimen07
             foreach (var o in objects) f.objects.Add(o.Clone());
             foreach (var d in doors) f.doors.Add(new DoorState { open = d.open, temp = d.temp });
             foreach (var m in missing) f.missing.Add(new Missing { t = m.t, x = m.x, y = m.y, label = m.label, done = m.done });
+            foreach (var t in tiles) f.tiles.Add(t.Clone());
             return f;
         }
     }
 
-    public class EatTarget { public bool isNpc; public Npc npc; public WorldObj obj; public string form; public float X { get { return isNpc ? npc.x : obj.x; } } public float Y { get { return isNpc ? npc.y : obj.y; } } public object Ref { get { return isNpc ? (object)npc : obj; } } }
+    public class EatTarget
+    {
+        public bool isNpc; public Npc npc; public WorldObj obj; public string form;
+        public EatenTile tile;                 // 붙박이 가구를 먹을 때 (obj 대신)
+        public Vector2 land;                   // 큰 가구로 변신한 뒤 설 자리
+        public bool IsTile { get { return tile != null; } }
+        public float X { get { return isNpc ? npc.x : tile != null ? tile.x + 0.5f : obj.x; } }
+        public float Y { get { return isNpc ? npc.y : tile != null ? tile.y + 0.5f : obj.y; } }
+        public object Ref { get { return isNpc ? (object)npc : tile != null ? (object)tile : obj; } }
+    }
     public class Eating { public EatTarget target; public float t; }
 
     public class Player
     {
-        public float x, y; public string form = "body"; public float timer, face, speedNow; public Eating eating; public bool moved;
+        public float x, y; public string form = "body"; public float timer, face, speedNow, eatCd; public Eating eating; public bool moved;
         public Player Clone() { var p = (Player)MemberwiseClone(); p.eating = null; return p; }
     }
 
