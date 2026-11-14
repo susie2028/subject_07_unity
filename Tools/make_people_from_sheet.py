@@ -7,7 +7,8 @@
 # 결과: Assets/Resources/Art/stand_<종류>_<front|back|side>.png (서 있는 그림)
 #       Assets/Resources/Art/walk_<종류>_<front|back|side>_<0..3>.png (걷기)
 # 실행: python3 Tools/make_people_from_sheet.py
-#  (Tools/art_src/walk_<종류>_<방향>.mp4 걷기 영상이 있으면 그 방향 걷기는 Tools/extract_walk_video.py 로 따로 뽑음)
+#  (Tools/art_src/walk_<종류>_<방향>.mp4 걷기 영상이 있으면 그 방향 걷기는 Tools/extract_walk_video.py 로 따로 뽑음,
+#   연구원 변형들의 걷기는 Tools/make_variant_walks.py 가 연구원 걷기를 색만 바꿔 만듦)
 import colorsys
 import os
 
@@ -112,11 +113,18 @@ def hsv(px):
     return colorsys.rgb_to_hsv(px[0] / 255, px[1] / 255, px[2] / 255)
 
 
+VREF = {}   # 색 바꾸기 기준 밝기 (같은 캐릭터의 모든 프레임이 같은 색이 되도록 고정)
+
+
 def recolor(a, pick, target, rows=None):
     # pick(h,s,v) 가 참인 픽셀을 target 색조로 (밝기 비율은 유지)
     th, ts, tv = colorsys.rgb_to_hsv(*[c / 255 for c in target])
     out = a.copy()
     picked = []
+    if rows is None and pick is HAIR:           # 머리색은 위쪽 절반에서만 (갈색 바지까지 바뀌지 않게)
+        ys = np.nonzero(a[..., 3])[0]
+        if len(ys):
+            rows = (0, int(ys.min() + (ys.max() - ys.min()) * 0.55))
     for y in range(a.shape[0]):
         if rows and not (rows[0] <= y < rows[1]):
             continue
@@ -128,7 +136,7 @@ def recolor(a, pick, target, rows=None):
                 picked.append((y, x, v))
     if not picked:
         return out
-    vmax = max(p[2] for p in picked)
+    vmax = VREF.get(pick.__name__ if hasattr(pick, '__name__') else id(pick)) or max(p[2] for p in picked)
     for y, x, v in picked:
         nv = min(1, tv * (v / vmax) * 1.05)
         r, g, b = colorsys.hsv_to_rgb(th, ts, nv)
@@ -136,9 +144,9 @@ def recolor(a, pick, target, rows=None):
     return out
 
 
-HAIR = lambda h, s, v: 10 <= h <= 45 and s > 0.35 and v < 0.62          # 갈색 머리
-SKIN = lambda h, s, v: 10 <= h <= 40 and 0.15 < s < 0.6 and v >= 0.62   # 피부
-TIE = lambda h, s, v: 85 <= h <= 170 and s > 0.25                        # 초록 넥타이
+def HAIR(h, s, v): return 10 <= h <= 45 and s > 0.35 and v < 0.62           # 갈색 머리
+def SKIN(h, s, v): return 10 <= h <= 40 and 0.15 < s < 0.6 and v >= 0.62    # 피부
+def TIE(h, s, v): return 85 <= h <= 170 and s > 0.25                         # 초록 넥타이
 
 
 def head_rows(a, body_test):
@@ -444,7 +452,8 @@ def main():
             g = feet_groups(a)
             static = [x for gg in g if gg[0] > CW * 0.62 for x in range(gg[0], gg[1] + 1)]
         fr = puppet_walk(a, view, static, hold_right=(kind == 'cleaner'))
-        if os.path.exists(os.path.join(HERE, 'art_src', 'walk_%s_%s.mp4' % (kind, view))):
+        base_kind = 'researcher' if kind.startswith('researcher') else kind
+        if os.path.exists(os.path.join(HERE, 'art_src', 'walk_%s_%s.mp4' % (base_kind, view))):
             pass   # 걷기 영상이 있으면 그쪽(extract_walk_video.py)이 만든 프레임을 씀
         else:
             for i, f in enumerate(fr):

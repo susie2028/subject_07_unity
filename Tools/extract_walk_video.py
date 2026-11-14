@@ -23,7 +23,17 @@ def frames_of(path):
     probe = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', path], capture_output=True, text=True).stdout.strip().split(',')
     w, h = int(probe[0]), int(probe[1])
     raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', path, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], capture_output=True).stdout
-    return np.frombuffer(raw, np.uint8).reshape(-1, h, w, 3).astype(float)
+    fr = np.frombuffer(raw, np.uint8).reshape(-1, h, w, 3).astype(float).copy()
+    # 영상 가장자리의 흰 띠(녹화 테두리)는 배경으로
+    white = (fr.min(-1) > 200).mean(axis=(0, 2))           # 줄마다 흰 비율
+    for y in list(range(h - 1, h - 40, -1)) + list(range(0, 40)):
+        if white[y] > 0.85:
+            fr[:, y] = (255, 0, 255)
+    wcol = (fr.min(-1) > 200).mean(axis=(0, 1))
+    for x in list(range(w - 1, w - 40, -1)) + list(range(0, 40)):
+        if wcol[x] > 0.85:
+            fr[:, :, x] = (255, 0, 255)
+    return fr
 
 
 def is_bg(col):

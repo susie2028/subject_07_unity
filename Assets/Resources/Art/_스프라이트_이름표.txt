@@ -98,3 +98,5 @@ walk_<종류>_<front|back|side>_0..N        걷기 8장 (팔다리 움직임). �
   <종류> = cleaner researcher researcher2 guard senior soldier director
 같은 종류 여러 모습: <종류>_v2, <종류>_v3 … 를 붙이면 사람마다 골라 씀
   예) stand_researcher_v2_front.png (지금: 연구원 v2 주황 머리, v3 금발 / 연구원2 v2 짙은 갈색)
+
+※ 연구원 변형(_v2, _v3, researcher2…)의 서 있기·걷기는 연구원 그림을 색만 바꾼 것: python3 Tools/make_variant_walks.py
