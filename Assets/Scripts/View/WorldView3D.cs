@@ -10,7 +10,7 @@ using UnityEngine.Rendering;
 
 namespace Specimen07
 {
-    public class WorldView3D : MonoBehaviour, IGameView
+    public partial class WorldView3D : MonoBehaviour, IGameView
     {
         /* ===== 조절값 (보면서 바꾸기) ===== */
         const float PITCH = 50f;          // 카메라 내려다보는 각도 (90 = 바로 위)
@@ -187,7 +187,7 @@ namespace Specimen07
             floorRoot = new GameObject("Floor3D_" + g.id).transform;
             dynRoot = new GameObject("Dynamic3D").transform;
             objPool.Clear(); npcPool.Clear(); shadowPool.Clear(); trailPool.Clear(); fxPool.Clear(); aimRingPool.Clear(); conePool.Clear(); aimPool.Clear();
-            doors.Clear(); traps.Clear(); consoleLeds.Clear(); liftLeds.Clear(); lamps.Clear();
+            doors.Clear(); traps.Clear(); consoleLeds.Clear(); liftLeds.Clear(); lamps.Clear(); bubbles.Clear();
             models.Clear(); modelUsed.Clear(); playerModel = null;
 
             BuildStatic();
@@ -321,6 +321,7 @@ namespace Specimen07
                         Sides(glass, glass, x + 0.35f, y, x + 0.65f, y + 1, 0, 1.0f, true, true, true, FULL);
                         break;
                 }
+                if (key != null && IsTankTile(g, x, y, salt)) { BuildTank(x, y, salt); key = null; }   // 실험용 수조
                 if (key != null)
                 {
                     float h = furnH[ch]; bool joinS = at(x, y + 1) == ch, joinE = at(x + 1, y) == ch, joinW = at(x - 1, y) == ch;
@@ -656,6 +657,8 @@ namespace Specimen07
                 consoleLeds[i].sharedMaterial.color = done ? Data.Hex("#7fe0b0") : new Color(1, 81 / 255f, 72 / 255f, 0.6f + 0.4f * Mathf.Sin(t * 5));
             }
             foreach (var led in liftLeds) led.sharedMaterial.color = S.alarm != null ? new Color(1, 81 / 255f, 72 / 255f, 0.5f + 0.5f * Mathf.Sin(t * 8)) : Data.Hex("#7fe0b0");
+
+            UpdateBubbles(t);
 
             // 점액 자국
             int ti = 0;
