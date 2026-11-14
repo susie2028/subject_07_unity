@@ -9,7 +9,7 @@ namespace Specimen07
     {
         // 그리는 순서 (숫자가 클수록 위)
         public const int L_FLOOR = 0, L_DECAL = 1, L_WALL = 2, L_TRIM = 3, L_BIG = 4, L_DOOR = 5, L_TRAP = 8, L_TRAIL = 9, L_OBJ = 10, L_NPC = 11, L_PLAYER = 12,
-                         L_HELI = 13, L_DARK = 20, L_TINT = 21, L_GLOW = 22, L_CONE = 23, L_AIM = 24, L_RING = 26, L_FX = 27, L_LABEL = 3;
+                         L_HELI = 13, L_DARK = 20, L_TINT = 21, L_GLOW = 22, L_CONE = 23, L_AIM = 24, L_FOG = 25, L_RING = 26, L_FX = 27, L_LABEL = 3;
 
         Game game; Camera cam;
         Transform floorRoot, dynRoot;
@@ -119,6 +119,7 @@ namespace Specimen07
             targetRing = Spr(dynRoot, "fx_ring", L_RING); targetRing.transform.localScale = Vector3.one * (34f / 32f);
             heli = Spr(dynRoot, "heli", L_HELI); heliRotor = Spr(dynRoot, "heli_rotor", L_HELI + 1);
             alarmTint = Spr(dynRoot, "fx_white", L_DARK + 1); alarmTint.transform.localScale = new Vector3(Cfg.VTW * 2, Cfg.VTH * 2, 1);
+            fog = NewCone(); fog.GetComponent<MeshRenderer>().sortingOrder = L_FOG; fog.name = "Fog";
             shotLine = NewLine(); shotLine.startColor = shotLine.endColor = new Color(1, 230 / 255f, 160 / 255f, 0.9f); shotLine.widthMultiplier = 3f / 32f;
 
             BuildDarkness();
@@ -429,10 +430,59 @@ namespace Specimen07
         }
 
         /* ===== 매 프레임 ===== */
-        bool InView(float x, float y, float m)
+        // 카메라 줌 (좁은 통로 = 줌 인, 넓은 곳 = 줌 아웃). 1 = 기본
+        public static float Zoom = 1f;
+        MeshFilter fog;
+
+        public static bool InViewOf(Vector2 cam, float x, float y, float m)
         {
-            var c = game.S.cam;
-            return x > c.x - m && x < c.x + Cfg.VTW + m && y > c.y - m && y < c.y + Cfg.VTH + m;
+            float cx = cam.x + Cfg.VTW / 2, cy = cam.y + Cfg.VTH / 2;
+            return Mathf.Abs(x - cx) < Cfg.VTW / 2 * Zoom + m && Mathf.Abs(y - cy) < Cfg.VTH / 2 * Zoom + m;
+        }
+        bool InView(float x, float y, float m) { return InViewOf(game.S.cam, x, y, m); }
+
+        void UpdateZoom(bool playing)
+        {
+            var S = game.S;
+            float target = 1f;
+            if (playing && game.visValid)
+            {
+                target = Mathf.Lerp(0.8f, 1.12f, Mathf.InverseLerp(2.5f, 7.5f, game.visAvg));
+                if (game.PlayerHidden()) target = 0.72f;
+                if (S.spot > 0 || game.AnyLocked()) target *= 0.94f;                      // 들킬 때 살짝 조여 옴
+                if (S.player.eating != null) target *= 0.9f;                             // 먹을 때 확 다가감
+            }
+            Zoom += (target - Zoom) * Mathf.Min(1, Time.deltaTime * 2.2f);
+            cam.orthographicSize = Cfg.VTH / 2f * Zoom;
+        }
+
+        // 시야 밖 어둠: 광선이 닿은 경계에서 바깥으로 짙어지는 메시
+        readonly List<Vector3> fv = new List<Vector3>(); readonly List<Color> fc = new List<Color>(); readonly List<int> ft = new List<int>();
+        void UpdateFog(bool playing)
+        {
+            bool on = playing && game.visValid;
+            fog.gameObject.SetActive(on);
+            if (!on) return;
+            var p = game.S.player; int N = Game.VIS_RAYS;
+            const float FOG_A = 0.84f;
+            Color inner = new Color(5 / 255f, 6 / 255f, 22 / 255f, 0f), outer = new Color(5 / 255f, 6 / 255f, 22 / 255f, FOG_A);
+            fv.Clear(); fc.Clear(); ft.Clear();
+            for (int i = 0; i < N; i++)
+            {
+                float a = i * Mathf.PI * 2 / N, ca = Mathf.Cos(a), sa = Mathf.Sin(a);
+                float d = game.visDist[i];
+                float din = d < game.visR - 0.05f ? d + 0.35f : d;     // 벽이면 벽면이 보이게 조금 더
+                fv.Add(U.W(p.x + ca * din, p.y + sa * din)); fc.Add(inner);
+                fv.Add(U.W(p.x + ca * (din + 1.1f), p.y + sa * (din + 1.1f))); fc.Add(outer);
+                fv.Add(U.W(p.x + ca * 60, p.y + sa * 60)); fc.Add(outer);
+            }
+            for (int i = 0; i < N; i++)
+            {
+                int j = (i + 1) % N, a0 = i * 3, b0 = j * 3;
+                ft.Add(a0); ft.Add(b0); ft.Add(b0 + 1); ft.Add(a0); ft.Add(b0 + 1); ft.Add(a0 + 1);
+                ft.Add(a0 + 1); ft.Add(b0 + 1); ft.Add(b0 + 2); ft.Add(a0 + 1); ft.Add(b0 + 2); ft.Add(a0 + 2);
+            }
+            var m = fog.sharedMesh; m.Clear(); m.SetVertices(fv); m.SetColors(fc); m.SetTriangles(ft, 0); m.RecalculateBounds();
         }
 
         T Pooled<T>(List<T> pool, int i, System.Func<T> make) where T : Component
@@ -458,7 +508,10 @@ namespace Specimen07
 
             // 카메라
             Vector2 shake = game.mode == Mode.Dying ? new Vector2(U.Rand(-3, 3), U.Rand(-3, 3)) / 32f : Vector2.zero;
+            if (S.alarm != null && S.time - S.alarm.started < 0.4f) shake += new Vector2(U.Rand(-2, 2), U.Rand(-2, 2)) / 32f;   // 경보 순간 흔들림
             cam.transform.position = new Vector3(S.cam.x + Cfg.VTW / 2 + shake.x, -(S.cam.y + Cfg.VTH / 2) + shake.y, -10);
+            UpdateZoom(playing);
+            UpdateFog(playing);
 
             // 문
             for (int i = 0; i < doors.Count; i++)
@@ -529,11 +582,18 @@ namespace Specimen07
             foreach (var n in F.npcs)
             {
                 if (!n.alive || !InView(n.x, n.y, 1)) continue;
+                if (playing && !game.PlayerCanSee(n.x, n.y)) continue;       // 주인공이 못 보는 사람은 안 그림
                 var sr = Pooled(npcPool, ni++, () => Spr(dynRoot, "char_researcher", L_NPC));
                 ApplyFacing(sr, "char_" + n.pal, n.face);
                 float s = 1;
                 if (p.eating != null && p.eating.target.isNpc && p.eating.target.npc == n) s = Mathf.Max(0.05f, 1 - p.eating.t / Cfg.eatTime);
-                sr.transform.position = U.W(n.x, n.y); sr.transform.localScale = Vector3.one * s;
+                // 걸을 때 통통 흔들림
+                bool moving = !n.frozen && ((n.path != null && n.path.Count > 0) || n.state == NpcState.Chase);
+                float ph = t * (n.state == NpcState.Chase ? 18 : 12) + n.id.GetHashCode() % 7;
+                float bob = moving ? Mathf.Abs(Mathf.Sin(ph)) * 0.06f : 0;
+                sr.transform.position = U.W(n.x, n.y - bob);
+                if (moving && Art.Dir("char_" + n.pal) == null) sr.transform.rotation = Quaternion.Euler(0, 0, U.Deg(n.face) + Mathf.Sin(ph) * 5f);
+                sr.transform.localScale = Vector3.one * s * (moving ? 1 + Mathf.Sin(ph * 2) * 0.03f : 1);
             }
             HideFrom(npcPool, ni);
 

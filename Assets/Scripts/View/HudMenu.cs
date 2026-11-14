@@ -84,14 +84,19 @@ namespace Specimen07
         /* ===== 일시 정지 (게임 중 Esc, MainMenu 씬이 있을 때) ===== */
         void BuildPause()
         {
-            pausePanel = ModalPanel(canvasRt, "Pause", "일시 정지", 600);
+            pausePanel = ModalPanel(canvasRt, "Pause", "설정", 640);
             var card = pausePanel.transform.Find("Card");
-            Txt(card, "Msg", "메인 화면으로 나가면 이어하기는 이 층에 도착한 시점부터예요.", 22, MUTED);
+            pauseVol = SettingRow(card, "소리 크기", "－", () => { ChangeVolume(-0.1f); RefreshPause(); }, "＋", () => { ChangeVolume(0.1f); RefreshPause(); });
+            pauseMini = SettingRow(card, "지도", null, null, "바꾸기", () => { game.showMini = !game.showMini; Settings.Minimap = game.showMini; SetMiniVisible(game.showMini); RefreshPause(); });
+            Txt(card, "Msg", "메인 화면으로 나가면 이어하기는 이 층에 도착한 시점부터예요.", 20, MUTED);
             var row = Row(card, "Buttons", 12);
             Btn(row, "계속하기", FLESH, Data.Hex("#1a0d10"), () => game.Resume(), 220, 60);
-            Btn(row, "메인 화면으로", PANEL, FG, () => game.GoToMenu(), 240, 60);
+            Btn(row, "게임 방법", PANEL, FG, ShowHowTo, 180, 60);
+            Btn(row, "메인 화면으로", PANEL, FG, () => game.GoToMenu(), 200, 60);
         }
-        public void ShowPause() { pausePanel.SetActive(true); pausePanel.transform.SetAsLastSibling(); }
+        Text pauseVol, pauseMini;
+        void RefreshPause() { if (pauseVol != null) { pauseVol.text = Mathf.RoundToInt(Settings.Volume * 100) + "%"; pauseMini.text = game.showMini ? "켜짐" : "꺼짐"; } }
+        public void ShowPause() { RefreshPause(); pausePanel.SetActive(true); pausePanel.transform.SetAsLastSibling(); }
         public void HidePause() { pausePanel.SetActive(false); }
 
         static RectTransform TopLeft(Transform parent, string name, Vector2 pos, Vector2 size)
@@ -199,6 +204,8 @@ namespace Specimen07
 
         public bool MenuOpen { get { return menuRoot != null && menuRoot.activeSelf; } }
         public bool MenuPanelOpen { get { return (settingsPanel != null && settingsPanel.activeSelf) || (confirmPanel != null && confirmPanel.activeSelf) || ovHowTo.activeSelf; } }
+        public bool HowToOpen { get { return ovHowTo.activeSelf; } }
+        public void CloseHowTo() { ovHowTo.SetActive(false); }
         public void CloseMenuPanels() { settingsPanel.SetActive(false); confirmPanel.SetActive(false); ovHowTo.SetActive(false); }
 
         public void ShowMenu()

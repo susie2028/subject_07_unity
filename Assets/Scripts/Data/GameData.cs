@@ -11,7 +11,8 @@ namespace Specimen07
         public const float moveEps = 0.05f, turnRate = 5.0f, inspectCooldown = 6f, playerR = 0.3f;
         public const float alarmTime = 20f, aimTime = 1.1f, catchDist = 0.8f, arriveGrace = 1.2f;
         public const float missingDelay = 20f, respawn = 45f, heliTime = 15f, waryStep = 0.75f;
-        public const float patrolK = 0.32f, chaseK = 0.42f;
+        public const float patrolK = 0.36f, chaseK = 0.48f;   // NPC 속도 배율 (피드백: 전체적으로 빠르게)
+        public const float visionR = 9f, ventVisionR = 3.2f; // 주인공 시야 반경 (칸). 이 밖과 벽 뒤는 안 보임
 
         // 화면에 보이는 칸 수 (작을수록 확대)
         public const float VTW = 22f, VTH = 12.375f;
@@ -87,15 +88,15 @@ namespace Specimen07
         {
             var d = new Dictionary<string, FormDef>
             {
-                { "body",  new FormDef { id = "body",  name = "본모습",    type = FormType.Body,   speed = 3.5f, dur = float.PositiveInfinity } },
-                { "chair", new FormDef { id = "chair", name = "의자",      type = FormType.Object, speed = 2.5f, dur = 25, seenSpeed = 0,  zone = "any" } },
-                { "trash", new FormDef { id = "trash", name = "쓰레기통",  type = FormType.Object, speed = 2.5f, dur = 20, seenSpeed = 0,  zone = "wall" } },
-                { "cart",  new FormDef { id = "cart",  name = "바퀴 카트", type = FormType.Object, speed = 3.0f, dur = 18, seenSpeed = 1f, zone = "wall" } },
+                { "body",  new FormDef { id = "body",  name = "본모습",    type = FormType.Body,   speed = 4.3f, dur = float.PositiveInfinity } },
+                { "chair", new FormDef { id = "chair", name = "의자",      type = FormType.Object, speed = 3.0f, dur = 25, seenSpeed = 0,  zone = "any" } },
+                { "trash", new FormDef { id = "trash", name = "쓰레기통",  type = FormType.Object, speed = 3.0f, dur = 20, seenSpeed = 0,  zone = "wall" } },
+                { "cart",  new FormDef { id = "cart",  name = "바퀴 카트", type = FormType.Object, speed = 3.6f, dur = 18, seenSpeed = 1.1f, zone = "wall" } },
             };
             foreach (var kv in Chars)
             {
                 var c = kv.Value;
-                d[c.id] = new FormDef { id = c.id, name = c.name, type = FormType.Human, speed = Mathf.Round((2.4f + c.speed * 0.08f) * 100f) / 100f, dur = c.dur };
+                d[c.id] = new FormDef { id = c.id, name = c.name, type = FormType.Human, speed = Mathf.Round((2.4f + c.speed * 0.08f) * 1.2f * 100f) / 100f, dur = c.dur };
             }
             return d;
         }

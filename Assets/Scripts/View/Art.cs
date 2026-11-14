@@ -222,6 +222,8 @@ namespace Specimen07
                         q.Px(x, y, new Color(1, 1, 1, Mathf.Clamp01((d - 0.55f) / 0.6f)));
                     }
                     return q.ToSprite(key, 64, true);
+                case "ui_round": // 둥근 모서리 패널 (9-slice)
+                    q = new Painter(32, 32); q.RoundRect(0, 0, 32, 32, 11, Color.white); return q.ToSprite(key, 32, true, null, new Vector4(12, 12, 12, 12));
                 case "ui_panel":
                     q = new Painter(16, 16); q.Rect(0, 0, 16, 16, Color.white); return q.ToSprite(key, 16);
             }
@@ -325,12 +327,14 @@ namespace Specimen07
                     px[(h - 1 - y) * w + x] = Color.Lerp(inner, outer, Mathf.Clamp01(d));
                 }
             }
-            public Sprite ToSprite(string name, int ppu = PPU, bool smooth = false, Vector2? pivot = null)
+            public Sprite ToSprite(string name, int ppu = PPU, bool smooth = false, Vector2? pivot = null, Vector4? border = null)
             {
                 var t = new Texture2D(w, h, TextureFormat.RGBA32, false);
                 t.name = name; t.filterMode = smooth || ppu != PPU ? FilterMode.Bilinear : FilterMode.Point; t.wrapMode = TextureWrapMode.Clamp;
                 t.SetPixels(px); t.Apply();
-                var s = Sprite.Create(t, new Rect(0, 0, w, h), pivot ?? new Vector2(0.5f, 0.5f), ppu);
+                var s = border.HasValue
+                    ? Sprite.Create(t, new Rect(0, 0, w, h), pivot ?? new Vector2(0.5f, 0.5f), ppu, 0, SpriteMeshType.FullRect, border.Value)
+                    : Sprite.Create(t, new Rect(0, 0, w, h), pivot ?? new Vector2(0.5f, 0.5f), ppu);
                 s.name = name;
                 return s;
             }

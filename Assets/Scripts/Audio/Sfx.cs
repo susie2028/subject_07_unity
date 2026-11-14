@@ -1,6 +1,6 @@
 // 효과음. 프로토타입처럼 코드로 소리를 합성한다.
 // Assets/Resources/Sounds/이름.wav(또는 .ogg/.mp3)가 있으면 그 파일을 대신 쓴다.
-// 이름: glass gulp morph melt sting huh door deny card lift siren calm beep shot grab zap heli win blip, 배경 웅웅거림: hum
+// 이름: glass gulp morph melt sting huh door deny card lift siren calm beep shot grab zap heli win blip step heart tick, 배경 웅웅거림: hum
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,7 +11,7 @@ namespace Specimen07
         const int SR = 22050;
         const float MASTER = 0.55f;
         public bool muted;
-        AudioSource oneShot, hum;
+        AudioSource oneShot, hum, spatial;
         readonly Dictionary<string, AudioClip> clips = new Dictionary<string, AudioClip>();
         bool inited;
 
@@ -19,6 +19,7 @@ namespace Specimen07
         {
             oneShot = gameObject.AddComponent<AudioSource>(); oneShot.playOnAwake = false;
             hum = gameObject.AddComponent<AudioSource>(); hum.playOnAwake = false; hum.loop = true;
+            spatial = gameObject.AddComponent<AudioSource>(); spatial.playOnAwake = false;
         }
 
         public void Init()
@@ -37,6 +38,16 @@ namespace Specimen07
             if (muted) return;
             var c = Get(name);
             if (c != null) oneShot.PlayOneShot(c);
+        }
+
+        // 좌우 위치가 있는 소리 (pan: -1 왼쪽 ~ 1 오른쪽)
+        public void PlayAt(string name, float volume, float pan)
+        {
+            if (muted || volume <= 0.01f) return;
+            var c = Get(name);
+            if (c == null) return;
+            spatial.panStereo = pan;
+            spatial.PlayOneShot(c, volume);
         }
 
         public void SetHum(float level, float detuneCents)
@@ -119,6 +130,9 @@ namespace Specimen07
                 case "heli": Noise(1.2f, 0.3f, 160, 3); break;
                 case "win": { float[] fs = { 523, 659, 784, 1046 }; for (int i = 0; i < 4; i++) Tone(fs[i], 0.35f, "triangle", 0.12f, 0, i * 0.12f); } break;
                 case "blip": Tone(900, 0.04f, "square", 0.02f); break;
+                case "step": Noise(0.07f, 0.35f, 220, 1f, "lowpass"); Tone(75, 0.06f, "sine", 0.18f, 50); break;                 // 안 보이는 NPC 발소리
+                case "heart": Tone(58, 0.13f, "sine", 0.55f, 42); Tone(52, 0.14f, "sine", 0.4f, 38, 0.2f); break;               // 변신이 곧 풀릴 때 심장 소리
+                case "tick": Tone(1250, 0.03f, "square", 0.04f); break;
                 case "hum":
                     {   // 118Hz 톱니파 + 저역 통과 (1초에 정확히 118번 → 이음새 없이 반복)
                         float low = 0, f = 2 * Mathf.Sin(Mathf.PI * 380f / SR);
