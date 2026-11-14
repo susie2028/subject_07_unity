@@ -134,7 +134,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      player_crawl_down_1_0: 2626989338494508813
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
