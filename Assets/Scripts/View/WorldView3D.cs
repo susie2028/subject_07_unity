@@ -22,7 +22,7 @@ namespace Specimen07
         const float PLAYER_LIGHT_I = 1.1f, PLAYER_LIGHT_R = 7.5f;   // 주인공 주변(시야 안)을 밝혀 주는 빛. 이 빛만 그림자를 만든다
         static readonly Color AMBIENT = new Color(0.17f, 0.18f, 0.3f);    // 전체 바탕 밝기 (시야 밖은 어둠 판이 덮음)
         static readonly float BB_Y = 1f / Mathf.Cos(PITCH * Mathf.Deg2Rad);   // 세운 그림이 비스듬히 보여 납작해지는 만큼 세로로 늘림
-        static float HeadH { get { return 1.45f * BB_Y; } }
+        const float HeadH = 1.45f;   // 말풍선 높이 (3D 사람 머리 위)
 
         Game game; Camera cam; FloorGeo G;
         Transform floorRoot, dynRoot;
@@ -729,7 +729,7 @@ namespace Specimen07
                 if (!(n.alive && n.aim > 0.02f && n.seesPlayer)) continue;
                 float k2 = Mathf.Min(1, n.aim / Cfg.aimTime);
                 var lr = Pooled(aimPool, ai, NewLine); lr.enabled = true;
-                lr.SetPosition(0, P(n.x, 1.0f * BB_Y, n.y)); lr.SetPosition(1, P(p.x, 0.4f, p.y));
+                lr.SetPosition(0, P(n.x, 0.75f, n.y)); lr.SetPosition(1, P(p.x, 0.4f, p.y));
                 lr.widthMultiplier = (1 + 2 * k2) / 32f;
                 lr.startColor = lr.endColor = new Color(1, 40 / 255f, 40 / 255f, 0.25f + 0.65f * k2);
                 var ring = Pooled(aimRingPool, ai, () => Flat(dynRoot, "fx_ring", 1));
@@ -740,7 +740,7 @@ namespace Specimen07
             HideFrom(aimPool, ai); HideFrom(aimRingPool, ai);
             bool shot = game.mode == Mode.Dying && S.deathKind == "shot" && S.shotFrom.HasValue;
             shotLine.enabled = shot;
-            if (shot) { shotLine.SetPosition(0, P(S.shotFrom.Value.x, 1.0f * BB_Y, S.shotFrom.Value.y)); shotLine.SetPosition(1, P(p.x, 0.4f, p.y)); }
+            if (shot) { shotLine.SetPosition(0, P(S.shotFrom.Value.x, 0.75f, S.shotFrom.Value.y)); shotLine.SetPosition(1, P(p.x, 0.4f, p.y)); }
 
             // 먹을 대상 표시
             var tgt = game.mode == Mode.Play && p.eating == null ? game.NearestEdible() : null;
