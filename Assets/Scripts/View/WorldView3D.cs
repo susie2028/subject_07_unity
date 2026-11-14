@@ -236,7 +236,7 @@ namespace Specimen07
             heli = Flat(dynRoot, "heli", 1); heliRotor = Flat(dynRoot, "heli_rotor", 1);
             var lgo = new GameObject("PlayerLight"); lgo.transform.SetParent(dynRoot, false);
             playerLight = lgo.AddComponent<Light>(); playerLight.type = LightType.Point; playerLight.range = PLAYER_LIGHT_R; playerLight.intensity = PLAYER_LIGHT_I;
-            playerLight.color = new Color(0.78f, 0.62f, 1f); playerLight.shadows = LightShadows.Soft; playerLight.shadowStrength = 0.85f;
+            playerLight.color = new Color(0.78f, 0.62f, 1f); playerLight.shadows = LightShadows.None;   // 길게 늘어지는 그림자 없음 (캐릭터 발밑 그림자만)
             fog = NewMesh("Fog", fogMat);
             shotLine = NewLine(); shotLine.startColor = shotLine.endColor = new Color(1, 230 / 255f, 160 / 255f, 0.9f); shotLine.widthMultiplier = 0.06f;
         }
@@ -832,16 +832,6 @@ namespace Specimen07
                 player.color = lit;
             }
             PlaceStand(player, p.x, p.y, scale, 0, f.type == FormType.Human ? humanPose : WorldView.Still);
-            // 벽 뒤(또는 환기구 안)에 있으면 실루엣을 겹쳐 그린다
-            int tx = U.Floor(p.x), ty = U.Floor(p.y);
-            bool behind = hidden || Tall(G.Tile(tx, ty + 1)) || Tall(G.Tile(tx, ty + 2));   // 남쪽(카메라 쪽) 1~2칸에 높은 것이 있으면
-            if (behind && xrayMat != null)
-            {
-                playerXray.gameObject.SetActive(true);
-                playerXray.sprite = player.sprite; playerXray.flipX = player.flipX;
-                playerXray.transform.position = player.transform.position; playerXray.transform.rotation = player.transform.rotation; playerXray.transform.localScale = player.transform.localScale;
-                playerXray.color = new Color(0.78f, 0.6f, 1f, 0.38f);
-            }
             if (hidden) playerShadow.gameObject.SetActive(false);
         }
 
