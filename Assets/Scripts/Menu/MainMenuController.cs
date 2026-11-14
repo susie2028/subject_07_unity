@@ -12,7 +12,7 @@ namespace Specimen07
         public enum Request { None, New, Continue }
         public static Request request = Request.None;
         public const string MenuScene = "MainMenu";
-        public const string GameScene = "Main";
+        public static string GameScene = "Main";   // 2.5D 씬에서 메뉴로 나오면 "Main_2_5D"로 바뀐다
         public static bool MenuSceneInBuild { get { return Application.CanStreamedLevelBeLoaded(MenuScene); } }
     }
 

@@ -98,6 +98,7 @@ namespace Specimen07
                 return p.ToSprite(key);
             }
             if (key.StartsWith("char_")) return Human(key, key.Substring(5));
+            if (key.StartsWith("stand_")) return Standing(key);
             if (key.StartsWith("wall_face")) { var f = new Painter(16, 16); f.Rect(0, 0, 16, 11, H("#393d7d")); f.Rect(0, 11, 16, 2, H("#1c1e4c")); return f.ToSprite(key, 16); }
             Painter q;
             switch (key)
@@ -268,6 +269,42 @@ namespace Specimen07
             }
             if (p.glasses) q.Rect(cx + 7, cy - 4.5f, 1.4f, 9, H("#1b1b1b"));
             return q.ToSprite(key, PPU, false, new Vector2(cx / q.w, 1 - cy / q.h));
+        }
+
+        // 2.5D용 서 있는 사람: stand_<종류>_<front|back|side> (16×24 픽셀, 발밑 기준, 16픽셀 = 1칸). side는 오른쪽을 본다.
+        static Sprite Standing(string key)
+        {
+            string rest = key.Substring(6); int us = rest.LastIndexOf('_');
+            string kind = us > 0 ? rest.Substring(0, us) : rest, view = us > 0 ? rest.Substring(us + 1) : "front";
+            Pal p; if (!PAL.TryGetValue(kind, out p)) p = PAL["researcher"];
+            bool front = view == "front", back = view == "back", side = view == "side";
+            var q = new Painter(16, 24);
+            Color coat = H(p.coat), trim = H(p.trim), skin = H(p.skin), hair = H(p.hair), dark = H("#16181c");
+            if (p.mop && !back) { q.Rect(side ? 2 : 13, 9, 1, 13, H("#a9865a")); q.Rect(side ? 1 : 12, 21, 3, 2, H("#d7d2c4")); }
+            // 다리·신발
+            if (side) { q.Rect(6, 17, 2, 5, trim); q.Rect(8.5f, 17, 2, 5, trim); q.Rect(6, 22, 3, 2, dark); q.Rect(8.5f, 22, 3, 2, dark); }
+            else { q.Rect(5, 17, 2.5f, 5, trim); q.Rect(8.5f, 17, 2.5f, 5, trim); q.Rect(5, 22, 2.5f, 2, dark); q.Rect(8.5f, 22, 2.5f, 2, dark); }
+            // 몸통
+            if (side) { q.Rect(5, 10, 6, 8, coat); q.Rect(5, 10, 1, 8, trim); q.Rect(7, 11, 2, 6, trim); q.Rect(7, 17, 2, 1, skin); }
+            else
+            {
+                q.Rect(4, 10, 8, 8, coat); q.Rect(4, 10, 1, 8, trim); q.Rect(11, 10, 1, 8, trim);
+                q.Rect(3, 11, 1, 6, trim); q.Rect(12, 11, 1, 6, trim); q.Rect(3, 17, 1, 1, skin); q.Rect(12, 17, 1, 1, skin);
+                if (front && p.tie != null) { q.Rect(7, 10, 2, 2, H("#e8e8e8")); q.Rect(7.5f, 11, 1, 4, H(p.tie)); }
+                if (front && p.badge != null) q.Rect(10, 12, 1, 1, H(p.badge));
+            }
+            // 머리
+            q.Rect(5, 3, 6, 7, skin);
+            if (back) q.Rect(5, 2, 6, 7, hair);
+            else if (side) { q.Rect(5, 2, 6, 2, hair); q.Rect(5, 3, 3, 5, hair); q.Rect(9, 6, 1, 1, dark); }
+            else { q.Rect(5, 2, 6, 2, hair); q.Rect(5, 3, 1, 3, hair); q.Rect(10, 3, 1, 3, hair); q.Rect(6, 6, 1, 1, dark); q.Rect(9, 6, 1, 1, dark); }
+            if (p.glasses && !back) { if (side) q.Rect(8, 5.5f, 3, 1, dark); else q.Rect(5.5f, 5.5f, 5, 1, dark); }
+            if (p.cap != null) { q.Rect(4.5f, 1, 7, 2.5f, H(p.cap)); if (!back) q.Rect(side ? 8 : 4.5f, 3, side ? 4 : 7, 1, H(p.cap)); }
+            if (p.helmet != null) { q.Rect(4, 1, 8, 4, H(p.helmet)); q.Rect(4, 4, 8, 1, H("#26301b")); }
+            if (p.rifle && !back) q.Rect(side ? 6 : 2, 13, side ? 9 : 12, 1.5f, H("#16190f"));
+            var s = q.ToSprite(key, 16, false, new Vector2(0.5f, 0));
+            s.texture.filterMode = FilterMode.Point;
+            return s;
         }
 
         /* 간단한 픽셀 붓. 좌표는 왼쪽 위 (0,0), y 아래쪽. */

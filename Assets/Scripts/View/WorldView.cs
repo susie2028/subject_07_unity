@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Specimen07
 {
-    public class WorldView : MonoBehaviour
+    public class WorldView : MonoBehaviour, IGameView
     {
         // 그리는 순서 (숫자가 클수록 위)
         public const int L_FLOOR = 0, L_DECAL = 1, L_WALL = 2, L_TRIM = 3, L_BIG = 4, L_DOOR = 5, L_TRAP = 8, L_TRAIL = 9, L_OBJ = 10, L_NPC = 11, L_PLAYER = 12,
@@ -253,12 +253,12 @@ namespace Specimen07
 
         /* ===== 타일 변형 고르기 ===== */
         // 가구·바닥은 같은 이름 뒤에 _2, _3 … 을 붙인 그림이 있으면 칸마다 섞어서 쓴다 (없으면 기본 그림만).
-        const string FACE_OK = ".STVMCN";
-        static readonly string[] FLOOR_V = { "", "_2", "_3", "_4", "_5" }; static readonly int[] FLOOR_W = { 82, 8, 5, 3, 2 };
-        static readonly string[] SHELF_V = { "", "_2", "_3" }; static readonly int[] SHELF_W = { 50, 25, 25 };
-        static readonly string[] TABLE_V = { "", "_2", "_3", "_4" }; static readonly int[] TABLE_W = { 55, 20, 15, 10 };
-        static readonly string[] INNER_V = { "", "_2", "_3" }; static readonly int[] INNER_W = { 60, 20, 20 };
-        static readonly string[] MACH_V = { "", "_2" }; static readonly int[] MACH_W = { 50, 50 };
+        internal const string FACE_OK = ".STVMCN";
+        internal static readonly string[] FLOOR_V = { "", "_2", "_3", "_4", "_5" }; internal static readonly int[] FLOOR_W = { 82, 8, 5, 3, 2 };
+        internal static readonly string[] SHELF_V = { "", "_2", "_3" }; internal static readonly int[] SHELF_W = { 50, 25, 25 };
+        internal static readonly string[] TABLE_V = { "", "_2", "_3", "_4" }; internal static readonly int[] TABLE_W = { 55, 20, 15, 10 };
+        internal static readonly string[] INNER_V = { "", "_2", "_3" }; internal static readonly int[] INNER_W = { 60, 20, 20 };
+        internal static readonly string[] MACH_V = { "", "_2" }; internal static readonly int[] MACH_W = { 50, 50 };
 
         // 칸 좌표로 정해지는 0~99 (매번 같은 결과 → 맵이 실행할 때마다 똑같이 보임)
         public static int Hash(int x, int y, int s)
@@ -270,7 +270,7 @@ namespace Specimen07
                 return (int)((h ^ (h >> 16)) % 100);
             }
         }
-        static string Variant(string baseKey, int x, int y, int salt, string[] suffix, int[] weight)
+        internal static string Variant(string baseKey, int x, int y, int salt, string[] suffix, int[] weight)
         {
             int r = Hash(x, y, salt), acc = 0;
             for (int i = 0; i < suffix.Length; i++)
@@ -280,7 +280,7 @@ namespace Specimen07
             }
             return baseKey;
         }
-        static string Pick(string key, string fallback) { return Art.Has(key) ? key : fallback; }
+        internal static string Pick(string key, string fallback) { return Art.Has(key) ? key : fallback; }
         static void Trim(Transform parent, string key, int x, int y) { if (Art.Has(key)) Tile(parent, key, x, y, L_TRIM); }
 
         public static SpriteRenderer Spr(Transform parent, string key, int order)
@@ -392,7 +392,7 @@ namespace Specimen07
         }
         void CopyBox(RectInt b, float[] src, float[] dst) { for (int py = b.yMin; py < b.yMax; py++) for (int px = b.xMin; px < b.xMax; px++) { int i = Idx(px, py); dst[i] = src[i]; } }
         void OutBox(RectInt b) { for (int py = b.yMin; py < b.yMax; py++) for (int px = b.xMin; px < b.xMax; px++) { int i = Idx(px, py); darkOut[i] = DarkPx(darkCur[i]); } }
-        float LightLevel(LightSrc l, float t)
+        internal static float LightLevel(LightSrc l, float t)
         {
             if (l.flick == 0) return l.i;
             float n = Mathf.Sin(t * 13 + l.x) * Mathf.Sin(t * 7.3f + l.y * 2);
@@ -439,7 +439,8 @@ namespace Specimen07
             float cx = cam.x + Cfg.VTW / 2, cy = cam.y + Cfg.VTH / 2;
             return Mathf.Abs(x - cx) < Cfg.VTW / 2 * Zoom + m && Mathf.Abs(y - cy) < Cfg.VTH / 2 * Zoom + m;
         }
-        bool InView(float x, float y, float m) { return InViewOf(game.S.cam, x, y, m); }
+        public bool InView(float x, float y, float m) { return InViewOf(game.S.cam, x, y, m); }
+        public Vector3 HeadScreen(float x, float y, float extra) { return cam.WorldToScreenPoint(U.W(x, y - extra)); }
 
         void UpdateZoom(bool playing)
         {
@@ -668,14 +669,14 @@ namespace Specimen07
 
         bool faceLeft;
         // player_<동작>_<방향>_N → 없으면 옆모습(side) → 없으면 player_<동작>_N
-        static List<Sprite> PlayerFrames(string anim, string dir)
+        internal static List<Sprite> PlayerFrames(string anim, string dir)
         {
             var l = Art.Frames("player_" + anim + "_" + dir);
             if (l.Count == 0) l = Art.Frames("player_" + anim + "_side");
             if (l.Count == 0) l = Art.Frames("player_" + anim);
             return l;
         }
-        const float TILE_PX = 16f; // 타일 그림 1칸의 픽셀 수 (캐릭터 크기 기준)
+        internal const float TILE_PX = 16f; // 타일 그림 1칸의 픽셀 수 (캐릭터 크기 기준)
 
         void DrawPlayer(float t)
         {

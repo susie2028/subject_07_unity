@@ -190,6 +190,14 @@ namespace Specimen07
             setBtn.GetComponent<Image>().sprite = Art.Get("ui_round"); setBtn.GetComponent<Image>().type = Image.Type.Sliced;
             meta = Txt(hr, "Meta", "", 17, MUTED, TextAnchor.UpperRight);
             meta.rectTransform.anchorMin = meta.rectTransform.anchorMax = meta.rectTransform.pivot = new Vector2(1, 1); meta.rectTransform.anchoredPosition = new Vector2(-30, -96); meta.rectTransform.sizeDelta = new Vector2(500, 26);
+            // 2.5D 비교 씬 표시 (설정 버튼 왼쪽)
+            if (game.use25D)
+            {
+                var tag = R(hr, "Tag25D", new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1), new Vector2(-172, -36), new Vector2(92, 46));
+                var tagImg = Img(tag, new Color(0.62f, 0.42f, 1f, 0.92f), "ui_round"); tagImg.type = Image.Type.Sliced;
+                var tt = Txt(tag, "T", "2.5D", 24, Color.white, TextAnchor.MiddleCenter, true);
+                tt.rectTransform.anchorMin = Vector2.zero; tt.rectTransform.anchorMax = Vector2.one; tt.rectTransform.sizeDelta = Vector2.zero;
+            }
 
             // ── 위 가운데: 경보
             alarmBox = R(hr, "Alarm", new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -28), new Vector2(440, 50)).gameObject;
@@ -577,11 +585,11 @@ namespace Specimen07
             foreach (var n in S.Fl.npcs)
             {
                 if (!n.alive) continue;
-                if (!WorldView.InViewOf(S.cam, n.x, n.y, 0)) continue;
+                if (game.view == null || !game.view.InView(n.x, n.y, 0)) continue;
                 if ((game.mode == Mode.Play || game.mode == Mode.Dying || game.mode == Mode.Pause) && !game.PlayerCanSee(n.x, n.y)) continue;   // 안 보이는 사람은 말풍선도 없음
-                Vector2 local;
-                RectTransformUtility.ScreenPointToLocalPointInRectangle(bubbleLayer, cam.WorldToScreenPoint(U.W(n.x, n.y)), null, out local);
-                float unit = bubbleLayer.rect.height / (Cfg.VTH * WorldView.Zoom); // 1칸의 UI 픽셀 크기
+                Vector2 bubblePos, markPos;   // 머리 위 위치 (2D/2.5D 화면이 각자 계산)
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(bubbleLayer, game.view.HeadScreen(n.x, n.y, 0.55f), null, out bubblePos);
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(bubbleLayer, game.view.HeadScreen(n.x, n.y, 0.3f), null, out markPos);
                 if (n.bubble != null)
                 {
                     while (bubbleBgs.Count <= bi)
@@ -597,7 +605,7 @@ namespace Specimen07
                     if (tx.text != n.bubble.text) tx.text = n.bubble.text;
                     float w = Mathf.Min(420, tx.preferredWidth + 26);
                     bg.rectTransform.sizeDelta = new Vector2(w, 34);
-                    bg.rectTransform.anchoredPosition = local + new Vector2(0, unit * 0.55f);
+                    bg.rectTransform.anchoredPosition = bubblePos;
                     float a = Mathf.Min(1, n.bubble.t * 3);
                     bg.color = new Color(236 / 255f, 240 / 255f, 238 / 255f, 0.95f * a); tx.color = new Color(26 / 255f, 32 / 255f, 36 / 255f, a);
                 }
@@ -609,7 +617,7 @@ namespace Specimen07
                     while (marks.Count <= mi) { var t = Txt(bubbleLayer, "Mark", "", 40, HAZARD, TextAnchor.LowerCenter, true); Shadow(t); t.rectTransform.anchorMin = t.rectTransform.anchorMax = new Vector2(0.5f, 0.5f); t.rectTransform.pivot = new Vector2(0.5f, 0); t.rectTransform.sizeDelta = new Vector2(80, 70); marks.Add(t); }
                     var m = marks[mi++]; m.gameObject.SetActive(true);
                     m.text = mark; m.color = col; m.fontSize = size;
-                    m.rectTransform.anchoredPosition = local + new Vector2(0, unit * 0.3f);
+                    m.rectTransform.anchoredPosition = markPos;
                 }
             }
             for (int i = bi; i < bubbleBgs.Count; i++) bubbleBgs[i].gameObject.SetActive(false);

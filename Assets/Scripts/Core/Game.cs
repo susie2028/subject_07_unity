@@ -21,7 +21,9 @@ namespace Specimen07
         public bool showMini = true;
         SaveData checkpoint;
 
-        public WorldView view;
+        public IGameView view;
+        [Tooltip("켜면 2.5D(비스듬한 3D 카메라) 화면으로 그린다. Main_2_5D 씬에서 켜져 있음")]
+        public bool use25D;
         public Hud hud;
         public Sfx sfx;
 
@@ -33,7 +35,8 @@ namespace Specimen07
             I = this;
             Application.targetFrameRate = 60;
             sfx = gameObject.AddComponent<Sfx>();
-            view = gameObject.AddComponent<WorldView>();
+            if (use25D) view = gameObject.AddComponent<WorldView3D>();
+            else view = gameObject.AddComponent<WorldView>();
             hud = gameObject.AddComponent<Hud>();
         }
 
@@ -167,7 +170,8 @@ namespace Specimen07
             if (mode == Mode.Pause) mode = Mode.Play;
             if (Launch.MenuSceneInBuild)
             {
-                // 진행은 마지막 층 도착 시점에 저장되어 있다
+                // 진행은 마지막 층 도착 시점에 저장되어 있다. 메뉴에서 다시 시작하면 지금 씬(2D/2.5D)으로 돌아온다
+                Launch.GameScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
                 UnityEngine.SceneManagement.SceneManager.LoadScene(Launch.MenuScene);
                 return;
             }

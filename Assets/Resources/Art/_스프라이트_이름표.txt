@@ -88,3 +88,10 @@ ui_panel_bg          설정 창 바탕
 
 [UI]
 ui_ring  ui_vignette  ui_panel
+
+[2.5D 씬 전용: 서 있는 사람]  (16픽셀 = 1칸, 발밑이 그림 아래쪽 가운데)
+stand_<종류>_front   앞모습 (카메라 쪽을 봄)
+stand_<종류>_back    뒷모습
+stand_<종류>_side    옆모습 (오른쪽을 봄. 왼쪽은 자동 뒤집기)
+  <종류> = cleaner researcher researcher2 guard senior soldier director
+  예) stand_guard_front.png
