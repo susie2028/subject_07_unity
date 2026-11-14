@@ -134,7 +134,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      stand_researcher_v2_front_0: 3136357587891398798
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
