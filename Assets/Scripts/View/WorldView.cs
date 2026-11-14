@@ -497,7 +497,7 @@ namespace Specimen07
         public const float CHAR_PX = 26f;     // 사람 그림 몇 픽셀이 1칸인지
         const float STAND_FOOT = 0.3f;        // 발 위치: 사람 좌표보다 이만큼 아래(화면상)
         //   걸을 때 walk_<종류>_<방향>_N 그림을 씀 (walkT = 걸음 진행 시간, -1 = 서 있음)
-        //   - 6장 이상(영상에서 뽑은 그림): 그대로 재생
+        //   - 6장 이상(팔다리 움직이는 그림): 순서대로 재생 + 약한 출렁임
         //   - 4장 이하: 발 번갈아 드는 그림 + 코드로 통통 눌렸다 늘어나는 출렁임·좌우 기우뚱 (LastPose)
         public struct Pose { public float sx, sy, lean, dx; }
         public static readonly Pose Still = new Pose { sx = 1, sy = 1 };
@@ -514,7 +514,13 @@ namespace Specimen07
             if (walk != null && walk.Count > 0)
             {
                 float cyc = walkT * STRIDE_HZ;
-                if (walk.Count >= 6) spr = walk[Mathf.FloorToInt(Mathf.Repeat(cyc, 1f) * walk.Count) % walk.Count];
+                if (walk.Count >= 6)
+                {
+                    // 팔다리가 움직이는 프레임 그림 + 약한 출렁임
+                    spr = walk[Mathf.FloorToInt(Mathf.Repeat(cyc, 1f) * walk.Count) % walk.Count];
+                    float sn = Mathf.Sin(cyc * Mathf.PI * 2), b = Mathf.Abs(sn);
+                    LastPose = new Pose { sx = 1.02f - 0.03f * b, sy = 0.97f + 0.05f * b, lean = sn * 2f * (dir == 2 ? -1 : 1), dx = 0 };
+                }
                 else
                 {
                     float ph = cyc * Mathf.PI * 2, sn = Mathf.Sin(ph), b = Mathf.Abs(sn);

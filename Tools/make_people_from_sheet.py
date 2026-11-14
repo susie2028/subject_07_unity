@@ -260,6 +260,154 @@ def walk_frames(a, view, static_cols=()):
     return [frames[0], f1, a.copy(), f3]
 
 
+# ------------------------------------------------------------------ 걷기 (팔·다리 따로 움직이는 8프레임)
+# 한 장짜리 그림을 부위로 나눠 움직인다: 다리(번갈아 들기/보폭), 팔(앞뒤로 흔들기), 몸(통통).
+# 순서: 다리(몸 뒤) → 몸 → 팔(몸 앞)
+def parts_front(a, static_cols, hold_right):
+    h, w = a.shape[:2]
+    op = a[..., 3] > 0
+    ys = np.nonzero(op.any(1))[0]; top, bot = ys.min(), ys.max(); H = bot - top + 1
+    body_cols = [x for x in range(w) if x not in static_cols]
+    bx = [x for x in body_cols if op[bot - 1:bot + 1, x].any()]
+    cx = (min(bx) + max(bx) + 1) / 2 if bx else w / 2
+    dark = lambda p: max(p[:3]) < 45
+    # 다리: 아래에서 위로, 가운데가 비었거나 외곽선인 줄
+    leg_top = bot
+    for y in range(bot, top + H // 2, -1):
+        c0, c1 = int(cx) - 1, int(cx)
+        gap = all((not op[y, x]) or dark(a[y, x]) for x in (c0, c1))
+        if gap:
+            leg_top = y
+        else:
+            break
+    # 가운이나 배처럼 넓은 줄은 다리가 아님: 아래쪽에서 몸 최대 폭의 80% 이하인 줄까지만
+    widths = {y: len([x for x in body_cols if op[y, x]]) for y in range(top, bot + 1)}
+    maxw = max(widths.values())
+    narrow_top = bot
+    for y in range(bot, top, -1):
+        if widths[y] <= 0.8 * maxw:
+            narrow_top = y
+        else:
+            break
+    leg_top = max(leg_top, narrow_top) if narrow_top < bot - 1 else leg_top
+    leg_top = min(leg_top, bot - 2)
+    legL = np.zeros_like(op); legR = np.zeros_like(op)
+    for y in range(leg_top, bot + 1):
+        for x in body_cols:
+            if op[y, x]:
+                (legL if x < cx else legR)[y, x] = True
+    # 팔: 몸 가운데~아래쪽에서 양옆으로 튀어나온 부분
+    armL = np.zeros_like(op); armR = np.zeros_like(op)
+    r0, r1 = top + int(H * 0.35), min(leg_top, top + int(H * 0.9))
+    lefts = {}; rights = {}
+    for y in range(r0, r1):
+        xs = [x for x in body_cols if op[y, x]]
+        if xs:
+            lefts[y] = min(xs); rights[y] = max(xs)
+    if lefts:
+        mL = min(lefts.values()); mR = max(rights.values())
+        for y, x0 in lefts.items():
+            if x0 <= mL + 1:
+                for x in range(mL, mL + 4):
+                    if op[y, x] and x not in static_cols:
+                        armL[y, x] = True
+        if not hold_right:
+            for y, x1 in rights.items():
+                if x1 >= mR - 1:
+                    for x in range(mR - 3, mR + 1):
+                        if op[y, x] and x not in static_cols:
+                            armR[y, x] = True
+    stat = np.zeros_like(op)
+    for x in static_cols:
+        stat[:, x] = op[:, x]
+    return legL, legR, armL, armR, stat
+
+
+def parts_side(a, static_cols):
+    h, w = a.shape[:2]
+    op = a[..., 3] > 0
+    ys = np.nonzero(op.any(1))[0]; top, bot = ys.min(), ys.max()
+    body_cols = [x for x in range(w) if x not in static_cols]
+    bx = [x for x in body_cols if op[bot - 1:bot + 1, x].any()]
+    cx = (min(bx) + max(bx) + 1) / 2 if bx else w / 2
+    legB = np.zeros_like(op); legF = np.zeros_like(op)
+    for y in range(bot - 3, bot + 1):
+        for x in body_cols:
+            if op[y, x]:
+                (legB if x < cx else legF)[y, x] = True
+    stat = np.zeros_like(op)
+    for x in static_cols:
+        stat[:, x] = op[:, x]
+    return legB, legF, stat
+
+
+def compose(a, layers):
+    # layers: [(mask, dx, dy)] 순서대로 덮어 그림. mask=None이면 '나머지 몸'
+    h, w = a.shape[:2]
+    out = np.zeros_like(a)
+    used = np.zeros(a.shape[:2], bool)
+    for m, _, _ in layers:
+        if m is not None:
+            used |= m
+    rest = (a[..., 3] > 0) & ~used
+    for m, dx, dy in layers:
+        mm = rest if m is None else m
+        ys, xs = np.nonzero(mm)
+        for y, x in zip(ys, xs):
+            ny, nx_ = y + dy, x + dx
+            if 0 <= ny < h and 0 <= nx_ < w:
+                out[ny, nx_] = a[y, x]
+    return out
+
+
+def ground_fill(f, a, m1, m2, dxs=(0, 0)):
+    # 몸이 위로 뜰 때 디딘 발은 바닥에 붙어 있게 맨 아래 줄을 한 줄 늘림
+    h, w = a.shape[:2]
+    for m, dx in ((m1, dxs[0]), (m2, dxs[1])):
+        if m is None:
+            continue
+        ys, xs = np.nonzero(m)
+        if len(ys) == 0:
+            continue
+        bot = ys.max()
+        for x in xs[ys == bot]:
+            nx_ = x + dx
+            if 0 <= nx_ < w and f[bot, nx_, 3] == 0:
+                f[bot, nx_] = a[bot, x]
+
+
+def puppet_walk(a, view, static_cols=(), hold_right=False, n=8):
+    frames = []
+    if view in ('front', 'back'):
+        legL, legR, armL, armR, stat = parts_front(a, static_cols, hold_right)
+        if view == 'back':          # 뒤에서 보면 왼쪽·오른쪽이 바뀐 것처럼 보이도록 위상 반대
+            legL, legR = legR, legL; armL, armR = armR, armL
+        for k in range(n):
+            s = np.sin(2 * np.pi * k / n)
+            liftL = 2 if s > 0.7 else 1 if s > 0.25 else 0
+            liftR = 2 if s < -0.7 else 1 if s < -0.25 else 0
+            bob = -1 if abs(s) > 0.7 else 0
+            aL = (-2 if s < -0.8 else -1 if s < -0.3 else (1 if s > 0.3 else 0))   # 오른발이 나갈 때 왼팔이 앞으로(위로)
+            aR = (-2 if s > 0.8 else -1 if s > 0.3 else (1 if s < -0.3 else 0))
+            f = compose(a, [(legL, 0, -liftL + bob), (legR, 0, -liftR + bob), (None, 0, bob), (stat, 0, 0),
+                            (armL, 0, bob + aL), (armR, 0, bob + aR)])
+            ground_fill(f, a, legL if liftL == 0 else None, legR if liftR == 0 else None)
+            frames.append(f)
+    else:
+        legB, legF, stat = parts_side(a, static_cols)
+        for k in range(n):
+            s = np.sin(2 * np.pi * k / n); c = np.cos(2 * np.pi * k / n)
+            dF = 2 if s > 0.8 else 1 if s > 0.3 else (-2 if s < -0.8 else -1 if s < -0.3 else 0)
+            liftF = 1 if abs(s) <= 0.35 and c > 0 else 0
+            liftB = 1 if abs(s) <= 0.35 and c < 0 else 0
+            bob = -1 if abs(s) > 0.7 else 0
+            f = compose(a, [(legB, -dF, -liftB + bob), (legF, dF, -liftF + bob), (None, 0, bob), (stat, 0, 0)])
+            if bob:
+                ground_fill(f, a, legB if liftB == 0 else None, legF if liftF == 0 else None, (-dF, dF))
+            frames.append(f)
+    return frames
+
+
 def save(img, name):
     Image.fromarray(img, 'RGBA').save(os.path.join(OUT, name + '.png'))
 
@@ -294,7 +442,7 @@ def main():
         if kind == 'cleaner':      # 대걸레는 걸을 때 바닥에 그대로
             g = feet_groups(a)
             static = [x for gg in g if gg[0] > CW * 0.62 for x in range(gg[0], gg[1] + 1)]
-        fr = walk_frames(a, view, static)
+        fr = puppet_walk(a, view, static, hold_right=(kind == 'cleaner'))
         if os.path.exists(os.path.join(HERE, 'art_src', 'walk_%s_%s.mp4' % (kind, view))):
             pass   # 걷기 영상이 있으면 그쪽(extract_walk_video.py)이 만든 프레임을 씀
         else:
@@ -306,12 +454,12 @@ def main():
     for k, v, _ in preview:
         if k not in kinds:
             kinds.append(k)
-    sheet = Image.new('RGBA', (CW * 12 + 40, CH * len(kinds)), (52, 44, 78, 255))
+    sheet = Image.new('RGBA', (CW * 24 + 40, CH * len(kinds)), (52, 44, 78, 255))
     for k, v, fr in preview:
         r = kinds.index(k); c = ROWS.index(v)
         for i, f in enumerate(fr):
             im = Image.fromarray(f, 'RGBA')
-            sheet.paste(im, (c * (CW * 4 + 12) + i * CW, r * CH), im)
+            sheet.paste(im, (c * (CW * 8 + 12) + i * CW, r * CH), im)
     sheet.resize((sheet.width * 4, sheet.height * 4), Image.NEAREST).save(os.path.join(HERE, 'people_preview.png'))
     print('ok', len(sets), 'sets')
 
