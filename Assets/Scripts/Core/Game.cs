@@ -332,7 +332,12 @@ namespace Specimen07
             var c = n.C;
             float dx = x - n.x, dy = y - n.y, d = Mathf.Sqrt(dx * dx + dy * dy);
             if (d > ViewDist(n)) return false;
-            if (c.shape != ViewShape.Circle && d > 0.25f && Mathf.Abs(U.AngDiff(Mathf.Atan2(dy, dx), n.face)) > Data.ShapeHalf(c.shape)) return false;
+            if (d > 0.25f)
+            {
+                float diff = Mathf.Abs(U.AngDiff(Mathf.Atan2(dy, dx), n.face));
+                if (c.shape != ViewShape.Circle && diff > Data.ShapeHalf(c.shape)) return false;
+                if (c.shape == ViewShape.Circle && diff > Data.Rad(Cfg.rearBlindFrom) && d > Cfg.rearRange) return false;   // 군인 등 뒤 사각지대
+            }
             return LineClear(n.x, n.y, x, y);
         }
         bool SeesPlayer(Npc n) { return n.alive && !PlayerHidden() && Sees(n, S.player.x, S.player.y); }

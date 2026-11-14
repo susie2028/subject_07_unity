@@ -110,12 +110,14 @@ Tools/                   ← 프로토타입 맵 → FloorDefs.cs 변환 스크�
 ```
 
 ### 맵을 고치고 싶다면
-- 간단한 수정: `FloorDefs.cs`의 숫자를 바로 고치면 됩니다. (rooms = 방 사각형, fill = 가구, doors = 문, npcs.route = 순찰 경로 `[x, y, 대기초, 바라보는 각도]`)
-- 프로토타입 HTML을 고친 뒤 다시 변환하려면:
-  ```
-  node Tools/extract.js Prototype/index.html   # floors.json 생성
-  python3 Tools/gen.py Assets/Scripts/Data/FloorDefs.cs
-  ```
+맵은 `Tools/floors_v2.py`에 층마다 방·통로·문·NPC 순찰 경로로 적혀 있습니다 (가구는 방 종류에 맞춰 자동 배치).
+고친 뒤에는 이렇게 다시 만들고 검사하세요:
+```
+cd Tools
+python3 floors_v2.py floors.json          # 맵 데이터 생성
+python3 validate_floors.py floors.json    # 순찰 경로·층 진행 가능 여부 검사 (총 오류 0이어야 함)
+python3 gen.py ../Assets/Scripts/Data/FloorDefs.cs
+```
 
 ---
 

@@ -7,11 +7,13 @@ namespace Specimen07
 {
     public static class Cfg
     {
-        public const float eatTime = 0.8f, eatRange = 1.15f, grace = 0.3f, stare = 2.0f;
+        public const float eatTime = 0.65f, eatRange = 1.15f, grace = 0.3f, stare = 2.0f;
         public const float moveEps = 0.05f, turnRate = 5.0f, inspectCooldown = 6f, playerR = 0.3f;
         public const float alarmTime = 20f, aimTime = 1.1f, catchDist = 0.8f, arriveGrace = 1.2f;
         public const float missingDelay = 20f, respawn = 45f, heliTime = 15f, waryStep = 0.75f;
         public const float patrolK = 0.36f, chaseK = 0.48f;   // NPC 속도 배율 (피드백: 전체적으로 빠르게)
+        // 군인(원형 시야)의 등 뒤 사각지대: 정면 기준 ±140° 바깥(등 뒤 80°)은 이 거리까지만 보임
+        public const float rearBlindFrom = 140f, rearRange = 0.6f;   // 먹기 사거리(1.15)보다 짧아서 등 뒤 0.6~1.15칸에서 먹을 수 있음
         public const float visionR = 9f, ventVisionR = 3.2f; // 주인공 시야 반경 (칸). 이 밖과 벽 뒤는 안 보임
 
         // 화면에 보이는 칸 수 (작을수록 확대)
@@ -136,12 +138,12 @@ namespace Specimen07
         {
             { "body", "본모습은 어떤 시야에도 들어가면 안 된다. 바닥의 부채꼴(군인은 원)이 시야다. 시야가 지나간 뒤에 움직이자." },
             { "moved", "물건 모습일 때는 누가 보고 있으면 멈춰야 한다. 바퀴 카트만 보는 앞에서 천천히 굴러갈 수 있다." },
-            { "eating", "먹는 데 0.8초가 걸린다. 대상 말고 다른 사람의 시야가 비었는지 확인하자. 변장한 상태라면 대상의 눈앞에서도 덮칠 수 있다." },
+            { "eating", "먹는 데 0.65초가 걸린다. 대상 말고 다른 사람의 시야가 비었는지 확인하자. 변장한 상태라면 대상의 눈앞에서도 덮칠 수 있다." },
             { "restricted", "사람 모습이라도 그 인물이 있을 이유가 없는 구역이 있다. 들킨 모습은 경보 동안 계속 수배된다." },
             { "laser", "레이저 그리드는 B1 기계실의 차단 장치로 끌 수 있다. 실험실 B의 환풍구로 우회하는 길도 있다." },
             { "gas", "가스 함정은 2F 보안 통제실에서 해제한다. 고위 연구원 카드가 필요하다." },
             { "caught", "경비원은 본모습이나 들킨 모습을 보면 쫓아온다. 시야를 끊고, 안 보이는 곳에서 다른 것을 먹어 모습을 바꾸자. 환풍구도 숨을 곳이다." },
-            { "shot", "군인은 사방을 본다. 보이면 멈춰 서서 조준한다 — 조준선이 다 차기 전에 벽 뒤로 숨어야 한다." },
+            { "shot", "군인은 사방을 보지만 등 바로 뒤는 사각지대다. 등 뒤로 바짝 붙어 먹거나, 사람으로 변장해서 다가가자. 조준선이 다 차기 전에 벽 뒤로 숨어야 한다." },
         };
         public static readonly Dictionary<string, string> Heads = new Dictionary<string, string>
         { { "shot", "사살" }, { "caught", "포획" }, { "laser", "감전" }, { "gas", "질식" } };

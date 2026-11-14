@@ -783,8 +783,9 @@ namespace Specimen07
             for (int i = 0; i <= N; i++)
             {
                 float a = n.face - half + (2 * half) * i / N, ca = Mathf.Cos(a), sa = Mathf.Sin(a);
-                float d = 0;
-                while (d < vd)
+                float d = 0, lim = vd;
+                if (c.shape == ViewShape.Circle && Mathf.Abs(U.AngDiff(a, n.face)) > Data.Rad(Cfg.rearBlindFrom)) lim = Cfg.rearRange;   // 등 뒤 사각지대
+                while (d < lim)
                 {
                     float nd = d + 0.08f;
                     if (game.IsOpaque(U.Floor(n.x + ca * nd), U.Floor(n.y + sa * nd))) break;
