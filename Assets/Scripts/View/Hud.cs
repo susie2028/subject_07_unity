@@ -46,7 +46,7 @@ namespace Specimen07
         GameObject hudRoot;
         Image formIcon; Text formName;
         RectTransform formCard, timerBox; Image timerFill, timerBg; Text timerLabel, timerNum, countdown; float heartT;
-        readonly List<Image> cardBoxes = new List<Image>(), cardStrips = new List<Image>(); readonly List<Text> cardTexts = new List<Text>();
+        readonly List<Image> cardBoxes = new List<Image>(); readonly List<Text> cardTexts = new List<Text>();
         GameObject pillSeen, pillOdd, pillVent;
         Text floorTag, objective, alarmText, meta; GameObject alarmBox;
         RawImage mini; Texture2D miniTex; Color32[] miniBase, miniPx; int miniTick;
@@ -176,13 +176,11 @@ namespace Specimen07
             {
                 var c = Data.CardOrder[i];
                 var box = R(cards, "Card_" + c, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(i * (CW + CG), 0), new Vector2(CW, CH));
-                var im = Img(box, panel, "ui_round"); im.type = Image.Type.Sliced;
-                var strip = R(box, "Strip", new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1), new Vector2(0, -5), new Vector2(-14, 5));
-                var st = Img(strip, Data.Cards[c].color);
+                var im = Img(box, panel, "ui_card"); im.type = Image.Type.Sliced;      // 모서리만 살짝 둥근 사각형
                 var t = Txt(box, "T", Data.Cards[c].name, 19, MUTED, TextAnchor.MiddleCenter, true);
-                t.rectTransform.anchorMin = Vector2.zero; t.rectTransform.anchorMax = Vector2.one; t.rectTransform.sizeDelta = Vector2.zero; t.rectTransform.anchoredPosition = new Vector2(0, -3);
+                t.rectTransform.anchorMin = Vector2.zero; t.rectTransform.anchorMax = Vector2.one; t.rectTransform.sizeDelta = Vector2.zero;
                 t.horizontalOverflow = HorizontalWrapMode.Overflow;
-                cardBoxes.Add(im); cardTexts.Add(t); cardStrips.Add(st);
+                cardBoxes.Add(im); cardTexts.Add(t);
             }
             var pills = R(hr, "Pills", Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(304, 110), new Vector2(200, 120));
             var pv = VStack(pills, 8); pv.childForceExpandWidth = false; pv.childAlignment = TextAnchor.LowerLeft;
@@ -198,14 +196,6 @@ namespace Specimen07
             setBtn.GetComponent<Image>().sprite = Art.Get("ui_round"); setBtn.GetComponent<Image>().type = Image.Type.Sliced;
             meta = Txt(hr, "Meta", "", 17, MUTED, TextAnchor.UpperRight);
             meta.rectTransform.anchorMin = meta.rectTransform.anchorMax = meta.rectTransform.pivot = new Vector2(1, 1); meta.rectTransform.anchoredPosition = new Vector2(-30, -96); meta.rectTransform.sizeDelta = new Vector2(500, 26);
-            // 2.5D 비교 씬 표시 (설정 버튼 왼쪽)
-            if (game.use25D)
-            {
-                var tag = R(hr, "Tag25D", new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1), new Vector2(-172, -36), new Vector2(92, 46));
-                var tagImg = Img(tag, new Color(0.62f, 0.42f, 1f, 0.92f), "ui_round"); tagImg.type = Image.Type.Sliced;
-                var tt = Txt(tag, "T", "2.5D", 24, Color.white, TextAnchor.MiddleCenter, true);
-                tt.rectTransform.anchorMin = Vector2.zero; tt.rectTransform.anchorMax = Vector2.one; tt.rectTransform.sizeDelta = Vector2.zero;
-            }
 
             // ── 위 가운데: 경보
             alarmBox = R(hr, "Alarm", new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -28), new Vector2(440, 50)).gameObject;
@@ -505,8 +495,7 @@ namespace Specimen07
                     var c = Data.CardOrder[i]; bool on = S.cards.Contains(c);
                     var cc = Data.Cards[c].color;
                     cardBoxes[i].color = on ? cc : new Color(BG.r, BG.g, BG.b, 0.72f);
-                    cardTexts[i].color = on ? Data.Hex("#11151a") : new Color(1, 1, 1, 0.28f);
-                    cardStrips[i].color = on ? new Color(1, 1, 1, 0.55f) : new Color(cc.r, cc.g, cc.b, 0.35f);
+                    cardTexts[i].color = on ? Data.Hex("#11151a") : new Color(1, 1, 1, 0.3f);
                 }
             }
             string ob = game.Objective();

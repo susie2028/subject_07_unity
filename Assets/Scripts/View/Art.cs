@@ -225,6 +225,8 @@ namespace Specimen07
                     return q.ToSprite(key, 64, true);
                 case "ui_round": // 둥근 모서리 패널 (9-slice)
                     q = new Painter(32, 32); q.RoundRect(0, 0, 32, 32, 11, Color.white); return q.ToSprite(key, 32, true, null, new Vector4(12, 12, 12, 12));
+                case "ui_card": // 모서리만 살짝 둥근 사각형 (출입 카드). 화면에서 모서리 반지름 약 5픽셀
+                    q = new Painter(24, 24); q.RoundRect(0, 0, 24, 24, 4, Color.white); return q.ToSprite(key, 80, true, null, new Vector4(5, 5, 5, 5));
                 case "ui_panel":
                     q = new Painter(16, 16); q.Rect(0, 0, 16, 16, Color.white); return q.ToSprite(key, 16);
             }

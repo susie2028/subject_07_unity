@@ -496,15 +496,35 @@ namespace Specimen07
         // 서 있는 사람 그림 (stand_<종류>_front/back/side). 있으면 true, sc = 크기 배율
         public const float CHAR_PX = 26f;     // 사람 그림 몇 픽셀이 1칸인지
         const float STAND_FOOT = 0.3f;        // 발 위치: 사람 좌표보다 이만큼 아래(화면상)
-        //   걸을 때 walk_<종류>_<방향>_0..3 그림이 있으면 그걸 순서대로 (walkT = 걸음 진행 시간)
+        //   걸을 때 walk_<종류>_<방향>_N 그림을 씀 (walkT = 걸음 진행 시간, -1 = 서 있음)
+        //   - 6장 이상(영상에서 뽑은 그림): 그대로 재생
+        //   - 4장 이하: 발 번갈아 드는 그림 + 코드로 통통 눌렸다 늘어나는 출렁임·좌우 기우뚱 (LastPose)
+        public struct Pose { public float sx, sy, lean, dx; }
+        public static readonly Pose Still = new Pose { sx = 1, sy = 1 };
+        public static Pose LastPose = Still;
+        public const float STRIDE_HZ = 1.1f;  // 1초에 몇 걸음 쌍(왼발+오른발)
         internal static bool ApplyStand(SpriteRenderer sr, string kind, float face, out float sc, float walkT = -1)
         {
-            sc = 1;
+            sc = 1; LastPose = Still;
             if (!Art.Has("stand_" + kind + "_front")) { sr.flipX = false; return false; }
             int dir = Art.DirIndex(face);
             string view = dir == 1 ? "front" : dir == 3 ? "back" : "side";
             var walk = walkT >= 0 ? Art.Frames("walk_" + kind + "_" + view) : null;
-            sr.sprite = walk != null && walk.Count > 0 ? walk[Mathf.FloorToInt(walkT * 8f) % walk.Count] : Art.Get("stand_" + kind + "_" + view);
+            Sprite spr = Art.Get("stand_" + kind + "_" + view);
+            if (walk != null && walk.Count > 0)
+            {
+                float cyc = walkT * STRIDE_HZ;
+                if (walk.Count >= 6) spr = walk[Mathf.FloorToInt(Mathf.Repeat(cyc, 1f) * walk.Count) % walk.Count];
+                else
+                {
+                    float ph = cyc * Mathf.PI * 2, sn = Mathf.Sin(ph), b = Mathf.Abs(sn);
+                    int idx = sn > 0.35f ? 1 : sn < -0.35f ? 3 : 0;
+                    spr = walk[Mathf.Min(idx, walk.Count - 1)];
+                    // 디딜 때 꾹 눌리고, 발을 들 때 쭉 늘어나며, 걸음마다 좌우로 기우뚱
+                    LastPose = new Pose { sx = 1.04f - 0.06f * b, sy = 0.93f + 0.1f * b, lean = sn * 4f * (dir == 2 ? -1 : 1), dx = sn * 0.03f };
+                }
+            }
+            sr.sprite = spr;
             sr.flipX = dir == 2; sr.transform.rotation = Quaternion.identity;
             sc = sr.sprite.pixelsPerUnit / CHAR_PX;
             return true;
@@ -626,8 +646,10 @@ namespace Specimen07
                 if (standing)
                 {
                     // 서 있는 그림: 발이 사람 위치보다 살짝 아래, 걸을 때 위아래로 통통
-                    sr.transform.localScale = Vector3.one * sc * s;
-                    sr.transform.position = U.W(n.x, n.y + STAND_FOOT + sr.sprite.bounds.min.y * sc * s - bob);
+                    var pz = LastPose;
+                    sr.transform.localScale = new Vector3(sc * s * pz.sx, sc * s * pz.sy, 1);
+                    sr.transform.rotation = Quaternion.Euler(0, 0, pz.lean);
+                    sr.transform.position = U.W(n.x + pz.dx, n.y + STAND_FOOT + sr.sprite.bounds.min.y * sc * s * pz.sy - bob);
                 }
                 else
                 {
@@ -780,8 +802,9 @@ namespace Specimen07
                 float sc;
                 if (f.type == FormType.Human && ApplyStand(player, p.form, p.face, out sc, p.speedNow > 0.3f ? t : -1))
                 {
-                    tr.localScale = Vector3.one * sc;
-                    j.y += STAND_FOOT + player.sprite.bounds.min.y * sc;
+                    var pz = LastPose;
+                    tr.localScale = new Vector3(sc * pz.sx, sc * pz.sy, 1); tr.rotation = Quaternion.Euler(0, 0, pz.lean);
+                    j.y += STAND_FOOT + player.sprite.bounds.min.y * sc * pz.sy; j.x += pz.dx;
                 }
                 else if (f.type == FormType.Human) ApplyFacing(player, "char_" + p.form, p.face);
                 else { player.sprite = Art.Get("obj_" + p.form); tr.rotation = Quaternion.identity; }

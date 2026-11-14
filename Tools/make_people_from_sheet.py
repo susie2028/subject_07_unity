@@ -7,6 +7,7 @@
 # 결과: Assets/Resources/Art/stand_<종류>_<front|back|side>.png (서 있는 그림)
 #       Assets/Resources/Art/walk_<종류>_<front|back|side>_<0..3>.png (걷기)
 # 실행: python3 Tools/make_people_from_sheet.py
+#  (Tools/art_src/walk_<종류>_<방향>.mp4 걷기 영상이 있으면 그 방향 걷기는 Tools/extract_walk_video.py 로 따로 뽑음)
 import colorsys
 import os
 
@@ -294,8 +295,11 @@ def main():
             g = feet_groups(a)
             static = [x for gg in g if gg[0] > CW * 0.62 for x in range(gg[0], gg[1] + 1)]
         fr = walk_frames(a, view, static)
-        for i, f in enumerate(fr):
-            save(f, 'walk_%s_%s_%d' % (kind, view, i))
+        if os.path.exists(os.path.join(HERE, 'art_src', 'walk_%s_%s.mp4' % (kind, view))):
+            pass   # 걷기 영상이 있으면 그쪽(extract_walk_video.py)이 만든 프레임을 씀
+        else:
+            for i, f in enumerate(fr):
+                save(f, 'walk_%s_%s_%d' % (kind, view, i))
         preview.append((kind, view, fr))
     # 미리보기
     kinds = []

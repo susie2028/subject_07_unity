@@ -447,14 +447,15 @@ namespace Specimen07
         // 세운 그림 (카메라 쪽을 봄)
         SpriteRenderer Stand(Transform parent, string key) { return Spr(parent, key); }
         // 발이 (x,y)에 닿게 세운다. pxPerTile: 그림 몇 픽셀이 1칸인지
-        void PlaceStand(SpriteRenderer sr, float x, float y, float scale, float lift = 0)
+        void PlaceStand(SpriteRenderer sr, float x, float y, float scale, float lift = 0) { PlaceStand(sr, x, y, scale, lift, WorldView.Still); }
+        void PlaceStand(SpriteRenderer sr, float x, float y, float scale, float lift, WorldView.Pose pz)
         {
             var spr = sr.sprite; if (spr == null) return;
             float s = scale;
-            sr.transform.rotation = Quaternion.identity;
-            sr.transform.localScale = new Vector3(s, s * BB_Y, s);
-            float bottom = spr.bounds.min.y * s * BB_Y;   // 피벗 아래로 내려간 만큼 올린다
-            sr.transform.position = P(x, lift - bottom, y);
+            sr.transform.rotation = Quaternion.Euler(0, 0, pz.lean);
+            sr.transform.localScale = new Vector3(s * pz.sx, s * BB_Y * pz.sy, s);
+            float bottom = spr.bounds.min.y * s * BB_Y * pz.sy;   // 피벗 아래로 내려간 만큼 올린다
+            sr.transform.position = P(x + pz.dx, lift - bottom, y);
         }
 
         MeshFilter NewMesh(string name, Material mat)
@@ -696,7 +697,7 @@ namespace Specimen07
                 if (p.eating != null && p.eating.target.isNpc && p.eating.target.npc == n) s = Mathf.Max(0.05f, 1 - p.eating.t / Cfg.eatTime);
                 float ph = t * (n.state == NpcState.Chase ? 18 : 12) + n.id.GetHashCode() % 7;
                 float bob = moving && !WorldView.HasWalk(kind) ? Mathf.Abs(Mathf.Sin(ph)) * 0.07f : 0;
-                PlaceStand(sr, n.x, n.y, s * sr.sprite.pixelsPerUnit / WorldView.CHAR_PX, bob);
+                PlaceStand(sr, n.x, n.y, s * sr.sprite.pixelsPerUnit / WorldView.CHAR_PX, bob, WorldView.LastPose);
                 sr.color = Tint(n.x, n.y);
                 sh.transform.position = P(n.x, 0.02f, n.y); sh.transform.localScale = new Vector3(0.75f, 0.45f, 1) * s; sh.color = new Color(0, 0, 0, 0.45f);
             }
@@ -779,7 +780,7 @@ namespace Specimen07
             if (playing) playerLight.transform.position = P(S.player.x, 1.1f, S.player.y);
         }
 
-        bool faceLeft;
+        bool faceLeft; WorldView.Pose humanPose = WorldView.Still;
         void DrawPlayer(float t)
         {
             var S = game.S; var p = S.player; var f = Data.Forms[p.form];
@@ -812,7 +813,7 @@ namespace Specimen07
             if (f.type == FormType.Human)
             {
                 float sc0; WorldView.ApplyStand(player, p.form, p.face, out sc0, p.speedNow > 0.3f ? t : -1);
-                scale = player.sprite.pixelsPerUnit / WorldView.CHAR_PX;
+                scale = player.sprite.pixelsPerUnit / WorldView.CHAR_PX; humanPose = WorldView.LastPose;
                 bool warn = p.timer < f.dur * 0.25f;
                 player.color = warn ? Color.Lerp(Tint(p.x, p.y), new Color(1, 0.6f, 0.65f), 0.5f + 0.5f * Mathf.Sin(t * 8)) : Tint(p.x, p.y);
             }
@@ -830,7 +831,7 @@ namespace Specimen07
                 var lit = Color.Lerp(Tint(p.x, p.y), Color.white, 0.3f); lit.a = a;   // 주인공은 조금 더 잘 보이게
                 player.color = lit;
             }
-            PlaceStand(player, p.x, p.y, scale);
+            PlaceStand(player, p.x, p.y, scale, 0, f.type == FormType.Human ? humanPose : WorldView.Still);
             // 벽 뒤(또는 환기구 안)에 있으면 실루엣을 겹쳐 그린다
             int tx = U.Floor(p.x), ty = U.Floor(p.y);
             bool behind = hidden || Tall(G.Tile(tx, ty + 1)) || Tall(G.Tile(tx, ty + 2));   // 남쪽(카메라 쪽) 1~2칸에 높은 것이 있으면

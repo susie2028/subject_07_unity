@@ -92,7 +92,9 @@ ui_ring  ui_vignette  ui_panel
 [사람 (2D·2.5D 공통)]  (사람 그림 26픽셀 = 1칸, 발이 그림 맨 아래 줄)
 ※ 지금 그림은 Tools/art_src/npc_sheet.png 를 Tools/make_people_from_sheet.py 로 잘라 만든 것 (40x42)
 stand_<종류>_front / _back / _side        서 있기 (side는 오른쪽을 봄, 왼쪽은 자동 뒤집기)
-walk_<종류>_<front|back|side>_0..3        걷기 4장 (0 서기, 1 왼발, 2 서기, 3 오른발)
+walk_<종류>_<front|back|side>_0..N        걷기. 6장 이상 = 그대로 재생(영상에서 뽑은 것), 4장 = 발 번갈아 + 코드로 출렁임
+※ 걷기 영상(자홍색 배경)을 Tools/art_src/walk_<종류>_<방향>.mp4 로 넣고
+   python3 Tools/extract_walk_video.py Tools/art_src/walk_soldier_front.mp4 soldier front  → 8장 생성
   <종류> = cleaner researcher researcher2 guard senior soldier director
 같은 종류 여러 모습: <종류>_v2, <종류>_v3 … 를 붙이면 사람마다 골라 씀
   예) stand_researcher_v2_front.png (지금: 연구원 v2 주황 머리, v3 금발 / 연구원2 v2 짙은 갈색)
