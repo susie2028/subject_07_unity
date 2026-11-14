@@ -10,3 +10,7 @@ beep    군인 조준음             shot    총소리
 grab    붙잡힘                  zap     레이저 감전
 heli    헬기                    win     탈출 성공
 blip    인트로 타자 소리        hum     배경 웅웅거림 (반복 재생, 이음새 없는 루프로)
+
+[배경음악·UI]
+bgm_play  게임 플레이 중 배경음악 (반복, 메인 메뉴에선 안 나옴)
+ui_click  UI 버튼 클릭

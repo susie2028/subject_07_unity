@@ -107,7 +107,7 @@ namespace Specimen07
         {
             var rt = R(parent, "Btn_" + label, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(w, h));
             var im = Img(rt, bg); im.raycastTarget = true;
-            var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = im; b.onClick.AddListener(onClick);
+            var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = im; b.onClick.AddListener(UiSound.Click); b.onClick.AddListener(onClick);
             var nav = b.navigation; nav.mode = Navigation.Mode.None; b.navigation = nav; // 키보드 Space/Enter가 게임 조작과 겹치지 않게
             var cb = b.colors; cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f, 1); cb.disabledColor = new Color(1, 1, 1, 0.45f); b.colors = cb;
             var t = Txt(rt, "Label", label, 28, fg, TextAnchor.MiddleCenter, true);

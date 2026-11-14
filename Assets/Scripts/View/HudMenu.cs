@@ -115,7 +115,7 @@ namespace Specimen07
             else if (common != null) { im.sprite = common; im.color = Color.white; if (common.border != Vector4.zero) im.type = Image.Type.Sliced; }
             else { im.sprite = Art.Get("ui_panel"); im.color = BTN_COLOR; }
 
-            var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = im; b.onClick.AddListener(onClick);
+            var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = im; b.onClick.AddListener(UiSound.Click); b.onClick.AddListener(onClick);
             var nav = b.navigation; nav.mode = Navigation.Mode.None; b.navigation = nav;
             var cb = b.colors; cb.normalColor = Color.white; cb.highlightedColor = new Color(0.85f, 0.85f, 0.9f, 1); cb.pressedColor = new Color(0.7f, 0.7f, 0.75f, 1); cb.disabledColor = new Color(0.6f, 0.6f, 0.6f, 0.6f); b.colors = cb;
 

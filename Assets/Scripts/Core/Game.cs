@@ -902,6 +902,12 @@ namespace Specimen07
             Tick(dt);
             if (view != null) view.Render();
             if (hud != null) hud.Refresh(false);
+            // 배경음악: 게임 플레이 중에만 (메인 메뉴·인트로 제외), 일시정지·결과 화면에선 작게, 탈출 성공 후엔 끔
+            if (sfx != null)
+            {
+                if (mode == Mode.Title || mode == Mode.Intro || mode == Mode.Clear) sfx.SetMusic(null);
+                else sfx.SetMusic("bgm_play", mode == Mode.Pause || mode == Mode.Over ? 0.4f : 1f);
+            }
         }
 
         void HandleKeys()

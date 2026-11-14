@@ -39,6 +39,8 @@ namespace Specimen07
         void Start()
         {
             AudioListener.volume = Settings.Volume;
+            // 이 씬의 모든 버튼에 클릭 소리
+            foreach (var btn in FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)) btn.onClick.AddListener(UiSound.Click);
             // 기본 글꼴(LegacyRuntime)로 된 글자는 한글이 나오는 글꼴로 바꿔 준다
             foreach (var t in GetComponentsInChildren<Text>(true))
             {

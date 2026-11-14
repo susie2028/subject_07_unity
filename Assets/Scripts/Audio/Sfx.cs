@@ -11,7 +11,9 @@ namespace Specimen07
         const int SR = 22050;
         const float MASTER = 0.55f;
         public bool muted;
-        AudioSource oneShot, hum, spatial;
+        AudioSource oneShot, hum, spatial, music;
+        string musicName; float musicLevel, musicCur;
+        const float MUSIC_VOL = 0.5f;   // 배경음악 크기 (효과음 대비)
         readonly Dictionary<string, AudioClip> clips = new Dictionary<string, AudioClip>();
         bool inited;
 
@@ -20,6 +22,33 @@ namespace Specimen07
             oneShot = gameObject.AddComponent<AudioSource>(); oneShot.playOnAwake = false;
             hum = gameObject.AddComponent<AudioSource>(); hum.playOnAwake = false; hum.loop = true;
             spatial = gameObject.AddComponent<AudioSource>(); spatial.playOnAwake = false;
+            music = gameObject.AddComponent<AudioSource>(); music.playOnAwake = false; music.loop = true; music.volume = 0;
+        }
+
+        // 배경음악: name = Resources/Sounds 의 파일 이름 (null이면 끔), level = 0~1 (일시정지 때 낮추기 등). 부드럽게 바뀐다.
+        public void SetMusic(string name, float level = 1f)
+        {
+            if (name != musicName)
+            {
+                musicName = name;
+                if (name != null)
+                {
+                    var c = Resources.Load<AudioClip>("Sounds/" + name);
+                    if (c != null && music.clip != c) { music.clip = c; music.time = 0; musicCur = 0; music.volume = 0; music.Play(); }
+                }
+            }
+            musicLevel = name == null ? 0 : level;
+        }
+
+        void Update()
+        {
+            float target = muted ? 0 : musicLevel * MUSIC_VOL;
+            musicCur = Mathf.MoveTowards(musicCur, target, Time.unscaledDeltaTime * (target > musicCur ? 0.6f : 1.2f));
+            if (music != null)
+            {
+                music.volume = musicCur;
+                if (musicCur <= 0.001f && musicName == null && music.isPlaying) music.Stop();
+            }
         }
 
         public void Init()
