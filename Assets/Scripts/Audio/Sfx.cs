@@ -13,7 +13,8 @@ namespace Specimen07
         public bool muted;
         AudioSource oneShot, hum, spatial, music;
         string musicName; float musicLevel, musicCur;
-        const float MUSIC_VOL = 0.5f;   // 배경음악 크기 (효과음 대비)
+        const float MUSIC_VOL = 0.32f;  // 배경음악 기본 크기 (설정의 배경음악 % 가 곱해짐)
+        const float SFX_GAIN = 1.7f;    // 효과음 기본 크기 (설정의 효과음 % 가 곱해짐). 배경음악보다 잘 들리게 크게
         readonly Dictionary<string, AudioClip> clips = new Dictionary<string, AudioClip>();
         bool inited;
 
@@ -42,7 +43,7 @@ namespace Specimen07
 
         void Update()
         {
-            float target = muted ? 0 : musicLevel * MUSIC_VOL;
+            float target = muted ? 0 : musicLevel * MUSIC_VOL * Settings.MusicVolume;
             musicCur = Mathf.MoveTowards(musicCur, target, Time.unscaledDeltaTime * (target > musicCur ? 0.6f : 1.2f));
             if (music != null)
             {
@@ -66,7 +67,7 @@ namespace Specimen07
         {
             if (muted) return;
             var c = Get(name);
-            if (c != null) oneShot.PlayOneShot(c);
+            if (c != null) oneShot.PlayOneShot(c, SFX_GAIN * Settings.SfxVolume);
         }
 
         // 좌우 위치가 있는 소리 (pan: -1 왼쪽 ~ 1 오른쪽)
@@ -76,13 +77,13 @@ namespace Specimen07
             var c = Get(name);
             if (c == null) return;
             spatial.panStereo = pan;
-            spatial.PlayOneShot(c, volume);
+            spatial.PlayOneShot(c, volume * SFX_GAIN * Settings.SfxVolume);
         }
 
         public void SetHum(float level, float detuneCents)
         {
             if (!inited) return;
-            hum.volume = muted ? 0 : level;
+            hum.volume = muted ? 0 : level * Settings.SfxVolume;
             hum.pitch = Mathf.Pow(2, detuneCents / 1200f);
         }
 

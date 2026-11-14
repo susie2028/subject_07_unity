@@ -83,7 +83,7 @@ namespace Specimen07.EditorTools
 
             // 캔버스
             var cGo = new GameObject("Canvas", typeof(RectTransform));
-            var canvas = cGo.AddComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            var canvas = cGo.AddComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.pixelPerfect = true;
             var scaler = cGo.AddComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution = new Vector2(1920, 1080); scaler.matchWidthOrHeight = 0.5f;
             cGo.AddComponent<GraphicRaycaster>();
             var ctrl = cGo.AddComponent<MainMenuController>();
@@ -117,7 +117,8 @@ namespace Specimen07.EditorTools
             // 설정 창
             Transform card;
             ctrl.settingsPanel = Modal(root, "SettingsPanel", "설정", out card);
-            ctrl.volumeValue = SettingRow(card, "소리 크기", "－", ctrl.OnVolumeDown, "＋", ctrl.OnVolumeUp);
+            ctrl.musicValue = SettingRow(card, "배경음악", "－", ctrl.OnMusicDown, "＋", ctrl.OnMusicUp);
+            ctrl.volumeValue = SettingRow(card, "효과음", "－", ctrl.OnVolumeDown, "＋", ctrl.OnVolumeUp);
             ctrl.fullscreenValue = SettingRow(card, "전체 화면", null, null, "바꾸기", ctrl.OnToggleFullscreen);
             ctrl.minimapValue = SettingRow(card, "미니맵", null, null, "바꾸기", ctrl.OnToggleMinimap);
             var row = Row(card, "Buttons");

@@ -25,7 +25,7 @@ namespace Specimen07
 
         GameObject menuRoot, settingsPanel, confirmPanel, pausePanel;
         Button btnContinue; Text continueLabel;
-        Text volText, fullText, miniText;
+        Text volText, musicText, fullText, miniText;
 
         void BuildMenu()
         {
@@ -86,7 +86,8 @@ namespace Specimen07
         {
             pausePanel = ModalPanel(canvasRt, "Pause", "설정", 640);
             var card = pausePanel.transform.Find("Card");
-            pauseVol = SettingRow(card, "소리 크기", "－", () => { ChangeVolume(-0.1f); RefreshPause(); }, "＋", () => { ChangeVolume(0.1f); RefreshPause(); });
+            pauseMusic = SettingRow(card, "배경음악", "－", () => { Settings.MusicVolume = Settings.Step(Settings.MusicVolume, -0.1f); RefreshPause(); }, "＋", () => { Settings.MusicVolume = Settings.Step(Settings.MusicVolume, 0.1f); RefreshPause(); });
+            pauseVol = SettingRow(card, "효과음", "－", () => { Settings.SfxVolume = Settings.Step(Settings.SfxVolume, -0.1f); RefreshPause(); }, "＋", () => { Settings.SfxVolume = Settings.Step(Settings.SfxVolume, 0.1f); RefreshPause(); });
             pauseMini = SettingRow(card, "지도", null, null, "바꾸기", () => { game.showMini = !game.showMini; Settings.Minimap = game.showMini; SetMiniVisible(game.showMini); RefreshPause(); });
             Txt(card, "Msg", "메인 화면으로 나가면 이어하기는 이 층에 도착한 시점부터예요.", 20, MUTED);
             var row = Row(card, "Buttons", 12);
@@ -94,8 +95,8 @@ namespace Specimen07
             Btn(row, "게임 방법", PANEL, FG, ShowHowTo, 180, 60);
             Btn(row, "메인 화면으로", PANEL, FG, () => game.GoToMenu(), 200, 60);
         }
-        Text pauseVol, pauseMini;
-        void RefreshPause() { if (pauseVol != null) { pauseVol.text = Mathf.RoundToInt(Settings.Volume * 100) + "%"; pauseMini.text = game.showMini ? "켜짐" : "꺼짐"; } }
+        Text pauseVol, pauseMusic, pauseMini;
+        void RefreshPause() { if (pauseVol != null) { pauseVol.text = Settings.Pct(Settings.SfxVolume); pauseMusic.text = Settings.Pct(Settings.MusicVolume); pauseMini.text = game.showMini ? "켜짐" : "꺼짐"; } }
         public void ShowPause() { RefreshPause(); pausePanel.SetActive(true); pausePanel.transform.SetAsLastSibling(); }
         public void HidePause() { pausePanel.SetActive(false); }
 
@@ -130,7 +131,8 @@ namespace Specimen07
         {
             settingsPanel = ModalPanel(parent, "Settings", "설정", 640);
             var card = settingsPanel.transform.Find("Card");
-            volText = SettingRow(card, "소리 크기", "－", () => ChangeVolume(-0.1f), "＋", () => ChangeVolume(0.1f));
+            musicText = SettingRow(card, "배경음악", "－", () => { Settings.MusicVolume = Settings.Step(Settings.MusicVolume, -0.1f); RefreshSettings(); }, "＋", () => { Settings.MusicVolume = Settings.Step(Settings.MusicVolume, 0.1f); RefreshSettings(); });
+            volText = SettingRow(card, "효과음", "－", () => ChangeVolume(-0.1f), "＋", () => ChangeVolume(0.1f));
             fullText = SettingRow(card, "전체 화면", null, null, "바꾸기", () => { Screen.fullScreen = !Screen.fullScreen; Later(RefreshSettings); });
             miniText = SettingRow(card, "미니맵", null, null, "바꾸기", () => { game.showMini = !game.showMini; Settings.Minimap = game.showMini; RefreshSettings(); });
             var row = Row(card, "Buttons", 12);
@@ -186,15 +188,15 @@ namespace Specimen07
 
         void ChangeVolume(float d)
         {
-            Settings.Volume = Mathf.Clamp01(Mathf.Round((Settings.Volume + d) * 10) / 10f);
-            AudioListener.volume = Settings.Volume;
+            Settings.SfxVolume = Settings.Step(Settings.SfxVolume, d);
             RefreshSettings();
         }
 
         void RefreshSettings()
         {
             if (volText == null) return;
-            volText.text = Mathf.RoundToInt(Settings.Volume * 100) + "%";
+            volText.text = Settings.Pct(Settings.SfxVolume);
+            if (musicText != null) musicText.text = Settings.Pct(Settings.MusicVolume);
             fullText.text = Screen.fullScreen ? "켜짐" : "꺼짐";
             miniText.text = game.showMini ? "켜짐" : "꺼짐";
         }
@@ -222,7 +224,11 @@ namespace Specimen07
     // 설정 저장 (PlayerPrefs)
     public static class Settings
     {
-        public static float Volume { get { return PlayerPrefs.GetFloat("specimen07.volume", 0.8f); } set { PlayerPrefs.SetFloat("specimen07.volume", value); PlayerPrefs.Save(); } }
+        public static float Volume { get { return PlayerPrefs.GetFloat("specimen07.volume", 0.8f); } set { PlayerPrefs.SetFloat("specimen07.volume", value); PlayerPrefs.Save(); } }   // (예전 전체 음량, 지금은 안 씀)
+        public static float MusicVolume { get { return PlayerPrefs.GetFloat("specimen07.music", 0.7f); } set { PlayerPrefs.SetFloat("specimen07.music", value); PlayerPrefs.Save(); } }   // 배경음악
+        public static float SfxVolume { get { return PlayerPrefs.GetFloat("specimen07.sfx", 0.9f); } set { PlayerPrefs.SetFloat("specimen07.sfx", value); PlayerPrefs.Save(); } }       // 효과음
+        public static float Step(float v, float d) { return Mathf.Clamp01(Mathf.Round((v + d) * 10) / 10f); }
+        public static string Pct(float v) { return Mathf.RoundToInt(v * 100) + "%"; }
         public static bool Minimap { get { return PlayerPrefs.GetInt("specimen07.minimap", 1) == 1; } set { PlayerPrefs.SetInt("specimen07.minimap", value ? 1 : 0); PlayerPrefs.Save(); } }
     }
 }

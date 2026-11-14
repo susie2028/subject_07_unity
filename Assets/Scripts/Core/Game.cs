@@ -42,7 +42,7 @@ namespace Specimen07
 
         void Start()
         {
-            AudioListener.volume = Settings.Volume;
+            AudioListener.volume = 1f;   // 크기는 배경음악·효과음 설정이 따로 맡음
             showMini = Settings.Minimap;
             NewGame();
             EnterFloorVisual();

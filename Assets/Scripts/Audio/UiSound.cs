@@ -19,7 +19,7 @@ namespace Specimen07
                 src = go.AddComponent<AudioSource>(); src.playOnAwake = false;
                 clip = Resources.Load<AudioClip>("Sounds/ui_click");
             }
-            if (clip != null) src.PlayOneShot(clip, VOLUME);
+            if (clip != null) src.PlayOneShot(clip, VOLUME * Settings.SfxVolume);
         }
     }
 }

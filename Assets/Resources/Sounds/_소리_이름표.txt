@@ -1,6 +1,6 @@
 이 폴더에 아래 이름의 소리 파일(.wav / .ogg / .mp3)을 넣으면 코드로 만든 임시 소리 대신 그 파일이 나옵니다.
 
-glass   수조 깨짐 (시작)        gulp    먹기
+glass   수조 깨짐 (시작)        gulp    먹기 (지금: gulp.wav, 받은 냠냠 소리를 0.5초로 자름)
 morph   변신                    melt    변신 풀림
 sting   죽음                    huh     NPC 의심 ("음?")
 door    문 열림                 deny    실패/거부
