@@ -134,7 +134,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      walk_soldier_back_2_0: 4553581412440035990
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
