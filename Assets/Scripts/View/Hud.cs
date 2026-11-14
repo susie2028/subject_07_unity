@@ -46,7 +46,7 @@ namespace Specimen07
         GameObject hudRoot;
         Image formIcon; Text formName;
         RectTransform formCard, timerBox; Image timerFill, timerBg; Text timerLabel, timerNum, countdown; float heartT;
-        readonly List<Image> cardBoxes = new List<Image>(); readonly List<Text> cardTexts = new List<Text>();
+        readonly List<Image> cardBoxes = new List<Image>(), cardStrips = new List<Image>(); readonly List<Text> cardTexts = new List<Text>();
         GameObject pillSeen, pillOdd, pillVent;
         Text floorTag, objective, alarmText, meta; GameObject alarmBox;
         RawImage mini; Texture2D miniTex; Color32[] miniBase, miniPx; int miniTick;
@@ -166,15 +166,23 @@ namespace Specimen07
             timerNum.rectTransform.anchorMin = Vector2.zero; timerNum.rectTransform.anchorMax = Vector2.one; timerNum.rectTransform.sizeDelta = new Vector2(-30, 0);
 
             // ── 카드 위: 출입 카드 / 오른쪽: 상태 표시
-            var cards = Row(hr, "Cards", 6);
-            cards.anchorMin = cards.anchorMax = cards.pivot = Vector2.zero; cards.anchoredPosition = new Vector2(60, 304);
-            foreach (var c in Data.CardOrder)
+            // 출입 카드: 6장을 한 줄로 (가진 카드는 카드 색으로 밝게, 없는 카드는 어둡게)
+            const float CW = 62, CH = 46, CG = 7;
+            var cards = R(hr, "Cards", Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(60, 306), new Vector2(6 * CW + 5 * CG, CH + 26));
+            var cardsLab = Txt(cards, "Label", "출입 카드", 17, MUTED, TextAnchor.UpperLeft, true);
+            cardsLab.rectTransform.anchorMin = new Vector2(0, 1); cardsLab.rectTransform.anchorMax = new Vector2(1, 1); cardsLab.rectTransform.pivot = new Vector2(0, 1);
+            cardsLab.rectTransform.anchoredPosition = Vector2.zero; cardsLab.rectTransform.sizeDelta = new Vector2(0, 22);
+            for (int i = 0; i < Data.CardOrder.Length; i++)
             {
-                var box = R(cards, "Card_" + c, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(52, 28)); Fixed(box, 52, 28);
-                var im = Img(box, new Color(BG.r, BG.g, BG.b, 0.85f));
-                var t = Txt(box, "T", Data.Cards[c].name, 16, Data.Hex("#4d5a62"), TextAnchor.MiddleCenter, true);
-                t.rectTransform.anchorMin = Vector2.zero; t.rectTransform.anchorMax = Vector2.one; t.rectTransform.sizeDelta = Vector2.zero;
-                cardBoxes.Add(im); cardTexts.Add(t);
+                var c = Data.CardOrder[i];
+                var box = R(cards, "Card_" + c, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(i * (CW + CG), 0), new Vector2(CW, CH));
+                var im = Img(box, panel, "ui_round"); im.type = Image.Type.Sliced;
+                var strip = R(box, "Strip", new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1), new Vector2(0, -5), new Vector2(-14, 5));
+                var st = Img(strip, Data.Cards[c].color);
+                var t = Txt(box, "T", Data.Cards[c].name, 19, MUTED, TextAnchor.MiddleCenter, true);
+                t.rectTransform.anchorMin = Vector2.zero; t.rectTransform.anchorMax = Vector2.one; t.rectTransform.sizeDelta = Vector2.zero; t.rectTransform.anchoredPosition = new Vector2(0, -3);
+                t.horizontalOverflow = HorizontalWrapMode.Overflow;
+                cardBoxes.Add(im); cardTexts.Add(t); cardStrips.Add(st);
             }
             var pills = R(hr, "Pills", Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(304, 110), new Vector2(200, 120));
             var pv = VStack(pills, 8); pv.childForceExpandWidth = false; pv.childAlignment = TextAnchor.LowerLeft;
@@ -493,8 +501,10 @@ namespace Specimen07
                 for (int i = 0; i < Data.CardOrder.Length; i++)
                 {
                     var c = Data.CardOrder[i]; bool on = S.cards.Contains(c);
-                    cardBoxes[i].color = on ? Data.Cards[c].color : new Color(BG.r, BG.g, BG.b, 0.85f);
-                    cardTexts[i].color = on ? BG : Data.Hex("#4d5a62");
+                    var cc = Data.Cards[c].color;
+                    cardBoxes[i].color = on ? cc : new Color(BG.r, BG.g, BG.b, 0.72f);
+                    cardTexts[i].color = on ? Data.Hex("#11151a") : new Color(1, 1, 1, 0.28f);
+                    cardStrips[i].color = on ? new Color(1, 1, 1, 0.55f) : new Color(cc.r, cc.g, cc.b, 0.35f);
                 }
             }
             string ob = game.Objective();
