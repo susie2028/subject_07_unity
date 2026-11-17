@@ -22,8 +22,6 @@ namespace Specimen07
         SaveData checkpoint;
 
         public IGameView view;
-        [Tooltip("켜면 2.5D(비스듬한 3D 카메라) 화면으로 그린다. Main_2_5D 씬에서 켜져 있음")]
-        public bool use25D;
         public Hud hud;
         public Sfx sfx;
 
@@ -35,8 +33,7 @@ namespace Specimen07
             I = this;
             Application.targetFrameRate = 60;
             sfx = gameObject.AddComponent<Sfx>();
-            if (use25D) view = gameObject.AddComponent<WorldView3D>();
-            else view = gameObject.AddComponent<WorldView>();
+            view = gameObject.AddComponent<WorldView3D>();   // 화면은 2.5D 하나 (2D는 지웠다)
             hud = gameObject.AddComponent<Hud>();
         }
 
@@ -48,6 +45,18 @@ namespace Specimen07
             EnterFloorVisual();
             // MainMenu 씬에서 넘어왔으면 그 요청대로 시작, 아니면(게임 씬을 바로 Play) 게임 안의 임시 메뉴
             var req = Launch.request; Launch.request = Launch.Request.None;
+#if UNITY_EDITOR
+            // 레벨 에디터의 "이 층 테스트": 그 층(원하면 그 자리)에서 바로 시작
+            string dev = PlayerPrefs.GetString(DEV_FLOOR, "");
+            if (dev != "" && FloorGeo.All.ContainsKey(dev))
+            {
+                float dx = PlayerPrefs.GetFloat(DEV_X, -1), dy = PlayerPrefs.GetFloat(DEV_Y, -1);
+                PlayerPrefs.DeleteKey(DEV_FLOOR); PlayerPrefs.DeleteKey(DEV_X); PlayerPrefs.DeleteKey(DEV_Y);
+                DevStart(dev);
+                if (dx >= 0 && dy >= 0) { S.player.x = dx; S.player.y = dy; S.arriveT = 0; UpdateCamera(0, true); }
+                return;
+            }
+#endif
             if (req == Launch.Request.New) StartGame();
             else if (req == Launch.Request.Continue && HasSave()) Continue();
             else if (hud != null) hud.ShowTitle();
@@ -170,8 +179,7 @@ namespace Specimen07
             if (mode == Mode.Pause) mode = Mode.Play;
             if (Launch.MenuSceneInBuild)
             {
-                // 진행은 마지막 층 도착 시점에 저장되어 있다. 메뉴에서 다시 시작하면 지금 씬(2D/2.5D)으로 돌아온다
-                Launch.GameScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+                // 진행은 마지막 층 도착 시점에 저장되어 있다
                 UnityEngine.SceneManagement.SceneManager.LoadScene(Launch.MenuScene);
                 return;
             }
@@ -1257,6 +1265,7 @@ namespace Specimen07
         /* 개발용: 인스펙터에서 층을 골라 바로 시작 (카드 지급) */
         [ContextMenu("Dev: 3F에서 시작")] void Dev3F() { DevStart("3F"); }
         [ContextMenu("Dev: 5F에서 시작")] void Dev5F() { DevStart("5F"); }
+        public const string DEV_FLOOR = "S07.devFloor", DEV_X = "S07.devX", DEV_Y = "S07.devY";
         public void DevStart(string fid)
         {
             if (hud != null) hud.HideAllOverlays();

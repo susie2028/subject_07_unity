@@ -1,4 +1,5 @@
-// 2.5D 화면 (비교용). 게임 규칙·맵·UI는 2D와 똑같고, 그리는 방식만 다르다.
+// 게임 화면 (2.5D). 게임 규칙은 Game, 맵은 FloorGeo, UI는 Hud가 맡고 여기서는 그리기만 한다.
+// 에디터의 레벨 에디터도 이 클래스로 층을 그린다 (WorldView3D.Preview.cs).
 //  - 바닥: 2D와 같은 타일 그림을 바닥 판에 붙임
 //  - 벽·가구: 높이 있는 상자 (윗면에 타일 그림). 벽 앞면에는 wall_face 그림
 //  - 조명: 진짜 점광원 (천장등, 수조, 모니터, 방 조명). 주인공 빛만 그림자를 만든다
@@ -36,6 +37,7 @@ namespace Specimen07
         void Awake()
         {
             game = GetComponent<Game>();
+            InitRes();
             cam = Camera.main;
             if (cam == null) { var go = new GameObject("Main Camera"); go.tag = "MainCamera"; cam = go.AddComponent<Camera>(); go.AddComponent<AudioListener>(); }
             cam.orthographic = false;
@@ -45,6 +47,16 @@ namespace Specimen07
             cam.nearClipPlane = 0.3f; cam.farClipPlane = 120f;
             cam.renderingPath = RenderingPath.DeferredShading;   // 점광원을 많이 써도 되도록
 
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = AMBIENT;
+            RenderSettings.fog = false;
+            QualitySettings.shadows = ShadowQuality.All;
+            QualitySettings.shadowDistance = 40f;
+        }
+        // 셰이더·재질·상자 메시 (게임과 에디터 미리보기 공용)
+        void InitRes()
+        {
+            if (unitBox != null) return;
             litSh = Find("Legacy Shaders/Diffuse", "Standard");
             cutSh = Find("Legacy Shaders/Transparent/Cutout/Diffuse", "Legacy Shaders/Diffuse");
             transSh = Find("Legacy Shaders/Transparent/Diffuse", "Sprites/Default");
@@ -55,14 +67,10 @@ namespace Specimen07
             // 벽 뒤에 가려진 주인공 실루엣: UI 셰이더의 "항상 위에 그리기" 옵션 사용
             var ui = Shader.Find("UI/Default");
             if (ui != null) { xrayMat = new Material(ui) { renderQueue = 3200 }; xrayMat.SetFloat("unity_GUIZTestMode", (float)CompareFunction.Always); }
-
-            RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = AMBIENT;
-            RenderSettings.fog = false;
-            QualitySettings.shadows = ShadowQuality.All;
-            QualitySettings.shadowDistance = 40f;
             unitBox = MakeUnitBox();
         }
+        // 플레이 중엔 Destroy, 에디터(미리보기)에선 바로 지운다
+        static void Kill(Object o) { if (o == null) return; if (Application.isPlaying) Destroy(o); else DestroyImmediate(o); }
         static Shader Find(string a, string b) { var s = Shader.Find(a); return s != null ? s : Shader.Find(b); }
 
         static Vector3 P(float x, float h, float y) { return new Vector3(x, h, -y); }
@@ -182,8 +190,8 @@ namespace Specimen07
         public void BuildFloor(FloorGeo g)
         {
             G = g;
-            if (floorRoot != null) Destroy(floorRoot.gameObject);
-            if (dynRoot != null) Destroy(dynRoot.gameObject);
+            if (floorRoot != null) Kill(floorRoot.gameObject);
+            if (dynRoot != null) Kill(dynRoot.gameObject);
             floorRoot = new GameObject("Floor3D_" + g.id).transform;
             dynRoot = new GameObject("Dynamic3D").transform;
             outlinePool.Clear(); framePool.Clear();
@@ -252,7 +260,7 @@ namespace Specimen07
             var wallSide = ColMat(Data.Hex("#23264f"));
             var trim = ColMat(Data.Hex("#9d8cff"), true);
             var wallTop = TexMat(Art.Get("tile_wall"), false);
-            var ventTop = TexMat(Art.Get(WorldView.Pick("tile_vent", "tile_wall")), false);
+            var ventTop = TexMat(Art.Get(ViewKit.Pick("tile_vent", "tile_wall")), false);
             var furnSide = new Dictionary<char, Material>
             {
                 { 'T', ColMat(Data.Hex("#4a3a30")) }, { 'S', ColMat(Data.Hex("#2a3238")) }, { 'V', ColMat(Data.Hex("#5a2028")) }, { 'N', ColMat(Data.Hex("#3a2e22")) },
@@ -270,18 +278,18 @@ namespace Specimen07
                 if (Wallish(ch))
                 {
                     // 벽 상자: 윗면 + 바닥 쪽으로 드러난 옆면. 남쪽(카메라 쪽) 면에는 벽 패널 그림
-                    Top(ch == 'v' ? ventTop : wallTop, x, y, x + 1, y + 1, WALL_H, UV(Art.Get(ch == 'v' ? WorldView.Pick("tile_vent", "tile_wall") : "tile_wall")));
+                    Top(ch == 'v' ? ventTop : wallTop, x, y, x + 1, y + 1, WALL_H, UV(Art.Get(ch == 'v' ? ViewKit.Pick("tile_vent", "tile_wall") : "tile_wall")));
                     bool s = inside(x, y + 1) && !wall(x, y + 1), e = inside(x + 1, y) && !wall(x + 1, y), w = inside(x - 1, y) && !wall(x - 1, y);
                     Material front = wallSide; Rect fuv = FULL;
                     if (s)
                     {
                         var zs = g.ZoneAt(x + 0.5f, y + 1.5f);
-                        if ((zs == null || zs.kind != "roof") && WorldView.FACE_OK.IndexOf(at(x, y + 1)) >= 0)
+                        if ((zs == null || zs.kind != "roof") && ViewKit.FACE_OK.IndexOf(at(x, y + 1)) >= 0)
                         {
                             string fk; bool redFix;
-                            if (WorldView.IsFixture(g, x, y + 1, out redFix)) fk = redFix ? "wall_face_alarm" : "wall_face_light";
-                            else fk = WorldView.WallFace(zs != null ? zs.kind : "hall", x, y + 1, salt);
-                            var spr = Art.Get(WorldView.Pick(fk, "wall_face"));
+                            if (ViewKit.IsFixture(g, x, y + 1, out redFix)) fk = redFix ? "wall_face_alarm" : "wall_face_light";
+                            else fk = ViewKit.WallFace(zs != null ? zs.kind : "hall", x, y + 1, salt);
+                            var spr = Art.Get(ViewKit.Pick(fk, "wall_face"));
                             front = TexMat(spr, false); fuv = UV(spr);
                         }
                     }
@@ -296,22 +304,22 @@ namespace Specimen07
                 }
 
                 // 바닥
-                var fspr = Art.FloorTile(WorldView.Variant("tile_floor_" + kind, x, y, salt, WorldView.FLOOR_V, WorldView.FLOOR_W), kind, g.id);   // 층·방마다 무늬와 색
+                var fspr = Art.FloorTile(ViewKit.Variant("tile_floor_" + kind, x, y, salt, ViewKit.FLOOR_V, ViewKit.FLOOR_W), kind, g.id);   // 층·방마다 무늬와 색
                 Top(TexMat(fspr, false), x, y, x + 1, y + 1, 0, UV(fspr));
 
                 // 가구
                 string key = null;
                 switch (ch)
                 {
-                    case 'S': key = WorldView.Variant("tile_shelf", x, y, salt + 1, WorldView.SHELF_V, WorldView.SHELF_W); break;
+                    case 'S': key = ViewKit.Variant("tile_shelf", x, y, salt + 1, ViewKit.SHELF_V, ViewKit.SHELF_W); break;
                     case 'V': key = "tile_vending"; break;
                     case 'T':
                         key = at(x, y + 1) == 'T' && Art.Has("tile_table_inner")
-                            ? WorldView.Variant("tile_table_inner", x, y, salt + 2, WorldView.INNER_V, WorldView.INNER_W)
-                            : WorldView.Variant("tile_table", x, y, salt + 2, WorldView.TABLE_V, WorldView.TABLE_W);
+                            ? ViewKit.Variant("tile_table_inner", x, y, salt + 2, ViewKit.INNER_V, ViewKit.INNER_W)
+                            : ViewKit.Variant("tile_table", x, y, salt + 2, ViewKit.TABLE_V, ViewKit.TABLE_W);
                         break;
                     case 'N': key = "tile_notice"; break;
-                    case 'M': key = WorldView.Variant("tile_machine", x, y, salt + 3, WorldView.MACH_V, WorldView.MACH_W); break;
+                    case 'M': key = ViewKit.Variant("tile_machine", x, y, salt + 3, ViewKit.MACH_V, ViewKit.MACH_W); break;
                     case 'C': key = "tile_console"; break;
                     case 'E': key = "tile_lift"; break;
                     case '>': case '<':
@@ -351,7 +359,7 @@ namespace Specimen07
                     Sides(tank, tank, f.x + 0.15f, f.y + 0.15f, f.x + f.w - 0.15f, f.y + f.h - 0.15f, 0, 1.6f, true, true, true, FULL);
                 }
             }
-            foreach (var dc in WorldView.RoomDecals(g))
+            foreach (var dc in ViewKit.RoomDecals(g))
             {
                 var spr = Art.Get(dc.key);
                 Top(TexMat(spr, true), dc.x, dc.y, dc.x + dc.w, dc.y + dc.h, 0.006f, UV(spr));
@@ -392,8 +400,8 @@ namespace Specimen07
                 AddLamp(l, P(l.x, WALL_H + 1.1f, l.y), r, inten, col);
             }
             // 소품 조명 (벽 천장등, 모니터, 자판기, 수조, 엘리베이터)
-            var props = new List<LightSrc>(); var glows = new List<WorldView.Glow>();
-            WorldView.CollectProps(g, props, glows);
+            var props = new List<LightSrc>(); var glows = new List<ViewKit.Glow>();
+            ViewKit.CollectProps(g, props, glows);
             foreach (var gl in glows)
             {
                 var c = new Color(gl.c.r, gl.c.g, gl.c.b);
@@ -403,7 +411,7 @@ namespace Specimen07
             for (int y = 0; y < g.h; y++) for (int x = 0; x < g.w; x++)
             {
                 bool red;
-                if (!WorldView.IsFixture(g, x, y, out red)) continue;
+                if (!ViewKit.IsFixture(g, x, y, out red)) continue;
                 var mr = Box(floorRoot, ColMat(red ? new Color(1f, 0.45f, 0.5f) : new Color(0.6f, 0.92f, 1f), true), x + 0.5f, y + 0.02f, 0.5f, 0.05f, 0.08f, WALL_H - 0.4f);
                 mr.shadowCastingMode = ShadowCastingMode.Off;
             }
@@ -455,8 +463,8 @@ namespace Specimen07
         // 세운 그림 (카메라 쪽을 봄)
         SpriteRenderer Stand(Transform parent, string key) { return Spr(parent, key); }
         // 발이 (x,y)에 닿게 세운다. pxPerTile: 그림 몇 픽셀이 1칸인지
-        void PlaceStand(SpriteRenderer sr, float x, float y, float scale, float lift = 0) { PlaceStand(sr, x, y, scale, lift, WorldView.Still); }
-        void PlaceStand(SpriteRenderer sr, float x, float y, float scale, float lift, WorldView.Pose pz)
+        void PlaceStand(SpriteRenderer sr, float x, float y, float scale, float lift = 0) { PlaceStand(sr, x, y, scale, lift, ViewKit.Still); }
+        void PlaceStand(SpriteRenderer sr, float x, float y, float scale, float lift, ViewKit.Pose pz)
         {
             var spr = sr.sprite; if (spr == null) return;
             float s = scale;
@@ -654,7 +662,7 @@ namespace Specimen07
                 if (S.player.eating != null) target *= 0.88f;
             }
             zoom += (target - zoom) * Mathf.Min(1, Time.deltaTime * 2.2f);
-            WorldView.Zoom = zoom;
+            ViewKit.Zoom = zoom;
             Vector3 shake = Vector3.zero;
             if (game.mode == Mode.Dying) shake = new Vector3(U.Rand(-3, 3), 0, U.Rand(-3, 3)) / 32f;
             if (S.alarm != null && S.time - S.alarm.started < 0.4f) shake += new Vector3(U.Rand(-2, 2), 0, U.Rand(-2, 2)) / 32f;
@@ -750,14 +758,14 @@ namespace Specimen07
                 var sr = Pooled(npcPool, ni, () => Stand(dynRoot, "stand_researcher_front"));
                 var sh = Pooled(shadowPool, ni, () => Flat(dynRoot, "fx_dot", 0.8f)); ni++;
                 bool moving = !n.frozen && ((n.path != null && n.path.Count > 0) || n.state == NpcState.Chase);
-                string kind = WorldView.Variant(n.pal, n.id);
+                string kind = ViewKit.Variant(n.pal, n.id);
                 float sc0;
-                WorldView.ApplyStand(sr, kind, n.face, out sc0, moving ? t * (n.state == NpcState.Chase ? 1.5f : 1f) + (n.id.Length % 4) * 0.13f : -1);
+                ViewKit.ApplyStand(sr, kind, n.face, out sc0, moving ? t * (n.state == NpcState.Chase ? 1.5f : 1f) + (n.id.Length % 4) * 0.13f : -1);
                 float s = 1;
                 if (p.eating != null && p.eating.target.isNpc && p.eating.target.npc == n) s = Mathf.Max(0.05f, 1 - p.eating.t / Cfg.eatTime);
                 float ph = t * (n.state == NpcState.Chase ? 18 : 12) + n.id.GetHashCode() % 7;
-                float bob = moving && !WorldView.HasWalk(kind) ? Mathf.Abs(Mathf.Sin(ph)) * 0.07f : 0;
-                PlaceStand(sr, n.x, n.y, s * sr.sprite.pixelsPerUnit / WorldView.CHAR_PX, bob, WorldView.LastPose);
+                float bob = moving && !ViewKit.HasWalk(kind) ? Mathf.Abs(Mathf.Sin(ph)) * 0.07f : 0;
+                PlaceStand(sr, n.x, n.y, s * sr.sprite.pixelsPerUnit / ViewKit.CHAR_PX, bob, ViewKit.LastPose);
                 sr.color = Tint(n.x, n.y);
                 sh.transform.position = P(n.x, 0.02f, n.y); sh.transform.localScale = new Vector3(0.75f, 0.45f, 1) * s; sh.color = new Color(0, 0, 0, 0.45f);
                 Game.Highlight nh;
@@ -848,13 +856,13 @@ namespace Specimen07
                 var pos = lp.l.transform.position;
                 bool near = Mathf.Abs(pos.x - c.x) < 18 + lp.l.range && Mathf.Abs(pos.z - c.z) < 13 + lp.l.range;
                 if (lp.l.enabled != near) lp.l.enabled = near;
-                if (near && lp.src != null) lp.l.intensity = lp.baseI * WorldView.LightLevel(lp.src, t) / Mathf.Max(0.01f, lp.src.i);
+                if (near && lp.src != null) lp.l.intensity = lp.baseI * ViewKit.LightLevel(lp.src, t) / Mathf.Max(0.01f, lp.src.i);
             }
             playerLight.enabled = playing;
             if (playing) playerLight.transform.position = P(S.player.x, 1.1f, S.player.y);
         }
 
-        bool faceLeft; WorldView.Pose humanPose = WorldView.Still;
+        bool faceLeft; ViewKit.Pose humanPose = ViewKit.Still;
         void DrawPlayer(float t)
         {
             var S = game.S; var p = S.player; var f = Data.Forms[p.form];
@@ -868,7 +876,7 @@ namespace Specimen07
             playerShadow.transform.localScale = new Vector3(0.85f, 0.5f, 1);
 
             bool asObj = f.type == FormType.Object;
-            if (playerModel != null && (!asObj || playerModelForm != p.form)) { Destroy(playerModel.gameObject); playerModel = null; }
+            if (playerModel != null && (!asObj || playerModelForm != p.form)) { Kill(playerModel.gameObject); playerModel = null; }
             if (asObj)
             {
                 // 물건으로 변신: 3D 모형 (변신이 거의 풀리면 덜덜 떨림, 움직이면 덜컹)
@@ -886,26 +894,26 @@ namespace Specimen07
             float scale = 1;
             if (f.type == FormType.Human)
             {
-                float sc0; WorldView.ApplyStand(player, p.form, p.face, out sc0, p.speedNow > 0.3f ? t : -1);
-                scale = player.sprite.pixelsPerUnit / WorldView.CHAR_PX; humanPose = WorldView.LastPose;
+                float sc0; ViewKit.ApplyStand(player, p.form, p.face, out sc0, p.speedNow > 0.3f ? t : -1);
+                scale = player.sprite.pixelsPerUnit / ViewKit.CHAR_PX; humanPose = ViewKit.LastPose;
                 bool warn = p.timer < f.dur * 0.25f;
                 player.color = warn ? Color.Lerp(Tint(p.x, p.y), new Color(1, 0.6f, 0.65f), 0.5f + 0.5f * Mathf.Sin(t * 8)) : Tint(p.x, p.y);
             }
             else
             {
-                var idleF = WorldView.PlayerFrames("idle", dn);
-                var crawlF = WorldView.PlayerFrames("crawl", dn); var eatF = WorldView.PlayerFrames("eat", dn);
+                var idleF = ViewKit.PlayerFrames("idle", dn);
+                var crawlF = ViewKit.PlayerFrames("crawl", dn); var eatF = ViewKit.PlayerFrames("eat", dn);
                 Sprite spr = null;
                 if (p.eating != null && eatF.Count > 0) spr = eatF[Mathf.Min(eatF.Count - 1, Mathf.FloorToInt(p.eating.t / Cfg.eatTime * eatF.Count))];
                 else if (p.speedNow > 0.3f && crawlF.Count > 0) spr = crawlF[Mathf.FloorToInt(t * 10) % crawlF.Count];
                 else if (idleF.Count > 0) spr = idleF[Mathf.FloorToInt(t * 2.5f) % idleF.Count];
-                if (spr != null) { player.sprite = spr; player.flipX = dn == "side" && faceLeft; scale = spr.pixelsPerUnit / WorldView.TILE_PX; }
+                if (spr != null) { player.sprite = spr; player.flipX = dn == "side" && faceLeft; scale = spr.pixelsPerUnit / ViewKit.TILE_PX; }
                 else player.sprite = Art.Get("player_blob");
                 if (hidden) scale *= 0.8f;
                 var lit = Color.Lerp(Tint(p.x, p.y), Color.white, 0.3f); lit.a = a;   // 주인공은 조금 더 잘 보이게
                 player.color = lit;
             }
-            PlaceStand(player, p.x, p.y, scale, 0, f.type == FormType.Human ? humanPose : WorldView.Still);
+            PlaceStand(player, p.x, p.y, scale, 0, f.type == FormType.Human ? humanPose : ViewKit.Still);
             if (hidden) playerShadow.gameObject.SetActive(false);
         }
 

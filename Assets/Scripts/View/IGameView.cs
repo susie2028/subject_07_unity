@@ -1,4 +1,4 @@
-// 게임 화면(2D / 2.5D)이 공통으로 해야 하는 일. Game과 Hud는 이것만 보고 쓴다.
+// 게임 화면이 해야 하는 일. Game과 Hud는 이것만 보고 쓴다.
 using UnityEngine;
 
 namespace Specimen07

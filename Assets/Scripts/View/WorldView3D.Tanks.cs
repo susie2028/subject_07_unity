@@ -24,12 +24,12 @@ namespace Specimen07
             if (z.kind != "lab" && z.kind != "cold") return false;
             char up = g.Tile(x, y - 1);
             if (up != '#' && up != 'v') return false;
-            return WorldView.Hash(x, y, salt + 41) < 55;
+            return ViewKit.Hash(x, y, salt + 41) < 55;
         }
 
         void BuildTank(int tx, int ty, int salt)
         {
-            int hsh = WorldView.Hash(tx, ty, salt + 77);
+            int hsh = ViewKit.Hash(tx, ty, salt + 77);
             bool broken = hsh < 12;
             int kind = hsh % 4;
             var root = new GameObject("Tank").transform; root.SetParent(floorRoot, false);

@@ -45,19 +45,16 @@ namespace Specimen07
             grid = new char[h, w];
             zoneIdx = new int[w * h]; trapAt = new int[w * h];
             for (int i = 0; i < w * h; i++) { zoneIdx[i] = -1; trapAt[i] = -1; }
-            for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) grid[y, x] = '#';
-
+            // 바탕 격자: 레벨 에셋이면 칠한 타일 그대로, 아니면 방·통로·채움으로 만든다
+            var baseGrid = d.tiles != null ? FromRows(d.tiles, w, h) : BaseGrid(d);
+            System.Array.Copy(baseGrid, grid, baseGrid.Length);
             for (int i = 0; i < d.rooms.Length; i++)
             {
                 var r = d.rooms[i];
                 var z = new Zone { name = r.name, kind = r.kind, x0 = r.x, y0 = r.y, x1 = r.x + r.w - 1, y1 = r.y + r.h - 1, allow = r.allow, label = r.label };
                 zones.Add(z);
-                for (int yy = z.y0; yy <= z.y1; yy++) for (int xx = z.x0; xx <= z.x1; xx++) { grid[yy, xx] = '.'; zoneIdx[yy * w + xx] = i; }
+                for (int yy = Mathf.Max(0, z.y0); yy <= Mathf.Min(h - 1, z.y1); yy++) for (int xx = Mathf.Max(0, z.x0); xx <= Mathf.Min(w - 1, z.x1); xx++) zoneIdx[yy * w + xx] = i;
             }
-            foreach (var g in d.gaps) Put('.', g.x, g.y, 1, 1);
-            foreach (var f in d.fill) Put(f.ch, f.x, f.y, f.w, f.h);
-            foreach (var g in d.glass) Put('G', g.x, g.y, g.w, g.h);
-            foreach (var v in d.vents) Put('v', v.x, v.y, v.w, v.h);
             for (int i = 0; i < d.doors.Length; i++) { Put('D', d.doors[i].x, d.doors[i].y, 1, 1); doorAt[d.doors[i].y * w + d.doors[i].x] = i; }
             for (int i = 0; i < d.consoles.Length; i++) { Put('C', d.consoles[i].x, d.consoles[i].y, 1, 1); consoleAt[d.consoles[i].y * w + d.consoles[i].x] = i; }
             foreach (var n in d.notices) Put('N', n.x, n.y, 1, 1);
@@ -66,7 +63,7 @@ namespace Specimen07
                 var tr = d.traps[i];
                 TrapInfo[tr.id] = tr; TrapFloor[tr.id] = d.id;
                 foreach (var r in tr.rects)
-                    for (int yy = r.y; yy < r.y + r.h; yy++) for (int xx = r.x; xx < r.x + r.w; xx++) trapAt[yy * w + xx] = i;
+                    for (int yy = r.y; yy < r.y + r.h; yy++) for (int xx = r.x; xx < r.x + r.w; xx++) if (xx >= 0 && yy >= 0 && xx < w && yy < h) trapAt[yy * w + xx] = i;
             }
             if (d.lift != null) foreach (var t in d.lift) Put('E', t.x, t.y, 1, 1);
             foreach (var s in d.stairs) Put(s.dir, s.x, s.y, s.w, s.h);
@@ -119,7 +116,7 @@ namespace Specimen07
             for (int i = 0; i < darkMap.Length; i++) darkMap[i] = baseDark;
             var all = new List<LightSrc>();
             foreach (var l in lights) all.Add(new LightSrc { x = l.x, y = l.y, r = l.r * Cfg.roomLightR, i = l.i * Cfg.roomLightI });
-            WorldView.CollectProps(this, all, new List<WorldView.Glow>());
+            ViewKit.CollectProps(this, all, new List<ViewKit.Glow>());
             foreach (var l in all)
             {
                 int x0 = Mathf.Max(0, Mathf.FloorToInt(l.x - l.r)), x1 = Mathf.Min(w - 1, Mathf.CeilToInt(l.x + l.r));
@@ -132,6 +129,33 @@ namespace Specimen07
                     darkMap[yy * w + xx] *= 1 - a;
                 }
             }
+        }
+
+        // 방(바닥) → 통로 → 채움 → 유리 → 환풍구 순서로 만든 바탕 격자 [y, x]. 문·콘솔·계단 등은 아직 안 찍힌 상태
+        public static char[,] BaseGrid(FloorDef d)
+        {
+            int w = d.w, h = d.h; var g = new char[h, w];
+            for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) g[y, x] = '#';
+            System.Action<char, int, int, int, int> put = (ch, x, y, fw, fh) =>
+            {
+                for (int yy = y; yy < y + fh; yy++) for (int xx = x; xx < x + fw; xx++) if (xx >= 0 && yy >= 0 && xx < w && yy < h) g[yy, xx] = ch;
+            };
+            foreach (var r in d.rooms) put('.', r.x, r.y, r.w, r.h);
+            if (d.gaps != null) foreach (var p in d.gaps) put('.', p.x, p.y, 1, 1);
+            if (d.fill != null) foreach (var f in d.fill) put(f.ch, f.x, f.y, f.w, f.h);
+            if (d.glass != null) foreach (var p in d.glass) put('G', p.x, p.y, p.w, p.h);
+            if (d.vents != null) foreach (var p in d.vents) put('v', p.x, p.y, p.w, p.h);
+            return g;
+        }
+        static char[,] FromRows(string[] rows, int w, int h)
+        {
+            var g = new char[h, w];
+            for (int y = 0; y < h; y++) for (int x = 0; x < w; x++)
+            {
+                var row = y < rows.Length ? rows[y] : null;
+                g[y, x] = row != null && x < row.Length ? row[x] : '#';
+            }
+            return g;
         }
 
         void Put(char ch, int x, int y, int fw, int fh)
@@ -152,14 +176,20 @@ namespace Specimen07
 
         /* ===== 전체 층 ===== */
         static Dictionary<string, FloorGeo> all;
+        public static void Reload() { all = null; }
         public static Dictionary<string, FloorGeo> All
         {
             get
             {
-                if (all == null)
+                if (all == null || all.Count == 0)
                 {
                     all = new Dictionary<string, FloorGeo>();
-                    foreach (var d in FloorDefs.All) all[d.id] = new FloorGeo(d);
+                    // 레벨 에셋(Resources/Levels/<층>)이 있으면 그걸, 없으면 코드에 적힌 기본 맵
+                    foreach (var d in FloorDefs.All)
+                    {
+                        var lv = Resources.Load<LevelAsset>("Levels/" + d.id);
+                        all[d.id] = new FloorGeo(lv != null ? lv.ToDef() : d);
+                    }
                 }
                 return all;
             }
