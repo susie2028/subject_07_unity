@@ -31,6 +31,7 @@ namespace Specimen07
         void Awake()
         {
             I = this;
+            LevelFloor.UseSceneLevels();   // 씬에 놓인 층이 있으면 그 맵으로
             Application.targetFrameRate = 60;
             sfx = gameObject.AddComponent<Sfx>();
             view = gameObject.AddComponent<WorldView3D>();   // 화면은 2.5D 하나 (2D는 지웠다)
@@ -46,7 +47,7 @@ namespace Specimen07
             // MainMenu 씬에서 넘어왔으면 그 요청대로 시작, 아니면(게임 씬을 바로 Play) 게임 안의 임시 메뉴
             var req = Launch.request; Launch.request = Launch.Request.None;
 #if UNITY_EDITOR
-            // 레벨 에디터의 "이 층 테스트": 그 층(원하면 그 자리)에서 바로 시작
+            // 층 Inspector의 "이 층 테스트": 그 층(원하면 그 자리)에서 바로 시작
             string dev = PlayerPrefs.GetString(DEV_FLOOR, "");
             if (dev != "" && FloorGeo.All.ContainsKey(dev))
             {

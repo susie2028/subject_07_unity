@@ -177,6 +177,14 @@ namespace Specimen07
         /* ===== 전체 층 ===== */
         static Dictionary<string, FloorGeo> all;
         public static void Reload() { all = null; }
+        static Dictionary<string, FloorDef> levels;
+        // 씬의 층들로 바꿔 쓴다 (Game이 시작할 때 부름)
+        public static void UseLevels(List<FloorDef> defs)
+        {
+            levels = new Dictionary<string, FloorDef>();
+            foreach (var d in defs) levels[d.id] = d;
+            all = null;
+        }
         public static Dictionary<string, FloorGeo> All
         {
             get
@@ -184,11 +192,11 @@ namespace Specimen07
                 if (all == null || all.Count == 0)
                 {
                     all = new Dictionary<string, FloorGeo>();
-                    // 레벨 에셋(Resources/Levels/<층>)이 있으면 그걸, 없으면 코드에 적힌 기본 맵
+                    // 씬에 놓인 층(LevelFloor)이 있으면 그걸, 없으면 코드에 적힌 기본 맵
                     foreach (var d in FloorDefs.All)
                     {
-                        var lv = Resources.Load<LevelAsset>("Levels/" + d.id);
-                        all[d.id] = new FloorGeo(lv != null ? lv.ToDef() : d);
+                        FloorDef lv;
+                        all[d.id] = new FloorGeo(levels != null && levels.TryGetValue(d.id, out lv) ? lv : d);
                     }
                 }
                 return all;
