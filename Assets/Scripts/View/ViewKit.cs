@@ -142,6 +142,14 @@ namespace Specimen07
             if (!Art.Has("stand_" + kind + "_front")) { sr.flipX = false; return false; }
             int dir = Art.DirIndex(face);
             string view = dir == 1 ? "front" : dir == 3 ? "back" : "side";
+            bool flip = dir == 2;
+            // 8방향: 대각선 그림(stand_<종류>_frontside / backside, 오른쪽을 보는 그림)이 있으면 대각선일 때 쓰고 왼쪽은 뒤집는다
+            float deg = Mathf.Repeat(face * Mathf.Rad2Deg + 180f, 360f) - 180f, ad = Mathf.Abs(deg);
+            if (ad > 22.5f && ad < 157.5f && Mathf.Abs(ad - 90f) > 22.5f)
+            {
+                string dv = deg > 0 ? "frontside" : "backside";
+                if (Art.Has("stand_" + kind + "_" + dv)) { view = dv; flip = ad > 90f; dir = flip ? 2 : 0; }
+            }
             var walk = walkT >= 0 ? Art.Frames("walk_" + kind + "_" + view) : null;
             Sprite spr = Art.Get("stand_" + kind + "_" + view);
             if (walk != null && walk.Count > 0)
@@ -164,7 +172,7 @@ namespace Specimen07
                 }
             }
             sr.sprite = spr;
-            sr.flipX = dir == 2; sr.transform.rotation = Quaternion.identity;
+            sr.flipX = flip; sr.transform.rotation = Quaternion.identity;
             sc = sr.sprite.pixelsPerUnit / CHAR_PX;
             return true;
         }
