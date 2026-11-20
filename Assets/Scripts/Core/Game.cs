@@ -344,7 +344,7 @@ namespace Specimen07
         public bool HasCard(string c) { return c == null || S.cards.Contains(c); }
 
         /* 시야 판정: 거리 → 각도(모양) → 벽 레이캐스트 */
-        public float ViewDist(Npc n) { return n.C.view + Cfg.waryStep * Fl.wary; }
+        public float ViewDist(Npc n) { return n.C.view * Cfg.viewMul + Cfg.waryStep * Fl.wary; }
         bool Sees(Npc n, float x, float y)
         {
             var c = n.C;
@@ -742,7 +742,11 @@ namespace Specimen07
                 var wp = n.route[n.wp];
                 if (n.wait > 0)
                 {
-                    n.desFace = Data.Rad(wp.look);
+                    // 멈춰 있는 동안 늘 같은 순서로 둘러본다 (가운데 → 오른쪽 → 가운데 → 왼쪽). 플레이어가 박자를 읽을 수 있게
+                    n.lookT += dt;
+                    int step = Mathf.FloorToInt(n.lookT / Cfg.lookStep) % 4;
+                    float off = step == 1 ? Cfg.lookAmp : step == 3 ? -Cfg.lookAmp : 0;
+                    n.desFace = Data.Rad(wp.look + off);
                     n.wait -= dt;
                     if (n.wait <= 0) { n.wp = (n.wp + 1) % n.route.Length; n.path = null; }
                 }
@@ -751,7 +755,8 @@ namespace Specimen07
                     if (n.path == null) n.path = FindPath(n, n.x, n.y, wp.x, wp.y) ?? new List<Vector2>();
                     if (MoveAlong(n, dt, NpcSpeed(n)))
                     {
-                        n.wait = Mathf.Max(0.05f, (wp.wait > 0 ? wp.wait : 0.01f) * n.C.wait * (1 - 0.25f * Fl.wary));
+                        n.wait = Mathf.Max(0.05f, (wp.wait > 0 ? wp.wait : 0.01f) * n.C.wait * Cfg.waitMul * (1 - 0.25f * Fl.wary));
+                        n.lookT = 0;
                         n.path = null;
                     }
                 }

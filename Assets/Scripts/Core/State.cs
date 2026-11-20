@@ -17,7 +17,7 @@ namespace Specimen07
         public RouteWp[] route;
         public int wp;
         public List<Vector2> path;
-        public float wait;
+        public float wait, lookT;
         public bool alive = true;
         public NpcState state = NpcState.Patrol;
         public Bubble bubble;

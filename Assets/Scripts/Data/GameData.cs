@@ -13,10 +13,13 @@ namespace Specimen07
         public const float missingDelay = 20f, respawn = 45f, heliTime = 15f, waryStep = 0.75f;
         public const float eatCooldown = 2.5f;                // 먹고 나서 다음에 먹을 수 있을 때까지 (초)
         public const float darkHide = 0.62f, darkSeeR = 1.7f;  // 이만큼 어두운 칸에 있으면 NPC가 이 거리 안에서만 알아챈다
-        public const float patrolK = 0.36f, chaseK = 0.48f;   // NPC 속도 배율 (피드백: 전체적으로 빠르게)
+        public const float viewMul = 1.25f;      // NPC 시야 거리 배율 (피드백: 너무 쉬워서 넓힘)
+        public const float waitMul = 0.55f;      // 순찰 지점에서 멈추는 시간 배율 (더 자주 돌아다니게)
+        public const float lookAmp = 45f, lookStep = 1.1f;   // 멈춰 있는 동안 정해진 순서로 둘러보기: 가운데 → 오른쪽 → 가운데 → 왼쪽 (각도, 한 칸 시간)
+        public const float patrolK = 0.42f, chaseK = 0.5f;   // NPC 속도 배율 (피드백: 전체적으로 빠르게)
         // 군인(원형 시야)의 등 뒤 사각지대: 정면 기준 ±140° 바깥(등 뒤 80°)은 이 거리까지만 보임
         public const float rearBlindFrom = 140f, rearRange = 0.6f;   // 먹기 사거리(1.15)보다 짧아서 등 뒤 0.6~1.15칸에서 먹을 수 있음
-        public const float visionR = 9f, ventVisionR = 3.2f; // 주인공 시야 반경 (칸). 이 밖과 벽 뒤는 안 보임
+        public const float visionR = 10.5f, ventVisionR = 3.2f; // 주인공 시야 반경 (칸). 이 밖과 벽 뒤는 안 보임
 
         // 화면에 보이는 칸 수 (작을수록 확대)
         public const float VTW = 22f, VTH = 12.375f;
@@ -75,7 +78,7 @@ namespace Specimen07
         };
         public static readonly string[] CharOrder = { "cleaner", "researcher", "guard", "senior", "soldier", "director" };
 
-        public static float ShapeHalf(ViewShape s) { return s == ViewShape.Cone ? Rad(40) : s == ViewShape.Half ? Rad(90) : Mathf.PI; }
+        public static float ShapeHalf(ViewShape s) { return s == ViewShape.Cone ? Rad(48) : s == ViewShape.Half ? Rad(90) : Mathf.PI; }
         public static string ShapeLabel(ViewShape s) { return s == ViewShape.Cone ? "방사형" : s == ViewShape.Half ? "반원" : "원"; }
 
         public static readonly Dictionary<string, CardDef> Cards = new Dictionary<string, CardDef>
