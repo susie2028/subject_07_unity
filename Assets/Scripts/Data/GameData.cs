@@ -102,15 +102,15 @@ namespace Specimen07
             var d = new Dictionary<string, FormDef>
             {
                 { "body",  new FormDef { id = "body",  name = "본모습",    type = FormType.Body,   speed = 4.8f, dur = float.PositiveInfinity } },
-                { "chair", new FormDef { id = "chair", name = "의자",      type = FormType.Object, speed = 3.3f, dur = 25, seenSpeed = 0,  zone = "any" } },
-                { "trash", new FormDef { id = "trash", name = "쓰레기통",  type = FormType.Object, speed = 3.3f, dur = 20, seenSpeed = 0,  zone = "wall" } },
-                { "cart",  new FormDef { id = "cart",  name = "바퀴 카트", type = FormType.Object, speed = 3.9f, dur = 18, seenSpeed = 1.1f, zone = "wall" } },
-                { "plant", new FormDef { id = "plant", name = "화분",      type = FormType.Object, speed = 3.1f, dur = 24, seenSpeed = 0,  zone = "wall" } },
-                { "water", new FormDef { id = "water", name = "정수기",    type = FormType.Object, speed = 2.9f, dur = 22, seenSpeed = 0,  zone = "wall" } },
-                { "box",   new FormDef { id = "box",   name = "상자",      type = FormType.Object, speed = 3.4f, dur = 20, seenSpeed = 0,  zone = "any" } },
+                { "chair", new FormDef { id = "chair", name = "의자",      type = FormType.Object, speed = 3.3f, dur = 11, seenSpeed = 0,  zone = "any" } },
+                { "trash", new FormDef { id = "trash", name = "쓰레기통",  type = FormType.Object, speed = 3.3f, dur = 9, seenSpeed = 0,  zone = "wall" } },
+                { "cart",  new FormDef { id = "cart",  name = "바퀴 카트", type = FormType.Object, speed = 3.9f, dur = 8, seenSpeed = 1.1f, zone = "wall" } },
+                { "plant", new FormDef { id = "plant", name = "화분",      type = FormType.Object, speed = 3.1f, dur = 10, seenSpeed = 0,  zone = "wall" } },
+                { "water", new FormDef { id = "water", name = "정수기",    type = FormType.Object, speed = 2.9f, dur = 10, seenSpeed = 0,  zone = "wall" } },
+                { "box",   new FormDef { id = "box",   name = "상자",      type = FormType.Object, speed = 3.4f, dur = 9, seenSpeed = 0,  zone = "any" } },
                 // 큰 가구: 느리고 오래가지만 덩치 때문에 문(1칸)을 못 지나간다 → 방 안에서 숨을 때 쓴다
-                { "desk",  new FormDef { id = "desk",  name = "책상",      type = FormType.Object, speed = 2.0f, dur = 35, seenSpeed = 0,  zone = "any",  radius = 0.56f } },
-                { "shelf", new FormDef { id = "shelf", name = "선반",      type = FormType.Object, speed = 1.8f, dur = 35, seenSpeed = 0,  zone = "wall", radius = 0.56f } },
+                { "desk",  new FormDef { id = "desk",  name = "책상",      type = FormType.Object, speed = 2.0f, dur = 15, seenSpeed = 0,  zone = "any",  radius = 0.56f } },
+                { "shelf", new FormDef { id = "shelf", name = "선반",      type = FormType.Object, speed = 1.8f, dur = 15, seenSpeed = 0,  zone = "wall", radius = 0.56f } },
             };
             foreach (var kv in Chars)
             {
