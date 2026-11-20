@@ -1,7 +1,7 @@
 # 연구원 그림(영상에서 뽑은 걷기 walk_researcher_* + 서 있기 stand_researcher_*)으로 연구원들을 만든다.
 #  - 일반 연구원들: 안경 벗기고 점눈, 머리색·넥타이를 사람마다 다르게 (머리 모양은 원래 그대로)
 #      researcher 갈색 / _v2 주황 / _v3 금발 / researcher2 검은 머리·어두운 피부 / researcher2_v2 짙은 갈색
-#  - 고위 연구원(senior): 안경 그대로, 회색 머리, 보라 넥타이, 금 배지
+#  - 고위 연구원(senior): 안경 그대로, 보라 넥타이, 금 배지, 머리는 art_src/senior_heads 의 대머리+옆머리로 갈아 끼움
 #  (머리 깎기·늘이기 함수 trim_spikes / cut_short / add_long / add_bun 은 남겨 둠. 지금은 안 씀)
 # 원본(안경 쓴 연구원)은 Assets/Resources/Art 의 _src_researcher_* 로 따로 보관해 두고 거기서 다시 만든다.
 # 실행: python3 Tools/make_variant_walks.py   (영상에서 연구원 걷기를 다시 뽑았다면: --fresh)
@@ -231,6 +231,46 @@ def senior_badge(a, view):
     return a
 
 
+# ------------------------------------------------------------------ 고위 연구원 머리 갈아 끼우기
+# art_src/senior_heads/head_<방향>.png : 서 있는 그림(stand)과 같은 자리에 그린 새 머리 (대머리 + 옆머리).
+# 걷기 프레임마다 머리 위치(위아래 출렁임)를 원래 머리 실루엣으로 찾아서 그 자리에 붙인다.
+HEADS = os.path.join(HERE, 'art_src', 'senior_heads')
+NECK = {'front': 24, 'back': 24, 'side': 20}      # 이 줄 위가 머리 (서 있는 그림 기준)
+_ref = {}
+
+
+def new_head(a, view):
+    hp = os.path.join(HEADS, 'head_%s.png' % view)
+    if not os.path.exists(hp):
+        return a
+    if view not in _ref:
+        _ref[view] = np.array(Image.open(os.path.join(SRC, 'stand_researcher_%s.png' % view)).convert('RGBA'))
+    head = np.array(Image.open(hp).convert('RGBA'))
+    ny = NECK[view]
+    m_ref = _ref[view][:ny, :, 3] > 0
+    best = None
+    for dy in range(-3, 4):
+        for dx in range(-3, 4):
+            sh = np.roll(np.roll(a[..., 3] > 0, -dy, 0), -dx, 1)[:ny]
+            sc = (sh & m_ref).sum() - 0.5 * (sh ^ m_ref).sum()
+            if best is None or sc > best[0]:
+                best = (sc, dx, dy)
+    _, dx, dy = best
+    o = a.copy()
+    o[:max(0, ny + dy)] = 0
+    for y, x in zip(*np.nonzero(head[..., 3] > 0)):
+        Y, X = y + dy, x + dx
+        if 0 <= Y < o.shape[0] and 0 <= X < o.shape[1]:
+            o[Y, X] = head[y, x]
+    if view == 'back':   # 목덜미에 남은 원래 갈색 머리 → 새 머리색
+        for y in range(max(0, ny + dy), min(o.shape[0], ny + dy + 4)):
+            for x in range(o.shape[1]):
+                r, g, b_, al = [int(t) for t in o[y, x]]
+                if al and r > b_ + 20 and r >= g and max(r, g, b_) < 150:
+                    o[y, x, :3] = (144, 141, 157) if max(r, g, b_) > 60 else (112, 106, 137)
+    return close_outline(o)
+
+
 def rec(a, hair=None, tie=None, skin=None):
     if hair: a = mp.recolor(a, mp.HAIR, hair)
     if skin: a = mp.recolor(a, mp.SKIN, skin)
@@ -246,7 +286,7 @@ LOOKS = {
     'researcher2':    lambda a, v: rec(remove_glasses(a, v), hair=(44, 38, 52), skin=(176, 118, 84), tie=(196, 54, 60)),
     'researcher2_v2': lambda a, v: rec(remove_glasses(a, v), hair=(90, 60, 40), tie=(220, 160, 40)),
     # 고위 연구원만 안경 + 회색 머리 + 보라 넥타이 + 금 배지
-    'senior':         lambda a, v: senior_badge(rec(a, hair=(196, 196, 204), tie=(122, 74, 184)), v),
+    'senior':         lambda a, v: senior_badge(new_head(rec(a, hair=(196, 196, 204), tie=(122, 74, 184)), v), v),   # 머리는 새로 그린 대머리로
 }
 
 
