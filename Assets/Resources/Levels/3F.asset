@@ -1,0 +1,648 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a215ba4532d46aab8311c5fe0dbd1bc, type: 3}
+  m_Name: 3F
+  m_EditorClassIdentifier: 
+  id: 3F
+  floorName: "\uC2E4\uD5D8\uB3D9"
+  sub: "\uB808\uC774\uC800 \uADF8\uB9AC\uB4DC\uC640 \uD658\uD48D\uAD6C \xB7 \uACE0\uC704
+    \uC5F0\uAD6C\uC6D0\uC744 \uCC3E\uC544\uB77C"
+  lethal: 0
+  dark: 0.6
+  w: 72
+  h: 42
+  tiles:
+  - '########################################################################'
+  - '#..........#TT......TTTT..TT#TT.TTT..TTT.TTTT..TT...#....#TTTT.TT.TTTT.#'
+  - '#..........#................#.......................#....#.............#'
+  - '#..........#...............S#S......................#....#S...........S#'
+  - '#..........#......T..TTT....G..TT...TTT...TTTTTT....#....#..TT..TT.....#'
+  - '#...........................G.......................#....#..TT..TT.....#'
+  - '#...........................GS......................v....#.............#'
+  - '#..........#..TTTTT..TT.....G..TTTTTTTTT..TTTTTTTT..#....#.............#'
+  - '#..........#................G.......................#...........TT.....#'
+  - '#..........#...............SG.......................#...........TT....S#'
+  - '#..........#......T....TTT..#.....TTTTTT..T......T..#....#.............#'
+  - '#####..#####................#.......................#....#.............#'
+  - '#........SS#................#.......................#....#S.TT.........#'
+  - '#..........########..##############..########..######....#..TT.........#'
+  - '#S.S..S....#........................................#....#.............#'
+  - '#.....S....#........................................#....#............S#'
+  - '#.....S....#....SS.....SS.....SS.....SS.....SS......#....#.............#'
+  - '#.....S..................................................#.............#'
+  - '#..S..S..................................................#.............#'
+  - '#..S..S....#....SS.....SS.....SS.....SS.............#....###############'
+  - '#..S..S....#........................................#....#.....TT......#'
+  - '#..S.......#........................................#....#.............#'
+  - '#..S.v.....#######..###########..###########..#######....#S............#'
+  - '#S.S.......#MMM.......MM.M#TT........#TTTT.......TTT#....#......TT.....#'
+  - '#..S..S....#..............#..........#..............#....#......TT.....#'
+  - '#..S..S....#.............S#..........#S.............#....#S...........S#'
+  - '#S.........#.....M..MMMM..#..T...TT..#.....T..TT....#....#.............#'
+  - '#..S..S....#..............#..........#..............#....#..TT.........#'
+  - '#..S..S....#S............SG..........#..............#.......TT........S#'
+  - '#..S......S#..MMMM..MMMM..G..TT..TT..#..TTTT..TTTT..#..................#'
+  - '#..S.......#..............G..........#...................#......WWW....#'
+  - '#..S.......#S.............GS.........#S..................#..TT..WWW...S#'
+  - '#..S..S....#..MMMM..M.....#..TT..TT..#..TTTT..TT....#....#..TT..WWW....#'
+  - '#..S..S....#..............#..........#..............#....#.............#'
+  - '#..S..S....#S.............#..........#.............S#....#S...........S#'
+  - '#..S..S....#..MMMM..MMMM..#..TT..TT.....TTTT..TTTT..#....#..TT..TT.....#'
+  - '#.....S....#..WW..........v.............WW..........#....#..TT..TT.....#'
+  - '#.....S....#..WW..........#..........#..WW..........#....#.............#'
+  - '#S....S....#.....M..MMM...#..TT......#..T.....TT....#....#.............#'
+  - '#..S..S....#..............#..........#..............#....#.............#'
+  - '#..........#..............#..........#..............#....#.............#'
+  - '########################################################################'
+  rooms:
+  - name: "\uC5D8\uB9AC\uBCA0\uC774\uD130 \uD640"
+    kind: lift
+    rect:
+      x: 1
+      y: 1
+      width: 10
+      height: 10
+    allow: 
+    label: 1
+  - name: "\uD654\uD559 \uCC3D\uACE0"
+    kind: store
+    rect:
+      x: 1
+      y: 12
+      width: 10
+      height: 29
+    allow: 
+    label: 1
+  - name: "\uC2E4\uD5D8\uC2E4 A"
+    kind: lab
+    rect:
+      x: 12
+      y: 1
+      width: 16
+      height: 12
+    allow: 
+    label: 1
+  - name: "\uC2E4\uD5D8\uC2E4 B"
+    kind: lab
+    rect:
+      x: 29
+      y: 1
+      width: 23
+      height: 12
+    allow: 
+    label: 1
+  - name: "\uC911\uC559 \uD640"
+    kind: hall
+    rect:
+      x: 12
+      y: 14
+      width: 40
+      height: 8
+    allow: 
+    label: 0
+  - name: "\uC800\uC628 \uBCF4\uAD00\uC2E4"
+    kind: cold
+    rect:
+      x: 12
+      y: 23
+      width: 14
+      height: 18
+    allow: 
+    label: 1
+  - name: "\uC18C\uB3C5\uC2E4"
+    kind: lab
+    rect:
+      x: 27
+      y: 23
+      width: 10
+      height: 18
+    allow: 
+    label: 1
+  - name: "\uBC30\uC591\uC2E4"
+    kind: lab
+    rect:
+      x: 38
+      y: 23
+      width: 14
+      height: 18
+    allow: 
+    label: 1
+  - name: "\uACA9\uB9AC \uC719"
+    kind: wing
+    rect:
+      x: 53
+      y: 1
+      width: 4
+      height: 40
+    allow: 
+    label: 0
+  - name: "\uBC15\uC0AC \uC5F0\uAD6C\uC2E4"
+    kind: wing
+    rect:
+      x: 58
+      y: 1
+      width: 13
+      height: 18
+    allow: senior,director
+    label: 1
+  - name: "\uD45C\uBCF8\uC2E4"
+    kind: wing
+    rect:
+      x: 58
+      y: 20
+      width: 13
+      height: 21
+    allow: 
+    label: 1
+  doors: []
+  consoles: []
+  notices:
+  - pos: {x: 47, y: 14}
+    text: "[\uACA9\uB9AC \uC719 \uACBD\uACE0]\n\uB808\uC774\uC800 \uADF8\uB9AC\uB4DC
+      \uAC00\uB3D9 \uC911. \uC778\uAC00 \uC778\uC6D0\uB9CC \uD1B5\uACFC.\n\uC218\uB3D9
+      \uCC28\uB2E8: B1 \uAE30\uACC4\uC2E4 (\uBCF4\uC548 \uCE74\uB4DC)."
+  - pos: {x: 2, y: 40}
+    text: "[\uD658\uAE30 \uC124\uBE44 \uC810\uAC80\uD45C]\n\uC2E4\uD5D8\uC2E4 B \uB3D9\uCABD
+      \uBCBD \uD658\uD48D\uAD6C \u2194 \uACA9\uB9AC \uC719 \uC5F0\uACB0.\n\uC0AC\uB78C\uC740
+      \uBABB \uB4E4\uC5B4\uAC10. \uC950 \uC8FC\uC758."
+  - pos: {x: 62, y: 1}
+    text: "[\uC5F0\uAD6C \uB178\uD2B8 \xB7 \uBC15\uC0AC \uD55C]\n\uD45C\uBCF8 07
+      \u2014 \uACE0\uC704\uC9C1 \uC2E0\uC6D0 \uBCF5\uC81C \uAC00\uB2A5\uC131.\n4F
+      \uC18C\uC7A5\uC2E4 \uC804\uC2E4 \uAC00\uC2A4\uB294 2F \uD1B5\uC81C\uC2E4\uC5D0\uC11C
+      \uAD00\uB9AC."
+  stairs: []
+  lift:
+  - {x: 0, y: 4}
+  - {x: 0, y: 5}
+  - {x: 0, y: 6}
+  hasPad: 0
+  pad:
+    x: 0
+    y: 0
+    width: 0
+    height: 0
+  traps:
+  - id: L3
+    kind: laser
+    label: "\uB808\uC774\uC800 \uADF8\uB9AC\uB4DC"
+    rects:
+    - x: 53
+      y: 16
+      width: 2
+      height: 4
+    - x: 53
+      y: 29
+      width: 2
+      height: 4
+  hasStart: 0
+  start: {x: 0, y: 0}
+  hasStairsArrive: 0
+  stairsArrive: {x: 0, y: 0}
+  hasLiftArrive: 1
+  liftArrive: {x: 2.5, y: 5.5}
+  hasTank: 0
+  tank: {x: 0, y: 0}
+  npcs:
+  - id: f3s
+    ch: senior
+    pal: senior
+    label: "\uBC15\uC0AC \uD55C"
+    pos: {x: 62.5, y: 8.5}
+    face: 0
+    route:
+    - pos: {x: 62.5, y: 8.5}
+      wait: 3
+      look: 0
+    - pos: {x: 66.5, y: 14.5}
+      wait: 2
+      look: 90
+    - pos: {x: 55.5, y: 9.5}
+      wait: 0.6
+      look: 90
+    - pos: {x: 55.5, y: 26.5}
+      wait: 0.6
+      look: 0
+    - pos: {x: 63.5, y: 26.5}
+      wait: 2.2
+      look: 0
+    - pos: {x: 55.5, y: 26.5}
+      wait: 0.6
+      look: -90
+    - pos: {x: 55.5, y: 9.5}
+      wait: 0.6
+      look: -8
+  - id: f3g1
+    ch: guard
+    pal: guard
+    label: "\uC2E4\uD5D8\uB3D9 \uACBD\uBE44"
+    pos: {x: 13.5, y: 16.5}
+    face: 0
+    route:
+    - pos: {x: 13.5, y: 16.5}
+      wait: 0.6
+      look: 0
+    - pos: {x: 50.5, y: 16.5}
+      wait: 0.8
+      look: 90
+    - pos: {x: 50.5, y: 20.5}
+      wait: 0.6
+      look: 180
+    - pos: {x: 13.5, y: 20.5}
+      wait: 0.8
+      look: -90
+  - id: f3g2
+    ch: guard
+    pal: guard
+    label: "\uBD81\uCABD \uACBD\uBE44"
+    pos: {x: 14.5, y: 5.5}
+    face: 0
+    route:
+    - pos: {x: 14.5, y: 5.5}
+      wait: 1
+      look: 0
+    - pos: {x: 49.5, y: 5.5}
+      wait: 1.2
+      look: 0
+    - pos: {x: 32.5, y: 10.5}
+      wait: 0.8
+      look: 180
+    - pos: {x: 14.5, y: 10.5}
+      wait: 0.8
+      look: -90
+  - id: f3g3
+    ch: guard
+    pal: guard
+    label: "\uB0A8\uCABD \uACBD\uBE44"
+    pos: {x: 14.5, y: 25.5}
+    face: 52
+    route:
+    - pos: {x: 14.5, y: 25.5}
+      wait: 0.8
+      look: 52
+    - pos: {x: 24.5, y: 38.5}
+      wait: 0.8
+      look: 0
+    - pos: {x: 35.5, y: 38.5}
+      wait: 0.8
+      look: 0
+    - pos: {x: 49.5, y: 38.5}
+      wait: 1
+      look: -90
+    - pos: {x: 49.5, y: 25.5}
+      wait: 0.8
+      look: 180
+    - pos: {x: 31.5, y: 25.5}
+      wait: 0.6
+      look: 180
+  - id: f3m
+    ch: soldier
+    pal: soldier
+    label: "\uACBD\uACC4\uBCD1"
+    pos: {x: 50.5, y: 18.5}
+    face: 180
+    route:
+    - pos: {x: 50.5, y: 18.5}
+      wait: 3
+      look: 180
+    - pos: {x: 50.5, y: 18.5}
+      wait: 2
+      look: 90
+    - pos: {x: 50.5, y: 18.5}
+      wait: 3
+      look: 180
+    - pos: {x: 50.5, y: 18.5}
+      wait: 2
+      look: -90
+  - id: f3r1
+    ch: researcher
+    pal: researcher
+    label: "\uC2E4\uD5D8\uC2E4 A \uC5F0\uAD6C\uC6D0"
+    pos: {x: 16.5, y: 4.5}
+    face: 0
+    route:
+    - pos: {x: 16.5, y: 4.5}
+      wait: 2.2
+      look: 0
+    - pos: {x: 24.5, y: 8.5}
+      wait: 1.6
+      look: 180
+    - pos: {x: 16.5, y: 9.5}
+      wait: 1.4
+      look: -90
+  - id: f3r2
+    ch: researcher
+    pal: researcher2
+    label: "\uC2E4\uD5D8\uC2E4 A \uC870\uAD50"
+    pos: {x: 25.5, y: 3.5}
+    face: 180
+    route:
+    - pos: {x: 25.5, y: 3.5}
+      wait: 2
+      look: 180
+    - pos: {x: 21.5, y: 10.5}
+      wait: 1.4
+      look: 0
+  - id: f3r3
+    ch: researcher
+    pal: researcher
+    label: "\uC2E4\uD5D8\uC2E4 B \uC5F0\uAD6C\uC6D0"
+    pos: {x: 34.5, y: 5.5}
+    face: 0
+    route:
+    - pos: {x: 34.5, y: 5.5}
+      wait: 2
+      look: 0
+    - pos: {x: 47.5, y: 9.5}
+      wait: 1.8
+      look: 180
+    - pos: {x: 40.5, y: 4.5}
+      wait: 1.4
+      look: 90
+  - id: f3r4
+    ch: researcher
+    pal: researcher2
+    label: "\uC2E4\uD5D8\uC2E4 B \uC870\uAD50"
+    pos: {x: 44.5, y: 10.5}
+    face: -90
+    route:
+    - pos: {x: 44.5, y: 10.5}
+      wait: 2.4
+      look: -90
+    - pos: {x: 49.5, y: 3.5}
+      wait: 1.6
+      look: 180
+  - id: f3r5
+    ch: researcher
+    pal: researcher
+    label: "\uC800\uC628\uC2E4 \uC5F0\uAD6C\uC6D0"
+    pos: {x: 15.5, y: 26.5}
+    face: 0
+    route:
+    - pos: {x: 15.5, y: 26.5}
+      wait: 2
+      look: 0
+    - pos: {x: 22.5, y: 33.5}
+      wait: 1.8
+      look: 180
+    - pos: {x: 15.5, y: 38.5}
+      wait: 1.4
+      look: -90
+  - id: f3r6
+    ch: researcher
+    pal: researcher2
+    label: "\uC18C\uB3C5\uC2E4 \uC5F0\uAD6C\uC6D0"
+    pos: {x: 31.5, y: 26.5}
+    face: 90
+    route:
+    - pos: {x: 31.5, y: 26.5}
+      wait: 2.2
+      look: 90
+    - pos: {x: 33.5, y: 38.5}
+      wait: 1.8
+      look: -90
+  - id: f3r7
+    ch: researcher
+    pal: researcher
+    label: "\uBC30\uC591\uC2E4 \uC5F0\uAD6C\uC6D0"
+    pos: {x: 41.5, y: 26.5}
+    face: 0
+    route:
+    - pos: {x: 41.5, y: 26.5}
+      wait: 2
+      look: 0
+    - pos: {x: 49.5, y: 32.5}
+      wait: 1.8
+      look: 180
+    - pos: {x: 42.5, y: 38.5}
+      wait: 1.4
+      look: 0
+  - id: f3r8
+    ch: researcher
+    pal: researcher2
+    label: "\uCC3D\uACE0 \uC5F0\uAD6C\uC6D0"
+    pos: {x: 4.5, y: 16.5}
+    face: 90
+    route:
+    - pos: {x: 4.5, y: 16.5}
+      wait: 2
+      look: 90
+    - pos: {x: 7.5, y: 30.5}
+      wait: 1.6
+      look: -90
+    - pos: {x: 4.5, y: 37.5}
+      wait: 1.4
+      look: 0
+  - id: f3r9
+    ch: researcher
+    pal: researcher
+    label: "\uD45C\uBCF8\uC2E4 \uC5F0\uAD6C\uC6D0"
+    pos: {x: 61.5, y: 23.5}
+    face: 0
+    route:
+    - pos: {x: 61.5, y: 23.5}
+      wait: 2
+      look: 0
+    - pos: {x: 68.5, y: 37.5}
+      wait: 1.6
+      look: 180
+  - id: f3g4
+    ch: guard
+    pal: guard
+    label: "\uD45C\uBCF8\uC2E4 \uACBD\uBE44"
+    pos: {x: 60.5, y: 22.5}
+    face: 0
+    route:
+    - pos: {x: 60.5, y: 22.5}
+      wait: 1.8
+      look: 0
+    - pos: {x: 68.5, y: 30.5}
+      wait: 1.4
+      look: 90
+    - pos: {x: 60.5, y: 38.5}
+      wait: 1.6
+      look: 0
+  - id: f3c
+    ch: cleaner
+    pal: cleaner
+    label: "\uCCAD\uC18C\uBD80 \uD558 \uC528"
+    pos: {x: 20.5, y: 18.5}
+    face: 0
+    route:
+    - pos: {x: 20.5, y: 18.5}
+      wait: 1.2
+      look: 0
+    - pos: {x: 44.5, y: 18.5}
+      wait: 1.2
+      look: 180
+  objects:
+  - form: trash
+    pos: {x: 1.5, y: 16.5}
+    rot: 0
+  - form: box
+    pos: {x: 2.5, y: 18.5}
+    rot: 0
+  - form: cart
+    pos: {x: 10.5, y: 21.5}
+    rot: 0
+  - form: box
+    pos: {x: 4.5, y: 34.5}
+    rot: 0
+  - form: box
+    pos: {x: 8.5, y: 18.5}
+    rot: 0
+  - form: box
+    pos: {x: 2.5, y: 37.5}
+    rot: 0
+  - form: trash
+    pos: {x: 1.5, y: 24.5}
+    rot: 0
+  - form: box
+    pos: {x: 26.5, y: 9.5}
+    rot: 0
+  - form: trash
+    pos: {x: 15.5, y: 12.5}
+    rot: 0
+  - form: water
+    pos: {x: 14.5, y: 12.5}
+    rot: 0
+  - form: trash
+    pos: {x: 12.5, y: 10.5}
+    rot: 0
+  - form: box
+    pos: {x: 15.5, y: 2.5}
+    rot: 0
+  - form: chair
+    pos: {x: 40.5, y: 2.5}
+    rot: 3.14
+  - form: chair
+    pos: {x: 47.5, y: 2.5}
+    rot: 0
+  - form: chair
+    pos: {x: 38.5, y: 2.5}
+    rot: 0
+  - form: chair
+    pos: {x: 47.5, y: 11.5}
+    rot: -1.57
+  - form: trash
+    pos: {x: 51.5, y: 10.5}
+    rot: 0
+  - form: chair
+    pos: {x: 37.5, y: 3.5}
+    rot: -1.57
+  - form: water
+    pos: {x: 33.5, y: 12.5}
+    rot: 0
+  - form: plant
+    pos: {x: 28.5, y: 21.5}
+    rot: 0
+  - form: plant
+    pos: {x: 24.5, y: 21.5}
+    rot: 0
+  - form: plant
+    pos: {x: 26.5, y: 21.5}
+    rot: 0
+  - form: trash
+    pos: {x: 12.5, y: 30.5}
+    rot: 0
+  - form: trash
+    pos: {x: 14.5, y: 40.5}
+    rot: 0
+  - form: box
+    pos: {x: 24.5, y: 28.5}
+    rot: 0
+  - form: box
+    pos: {x: 15.5, y: 30.5}
+    rot: 0
+  - form: trash
+    pos: {x: 12.5, y: 39.5}
+    rot: 0
+  - form: box
+    pos: {x: 21.5, y: 25.5}
+    rot: 0
+  - form: chair
+    pos: {x: 28.5, y: 32.5}
+    rot: 1.57
+  - form: chair
+    pos: {x: 28.5, y: 27.5}
+    rot: -1.57
+  - form: chair
+    pos: {x: 32.5, y: 29.5}
+    rot: 1.57
+  - form: trash
+    pos: {x: 29.5, y: 40.5}
+    rot: 0
+  - form: box
+    pos: {x: 39.5, y: 26.5}
+    rot: 0
+  - form: box
+    pos: {x: 42.5, y: 28.5}
+    rot: 0
+  - form: box
+    pos: {x: 39.5, y: 38.5}
+    rot: 0
+  - form: box
+    pos: {x: 44.5, y: 36.5}
+    rot: 0
+  - form: box
+    pos: {x: 48.5, y: 34.5}
+    rot: 0
+  - form: chair
+    pos: {x: 39.5, y: 25.5}
+    rot: 1.57
+  - form: plant
+    pos: {x: 58.5, y: 6.5}
+    rot: 0
+  - form: water
+    pos: {x: 70.5, y: 10.5}
+    rot: 0
+  - form: chair
+    pos: {x: 59.5, y: 9.5}
+    rot: 3.14
+  - form: water
+    pos: {x: 58.5, y: 17.5}
+    rot: 0
+  - form: box
+    pos: {x: 63.5, y: 3.5}
+    rot: 0
+  - form: trash
+    pos: {x: 66.5, y: 18.5}
+    rot: 0
+  - form: water
+    pos: {x: 68.5, y: 40.5}
+    rot: 0
+  - form: plant
+    pos: {x: 60.5, y: 40.5}
+    rot: 0
+  - form: box
+    pos: {x: 63.5, y: 30.5}
+    rot: 0
+  - form: plant
+    pos: {x: 70.5, y: 26.5}
+    rot: 0
+  - form: plant
+    pos: {x: 58.5, y: 33.5}
+    rot: 0
+  - form: water
+    pos: {x: 59.5, y: 40.5}
+    rot: 0
+  - form: chair
+    pos: {x: 66.5, y: 24.5}
+    rot: 1.57
+  spawns:
+  - {x: 68.5, y: 38.5}
+  - {x: 13.5, y: 39.5}
+  reinforce:
+  - ch: guard
+    n: 2
+  - ch: soldier
+    n: 1
+  lamps: []
