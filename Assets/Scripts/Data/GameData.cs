@@ -229,7 +229,7 @@ namespace Specimen07
         public Vector2Int[] lift; public RectI? pad;
         public TrapDef[] traps; public Vector2[] spawns; public ReinforceDef[] reinforce; public LightDef[] extraLights;
         public ObjDef[] objects; public NpcDef[] npcs;
-        public string[] tiles;   // 레벨 에셋에서 온 층: 칠한 타일 줄(위→아래). null이면 rooms/gaps/fill로 만든다
+        public string[] tiles;   // 씬의 층(LevelFloor)에서 온 경우: 칠한 타일 줄(위→아래). null이면 rooms/gaps/fill로 만든다
 
         public Vector2 Arrive(string via)
         {

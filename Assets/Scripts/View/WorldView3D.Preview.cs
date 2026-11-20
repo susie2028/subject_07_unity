@@ -1,4 +1,4 @@
-// 레벨 에디터용: Play를 누르지 않고 씬 창에 층을 2.5D 그대로 그린다.
+// 에디터용: Play를 누르지 않고 씬 창에 층(LevelFloor)을 2.5D 그대로 그린다 (Editor/Level/LevelSceneSync.cs가 부름).
 // 그린 것은 씬에 저장되지 않는다 (HideFlags.DontSave). 게임 중에는 쓰지 않는다.
 using System.Collections.Generic;
 using UnityEngine;
@@ -26,11 +26,11 @@ namespace Specimen07
         {
             InitRes();
             if (actorRoot != null) Kill(actorRoot.gameObject);
-            actorRoot = new GameObject("Actors").transform; actorRoot.SetParent(transform, false);
-            if (G == null) return;
+            actorRoot = new GameObject("Actors").transform;   // 원점에서 만든 뒤 마지막에 층 아래로 옮긴다 (층 위치만큼 같이 이동)
+            if (G == null) { actorRoot.SetParent(transform, false); return; }
             foreach (var o in d.objects)
             {
-                var m = BuildModel(o.form); m.SetParent(actorRoot, true);
+                var m = BuildModel(o.form); m.SetParent(actorRoot, true);   // 아직 actorRoot가 원점이라 월드 = 로컬
                 m.position = P(o.x, 0, o.y);
                 m.rotation = Quaternion.Euler(0, o.form == "chair" ? o.rot * Mathf.Rad2Deg - 90 : 0, 0);
             }
@@ -43,6 +43,7 @@ namespace Specimen07
                 if (sr.sprite != null) PlaceStand(sr, n.x, n.y, sr.sprite.pixelsPerUnit / ViewKit.CHAR_PX);
                 var sh = Flat(actorRoot, "fx_dot", 0.8f); sh.transform.position = P(n.x, 0.02f, n.y); sh.transform.localScale = new Vector3(0.75f, 0.45f, 1); sh.color = new Color(0, 0, 0, 0.45f);
             }
+            actorRoot.SetParent(transform, false);
             MarkPreview(actorRoot);
         }
 

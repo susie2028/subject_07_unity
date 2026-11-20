@@ -53,6 +53,7 @@ namespace Specimen07.EditorTools
             camGo.transform.position = new Vector3(10, 14, -15);
             camGo.AddComponent<AudioListener>();
             new GameObject("Game").AddComponent<Game>();
+            LevelSceneSync.CreateFromDefaults();   // 층 6개 (레벨 디자인용)
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             // 빌드 목록: 메인 메뉴 → 게임 (예전 2.5D 비교 씬 항목은 지운다)
