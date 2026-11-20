@@ -11,7 +11,8 @@ namespace Specimen07
         public const float moveEps = 0.05f, turnRate = 5.0f, inspectCooldown = 6f, playerR = 0.3f;
         public const float alarmTime = 20f, aimTime = 1.1f, catchDist = 0.8f, arriveGrace = 1.2f;
         public const float missingDelay = 20f, respawn = 45f, heliTime = 15f, waryStep = 0.75f;
-        public const float eatCooldown = 2.5f;                // 먹고 나서 다음에 먹을 수 있을 때까지 (초)
+        public const float eatCooldown = 2.5f;
+        public const float eatNpcCooldown = 12f;             // 사람을 먹은 뒤 다음 사람을 먹을 수 있을 때까지 (물건은 eatCooldown만)                // 먹고 나서 다음에 먹을 수 있을 때까지 (초)
         public const float darkHide = 0.62f, darkSeeR = 1.7f;  // 이만큼 어두운 칸에 있으면 NPC가 이 거리 안에서만 알아챈다
         public const float viewMul = 1.25f;      // NPC 시야 거리 배율 (피드백: 너무 쉬워서 넓힘)
         public const float waitMul = 0.55f;      // 순찰 지점에서 멈추는 시간 배율 (더 자주 돌아다니게)

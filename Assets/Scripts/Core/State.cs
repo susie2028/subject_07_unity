@@ -111,7 +111,7 @@ namespace Specimen07
 
     public class Player
     {
-        public float x, y; public string form = "body"; public float timer, face, speedNow, eatCd; public Eating eating; public bool moved;
+        public float x, y; public string form = "body"; public float timer, face, speedNow, eatCd, npcCd;   // eatCd: 뭐든 먹은 뒤 잠깐, npcCd: 사람을 먹은 뒤 사람만 못 먹는 시간 public Eating eating; public bool moved;
         public Player Clone() { var p = (Player)MemberwiseClone(); p.eating = null; return p; }
     }
 

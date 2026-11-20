@@ -593,6 +593,7 @@ namespace Specimen07
             var t = NearestEdible();
             if (t == null) return;
             if (p.eatCd > 0) { Snd("deny"); Toast("아직 소화 중… " + Mathf.CeilToInt(p.eatCd) + "초"); return; }
+            if (t.isNpc && p.npcCd > 0) { Snd("deny"); Toast("사람은 아직 못 먹어… " + Mathf.CeilToInt(p.npcCd) + "초"); return; }
             if (OthersSee(t.Ref)) { Snd("deny"); Toast("누가 보고 있다"); return; }
             if (t.isNpc && p.form == "body" && SeesPlayer(t.npc)) { Snd("deny"); Toast("눈이 마주쳤다 — 뒤로 돌아가거나 변장할 것"); return; }
             p.eating = new Eating { target = t, t = 0 };
@@ -631,6 +632,7 @@ namespace Specimen07
                     else { tg.obj.alive = false; tg.obj.respawnT = Cfg.respawn; }
                     for (int i = 0; i < 16; i++) SpawnParticle(p.x, p.y, i % 2 != 0 ? Data.Hex("#ff8a98") : Data.Hex("#ffc2ca"), U.Rand(1.5f, 4), U.Rand(0.3f, 0.7f), U.Rand(1.5f, 3));
                     p.eating = null; p.eatCd = Cfg.eatCooldown;
+                    if (tg.isNpc) p.npcCd = Cfg.eatNpcCooldown;
                     SetForm(tg.form);
                     Snd("morph");
                 }
@@ -652,6 +654,7 @@ namespace Specimen07
             }
             p.speedNow = dt > 0 ? U.Dist(ox, oy, p.x, p.y) / dt : 0;
             if (p.eatCd > 0) p.eatCd -= dt;
+            if (p.npcCd > 0) p.npcCd -= dt;
 
             // 변신 타이머
             var fm = Data.Forms[p.form];
@@ -1190,7 +1193,7 @@ namespace Specimen07
             var p = S.player;
             int dr = NearDoor(); var cn = dr < 0 ? NearConsole() : null; bool lift = dr < 0 && cn == null && NearLift();
             var tgt = dr < 0 && cn == null && !lift && p.eating == null ? NearestEdible() : null;
-            bool blocked = tgt != null && (p.eatCd > 0 || (S.anySee && OthersSee(tgt.Ref)));
+            bool blocked = tgt != null && (p.eatCd > 0 || (tgt.isNpc && p.npcCd > 0) || (S.anySee && OthersSee(tgt.Ref)));
             float pulse = 0.75f + 0.25f * Mathf.Sin(S.time * 7);
             Func<Color, float, Color> A = (c, a) => new Color(c.r, c.g, c.b, a);
             Color strongEat = A(blocked ? HI_BLOCK : HI_EAT, pulse), softEat = A(HI_EAT, 0.55f);
@@ -1258,6 +1261,7 @@ namespace Specimen07
             if (notice != null) { note = true; return notice.text; }
             if (tgt != null) return S.anySee && OthersSee(tgt.Ref) ? "누가 보고 있어서 먹을 수 없다" :
                     p.eatCd > 0 ? "소화 중… " + Mathf.CeilToInt(p.eatCd) + "초 뒤에 먹을 수 있다" :
+                    tgt.isNpc && p.npcCd > 0 ? "사람은 " + Mathf.CeilToInt(p.npcCd) + "초 뒤에 먹을 수 있다 (물건은 지금 가능)" :
                     "[E] " + Data.Forms[tgt.form].name + " 먹기" + (tgt.isNpc ? (p.form == "body" ? " · 뒤에서 접근할 것" : " · 변장 중이라 덮칠 수 있다") : Data.Forms[tgt.form].Big ? " · 덩치가 커서 문은 못 지나간다" : "");
             if (PlayerHidden()) return "환풍구 안 — 아무도 볼 수 없다";
             if (PlayerInDark() && !S.anySee) return "어둠 속 — 바로 옆까지 오지 않으면 못 알아챈다";

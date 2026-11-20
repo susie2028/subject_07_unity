@@ -537,8 +537,9 @@ namespace Specimen07
             pillOdd.SetActive(mode == Mode.Play && f.type == FormType.Object && !game.IsNatural(p));
             pillVent.SetActive(mode == Mode.Play && hidden);
             pillDark.SetActive(mode == Mode.Play && !hidden && game.PlayerInDark());
-            bool cd = mode == Mode.Play && p.eatCd > 0;
-            pillCd.SetActive(cd); if (cd) pillCdText.text = "소화 중 " + Mathf.CeilToInt(p.eatCd);
+            bool cd = mode == Mode.Play && (p.eatCd > 0 || p.npcCd > 0);
+            pillCd.SetActive(cd);
+            if (cd) pillCdText.text = p.eatCd > 0 ? "소화 중 " + Mathf.CeilToInt(p.eatCd) : "사람 소화 중 " + Mathf.CeilToInt(p.npcCd);
             meta.text = "재시도 " + game.deaths + "회 · 경보 " + S.alarms + "회 · " + Data.FmtTime(S.elapsed);
 
             // 위험 테두리
