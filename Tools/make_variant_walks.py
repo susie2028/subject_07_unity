@@ -1,7 +1,7 @@
 # 연구원 그림(영상에서 뽑은 걷기 walk_researcher_* + 서 있기 stand_researcher_*)으로 연구원들을 만든다.
 #  - 일반 연구원들: 안경 벗기고 점눈, 머리색·넥타이를 사람마다 다르게 (머리 모양은 원래 그대로)
 #      researcher 갈색 / _v2 주황 / _v3 금발 / researcher2 검은 머리·어두운 피부 / researcher2_v2 짙은 갈색
-#  - 고위 연구원(senior): 안경 그대로, 회색 머리, 보라 넥타이, 금 배지
+#  - 고위 연구원(senior): 안경 그대로, 정수리 대머리 + 삐죽한 회색 옆머리, 보라 넥타이, 금 배지
 #  (머리 깎기·늘이기 함수 trim_spikes / cut_short / add_long / add_bun 은 남겨 둠. 지금은 안 씀)
 # 원본(안경 쓴 연구원)은 Assets/Resources/Art 의 _src_researcher_* 로 따로 보관해 두고 거기서 다시 만든다.
 # 실행: python3 Tools/make_variant_walks.py   (영상에서 연구원 걷기를 다시 뽑았다면: --fresh)
@@ -231,6 +231,79 @@ def senior_badge(a, view):
     return a
 
 
+# ------------------------------------------------------------------ 대머리 (고위 연구원): 정수리는 맨살, 옆머리만 삐죽
+def bald(a, view):
+    a = a.copy()
+    C = classes(a)
+    hm = hair_mask(a)
+    if not hm.any():
+        return a
+    h, w = C.shape
+    hy, hx = np.nonzero(hm)
+    skin_px = a[C == 'S'][:, :3]
+    base = np.median(skin_px, axis=0) if len(skin_px) else np.array([232, 190, 150])
+    if view in ('front', 'side'):
+        lab, n = nd.label(C == 'S', structure=np.ones((3, 3)))
+        comps = []
+        for i in range(1, n + 1):
+            yy, xx = np.nonzero(lab == i)
+            if len(yy) >= 4: comps.append((yy.min(), i))
+        if not comps:
+            return a
+        comps.sort(); face = lab == comps[0][1]
+        fy = np.nonzero(face)[0].min()
+        top3 = face & (np.arange(h)[:, None] <= fy + 2)
+        fx = np.nonzero(top3)[1]; fx0, fx1 = fx.min(), fx.max()
+        if view == 'front':
+            cx = (fx0 + fx1) / 2; rx = (fx1 - fx0) / 2 + 1.2
+        else:   # 옆모습(오른쪽을 봄): 머리통이 뒤(왼쪽)로 더 나와 있다
+            cx = (fx0 + fx1) / 2 - 1.8; rx = (fx1 - fx0) / 2 + 2.6
+        top = fy - 5.0; cy = fy + 1.0; ry = cy - top
+        limit = fy               # 이 줄 위만 바꾼다 (얼굴은 그대로)
+    else:
+        x0, x1, y0, y1 = hx.min(), hx.max(), hy.min(), hy.max()
+        cx = (x0 + x1) / 2; rx = (x1 - x0) / 2 - 3.0
+        top = y0 + 3.0; ry = (y1 - top) * 0.5; cy = top + ry
+        limit = int(cy) + 1
+    yy, xx = np.mgrid[0:h, 0:w]
+    d = ((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2
+    inside = (d <= 1.0) & (yy < limit)
+    # 정수리 위로 솟은 머리는 지운다 (옆머리 삐죽은 남김)
+    crown = hm & ~inside & (yy < cy) & (np.abs(xx - cx) < rx * (0.72 if view != 'side' else 0.55))
+    if view == 'side':
+        crown |= hm & ~inside & (yy < top + 1) & (xx > cx - rx * 0.35)     # 앞쪽·위쪽 삐죽 지우기
+    a[crown] = 0
+    if view == 'front':      # 이마를 덮던 앞머리도 맨살로
+        inside |= hm & (yy >= fy) & (yy <= fy + 2) & (xx >= fx0) & (xx <= fx1)
+    # 맨살 정수리 + 작은 반짝임
+    light = np.clip(base * 1.13 + 6, 0, 255); dark = np.clip(base * 0.86, 0, 255)
+    for y, x in zip(*np.nonzero(inside)):
+        c = base
+        if ((x - (cx - rx * 0.35)) / (rx * 0.32)) ** 2 + ((y - (top + ry * 0.35)) / (ry * 0.28)) ** 2 <= 1.0: c = light
+        elif d[y, x] > 0.72 and y > top + ry * 0.6: c = dark
+        a[y, x, :3] = c.astype(np.uint8); a[y, x, 3] = 255
+    if view == 'front':      # 앞머리 그림자로 남은 이마의 검은 선
+        fh = (yy >= fy) & (yy <= fy + 1) & (xx > fx0) & (xx < fx1) & (a[..., :3].max(axis=2) < 75) & (a[..., 3] > 0)
+        a[fh, :3] = base.astype(np.uint8)
+    # 지운 머리의 외곽선 찌꺼기(검은 선만 남은 것) 지우기
+    up = yy < cy + 1
+    for _ in range(6):
+        dk = (a[..., 3] > 0) & (a[..., :3].max(axis=2) < 75) & up
+        solid = (a[..., 3] > 0) & (a[..., :3].max(axis=2) >= 75)
+        nb = nd.binary_dilation(solid, structure=np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]]))
+        lone = dk & ~nb
+        if not lone.any(): break
+        a[lone] = 0
+    # 몸에서 떨어져 남은 작은 머리카락 조각 지우기
+    lab, n = nd.label(a[..., 3] > 0, structure=np.ones((3, 3)))
+    if n > 1:
+        sizes = nd.sum(np.ones_like(lab), lab, range(1, n + 1))
+        main = 1 + int(np.argmax(sizes))
+        for i in range(1, n + 1):
+            if i != main and sizes[i - 1] < 12: a[lab == i] = 0
+    return close_outline(a)
+
+
 def rec(a, hair=None, tie=None, skin=None):
     if hair: a = mp.recolor(a, mp.HAIR, hair)
     if skin: a = mp.recolor(a, mp.SKIN, skin)
@@ -246,7 +319,7 @@ LOOKS = {
     'researcher2':    lambda a, v: rec(remove_glasses(a, v), hair=(44, 38, 52), skin=(176, 118, 84), tie=(196, 54, 60)),
     'researcher2_v2': lambda a, v: rec(remove_glasses(a, v), hair=(90, 60, 40), tie=(220, 160, 40)),
     # 고위 연구원만 안경 + 회색 머리 + 보라 넥타이 + 금 배지
-    'senior':         lambda a, v: senior_badge(rec(a, hair=(196, 196, 204), tie=(122, 74, 184)), v),
+    'senior':         lambda a, v: senior_badge(rec(bald(a, v), hair=(196, 196, 204), tie=(122, 74, 184)), v),   # 정수리 대머리 + 옆머리
 }
 
 
