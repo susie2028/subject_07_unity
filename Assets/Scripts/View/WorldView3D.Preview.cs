@@ -14,11 +14,14 @@ namespace Specimen07
         public void BuildPreview(FloorGeo g)
         {
             InitRes();
-            BuildFloor(g);
-            floorRoot.SetParent(transform, false);
-            dynRoot.SetParent(transform, false);
-            dynRoot.gameObject.SetActive(false);   // 주인공·헬기·시야 같은 움직이는 것은 안 보이게
-            MarkPreview(transform);
+            try { BuildFloor(g); }
+            finally
+            {
+                // 중간에 실패해도 씬 맨 위에 덩그러니 남지 않게 미리보기 아래로
+                if (floorRoot != null) floorRoot.SetParent(transform, false);
+                if (dynRoot != null) { dynRoot.SetParent(transform, false); dynRoot.gameObject.SetActive(false); }   // 주인공·헬기·시야 같은 움직이는 것은 안 보이게
+                MarkPreview(transform);
+            }
         }
 
         // 사람·물건·도착 지점 (위치만 바뀌었을 때는 이것만 다시 그린다)
@@ -49,7 +52,7 @@ namespace Specimen07
 
         static void MarkPreview(Transform t)
         {
-            foreach (var tf in t.GetComponentsInChildren<Transform>(true)) tf.gameObject.hideFlags = HideFlags.DontSave;
+            foreach (var tf in t.GetComponentsInChildren<Transform>(true)) tf.gameObject.hideFlags = HideFlags.DontSave | HideFlags.HideInHierarchy;
             foreach (var r in t.GetComponentsInChildren<Renderer>(true)) r.shadowCastingMode = r is SpriteRenderer ? ShadowCastingMode.Off : r.shadowCastingMode;
         }
     }

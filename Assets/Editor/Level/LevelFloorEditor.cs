@@ -29,6 +29,8 @@ namespace Specimen07.EditorTools
         public override void OnInspectorGUI()
         {
             var f = F;
+            var err = LevelSceneSync.ErrorOf(f);
+            if (err != null) EditorGUILayout.HelpBox("이 층 미리보기를 그리지 못했어요: " + err + "\n(Console에 자세한 내용) 메뉴 표본07 → 층 미리보기 다시 그리기", MessageType.Error);
             EditorGUILayout.HelpBox("자식 오브젝트(방·사람·물건·문…)를 Scene에서 클릭해 고르고 이동 툴(W)로 옮겨요. 늘릴 땐 복제(Ctrl/Cmd+D).\n" +
                 "문·콘솔은 칸 가운데로, 방·계단 같은 영역은 칸 모서리로 자동으로 맞춰져요.", MessageType.None);
 

@@ -22,6 +22,9 @@ namespace Specimen07.EditorTools
         static readonly Dictionary<LevelFloor, Pv> pvs = new Dictionary<LevelFloor, Pv>();
         static double next;
         public static bool Paused;   // 타일 칠하는 동안 등
+        const HideFlags PV = HideFlags.DontSave | HideFlags.HideInHierarchy;   // 저장 안 함 + Hierarchy에 안 보임 (NotEditable은 붙이지 않음: 자식 붙이기가 막힐 수 있어서)
+        static readonly Dictionary<LevelFloor, string> errors = new Dictionary<LevelFloor, string>();
+        public static string ErrorOf(LevelFloor f) { string e; return errors.TryGetValue(f, out e) ? e : null; }
 
         static LevelSceneSync()
         {
@@ -55,6 +58,17 @@ namespace Specimen07.EditorTools
             foreach (var go in EditorSceneManager.GetActiveScene().GetRootGameObjects()) if (go.name == RootName) Undo.DestroyObjectImmediate(go);
             CreateFromDefaults();
         }
+        [MenuItem("표본07/Scene 카메라: 층 전체 보기", false, 23)]
+        public static void FrameAll()
+        {
+            var floors = Object.FindObjectsByType<LevelFloor>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            var sv = SceneView.lastActiveSceneView; if (sv == null || floors.Length == 0) return;
+            var b = new Bounds(floors[0].transform.position, Vector3.zero);
+            foreach (var f in floors) { b.Encapsulate(f.transform.TransformPoint(Vector3.zero)); b.Encapsulate(f.transform.TransformPoint(new Vector3(f.w, 0, -f.h))); }
+            sv.in2DMode = false; sv.orthographic = false;
+            sv.LookAt(b.center, Quaternion.Euler(60, 0, 0), Mathf.Max(b.size.x, b.size.z) * 0.55f);
+        }
+
         [MenuItem("표본07/층 미리보기 다시 그리기", false, 22)]
         static void RedrawMenu() { Art.ClearCache(); ClearAll(); }
 
@@ -77,10 +91,30 @@ namespace Specimen07.EditorTools
         static void ClearAll()
         {
             foreach (var kv in pvs) if (kv.Value.go != null) Object.DestroyImmediate(kv.Value.go);
-            pvs.Clear();
+            pvs.Clear(); errors.Clear();
+            CleanStray();
             // 스크립트를 다시 불러온 뒤 주인 없이 남은 미리보기
             foreach (var f in Object.FindObjectsByType<LevelFloor>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 for (int i = f.transform.childCount - 1; i >= 0; i--) { var c = f.transform.GetChild(i); if (c.name == PreviewName) Object.DestroyImmediate(c.gameObject); }
+        }
+
+        // 예전에 미리보기를 그리다 실패해서 씬 맨 위에 남은 것들 (Floor3D_*, Dynamic3D, Actors) 지우기
+        static void CleanStray()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+            for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+            {
+                var sc = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+                if (!sc.isLoaded) continue;
+                bool dirty = false;
+                foreach (var go in sc.GetRootGameObjects())
+                    if (go.name.StartsWith("Floor3D_") || go.name == "Dynamic3D" || go.name == "Actors")
+                    {
+                        if ((go.hideFlags & HideFlags.DontSave) == 0) dirty = true;
+                        Object.DestroyImmediate(go);
+                    }
+                if (dirty) EditorSceneManager.MarkSceneDirty(sc);
+            }
         }
 
         static void Tick()
@@ -123,7 +157,7 @@ namespace Specimen07.EditorTools
             if (pv.go == null)
             {
                 for (int i = f.transform.childCount - 1; i >= 0; i--) { var c = f.transform.GetChild(i); if (c.name == PreviewName) Object.DestroyImmediate(c.gameObject); }
-                pv.go = new GameObject(PreviewName) { hideFlags = HideFlags.HideAndDontSave };
+                pv.go = new GameObject(PreviewName) { hideFlags = PV };
                 pv.go.transform.SetParent(f.transform, false);
                 pv.view = pv.go.AddComponent<WorldView3D>();
             }
@@ -132,14 +166,18 @@ namespace Specimen07.EditorTools
                 var g = new FloorGeo(d);
                 pv.view.BuildPreview(g);
                 pv.view.BuildPreviewActors(d);
-                Hide(pv.go);
-                pv.built = true;
+                errors.Remove(f);
             }
-            catch (System.Exception e) { Debug.LogException(e); pv.built = true; }
+            catch (System.Exception e)
+            {
+                errors[f] = e.GetType().Name + ": " + e.Message;
+                Debug.LogError("[표본07] " + f.id + " 층 미리보기를 그리지 못했어요 → " + e);
+            }
+            finally { Hide(pv.go); CleanStray(); pv.built = true; }
         }
         static void Hide(GameObject go)
         {
-            foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.hideFlags = HideFlags.HideAndDontSave;
+            foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.hideFlags = PV;
             SceneVisibilityManager.instance.DisablePicking(go, true);
         }
 
