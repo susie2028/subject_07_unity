@@ -26,6 +26,8 @@ namespace Specimen07
         public Inspect inspect;
         public bool seesPlayer, frozen, temp;
         public float lockT, aim, repath, shoutCool, fleeT;
+        public float stunT, stunYaw;           // 변신이 풀려 뱉어진 뒤 기절해 누워 있는 시간 · 누운 방향(도)
+        public bool Stunned { get { return stunT > 0; } }
         public Search search;
 
         public CharDef C { get { return Data.Chars[ch]; } }
@@ -111,7 +113,9 @@ namespace Specimen07
 
     public class Player
     {
-        public float x, y; public string form = "body"; public float timer, face, speedNow, eatCd, npcCd; public Eating eating; public bool moved;   // eatCd: 뭐든 먹은 뒤 잠깐, npcCd: 사람을 먹은 뒤 사람만 못 먹는 시간
+        public float x, y; public string form = "body"; public float timer, face, speedNow, eatCd, npcCd; public Eating eating; public bool moved;
+        // 지금 모습의 원래 주인 (변신이 풀리면 그 자리에 뱉어낸다). srcKind: 0 없음, 1 사람(srcId), 2 물건(srcIdx), 3 붙박이 가구(srcTx,srcTy)
+        public int srcKind, srcIdx, srcTx, srcTy; public string srcFloor, srcId;   // eatCd: 뭐든 먹은 뒤 잠깐, npcCd: 사람을 먹은 뒤 사람만 못 먹는 시간
         public Player Clone() { var p = (Player)MemberwiseClone(); p.eating = null; return p; }
     }
 

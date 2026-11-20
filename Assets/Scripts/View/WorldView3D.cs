@@ -757,8 +757,24 @@ namespace Specimen07
                 if (playing && !game.PlayerCanSee(n.x, n.y)) continue;
                 var sr = Pooled(npcPool, ni, () => Stand(dynRoot, "stand_researcher_front"));
                 var sh = Pooled(shadowPool, ni, () => Flat(dynRoot, "fx_dot", 0.8f)); ni++;
-                bool moving = !n.frozen && ((n.path != null && n.path.Count > 0) || n.state == NpcState.Chase);
+                bool moving = !n.frozen && !n.Stunned && ((n.path != null && n.path.Count > 0) || n.state == NpcState.Chase);
                 string kind = ViewKit.Variant(n.pal, n.id);
+                if (n.Stunned)
+                {
+                    // 기절: 정면 그림(눈 X)을 바닥에 눕힌다. 깨기 직전엔 꿈틀
+                    var ko = Art.TryLoad("stun_" + kind) ?? Art.TryLoad("stand_" + kind + "_front") ?? Art.Get("stand_researcher_front");
+                    sr.sprite = ko; sr.flipX = false;
+                    float wob = n.stunT < 1.2f ? Mathf.Sin(t * 30) * 6 : 0;
+                    float ks = ko.pixelsPerUnit / ViewKit.CHAR_PX;
+                    sr.transform.rotation = Quaternion.Euler(90, n.stunYaw + wob, 0);
+                    sr.transform.localScale = Vector3.one * ks;
+                    sr.transform.position = P(n.x, 0.03f, n.y);
+                    sr.color = Tint(n.x, n.y);
+                    sh.transform.position = P(n.x, 0.02f, n.y); sh.transform.localScale = new Vector3(1.1f, 1.1f, 1); sh.color = new Color(0, 0, 0, 0.3f);
+                    Game.Highlight kh;
+                    if (hiOf.TryGetValue(n, out kh)) Pooled(outlinePool, oli++, () => SpriteOutline.Make(dynRoot)).Show(sr, kh.color, 1.6f, Vector3.down * 0.005f);
+                    continue;
+                }
                 float sc0;
                 ViewKit.ApplyStand(sr, kind, n.face, out sc0, moving ? t * (n.state == NpcState.Chase ? 1.5f : 1f) + (n.id.Length % 4) * 0.13f : -1);
                 float s = 1;
@@ -798,7 +814,7 @@ namespace Specimen07
             int ci = 0;
             foreach (var n in F.npcs)
             {
-                if (!n.alive || !InView(n.x, n.y, game.ViewDist(n) + 1)) continue;
+                if (!n.alive || n.Stunned || !InView(n.x, n.y, game.ViewDist(n) + 1)) continue;
                 var mf = Pooled(conePool, ci++, () => NewMesh("Cone", spriteMat));
                 BuildCone(mf.sharedMesh, n);
             }

@@ -298,7 +298,7 @@ namespace Specimen07
             Rule(rules, "물건", "보는 앞에서는 꼼짝 말 것. 제자리가 아니면 의심받는다. 카트만 천천히 굴러갈 수 있다.", HAZARD);
             Rule(rules, "사람", "먹으면 그 사람의 카드를 얻는다. 보는 앞에서도 걷고, 문을 연다. 단, 있으면 안 되는 구역이 있다.", Data.Hex("#8fb4d6"));
             CharTable(card);
-            Txt(card, "Keys", "<b>WASD / 방향키</b> 이동     <b>E / Space</b> 먹기 · 열기 · 조작     <b>M</b> 지도     <b>R</b> 층 도착 시점부터", 20, MUTED);
+            Txt(card, "Keys", "<b>WASD / 방향키</b> 이동     <b>E / Space</b> 먹기 · 열기 · 조작     <b>Q</b> 변신 풀기     <b>M</b> 지도     <b>R</b> 층 도착 시점부터", 20, MUTED);
             var row = Row(card, "Buttons", 12);
             Btn(row, "닫기", PANEL, FG, () => ovHowTo.SetActive(false), 220, 64);
 

@@ -222,7 +222,7 @@ namespace Specimen07
             S.floorId = id; G = FloorGeo.All[id];
             var a = G.def.Arrive(via);
             p.x = a.x; p.y = a.y; p.eating = null;
-            if (Data.Forms[p.form].Big) { p.form = "body"; p.timer = 0; }   // 큰 가구 모습은 층을 옮기면 풀린다 (도착 자리가 좁을 수 있다)
+            if (Data.Forms[p.form].Big) { DropSource(); p.form = "body"; p.timer = 0; }   // 큰 가구 모습은 층을 옮기면 풀린다 (도착 자리가 좁을 수 있다). 가구는 원래 층 제자리로
             S.alarm = null; S.trail.Clear(); S.particles.Clear(); S.spot = 0; S.spotNpc = null; S.arriveT = Cfg.arriveGrace;
             foreach (var n in Fl.npcs) { n.state = NpcState.Patrol; n.path = null; n.lockT = 0; n.aim = 0; n.search = null; n.inspect = null; n.frozen = false; }
             Fl.npcs.RemoveAll(n => n.temp);
@@ -347,6 +347,7 @@ namespace Specimen07
         public float ViewDist(Npc n) { return n.C.view * Cfg.viewMul + Cfg.waryStep * Fl.wary; }
         bool Sees(Npc n, float x, float y)
         {
+            if (n.Stunned) return false;   // 기절해 누워 있으면 아무것도 못 본다
             var c = n.C;
             float dx = x - n.x, dy = y - n.y, d = Mathf.Sqrt(dx * dx + dy * dy);
             if (d > ViewDist(n)) return false;
@@ -640,24 +641,28 @@ namespace Specimen07
                 p.face = Mathf.Atan2(tg.Y - p.y, tg.X - p.x);
                 if (p.eating.t >= Cfg.eatTime)
                 {
+                    DropSource();   // 이미 뭔가로 변신해 있었다면 그 주인은 지금 자리에 뱉어낸다
+                    p.srcFloor = S.floorId;
                     if (tg.isNpc)
                     {
                         var n = tg.npc;
                         n.alive = false; n.frozen = false;
                         GainCards(n.ch);
+                        p.srcKind = 1; p.srcId = n.id;
                         if (!n.temp) Fl.missing.Add(new Missing { t = Cfg.missingDelay, x = n.x, y = n.y, label = n.label });
                     }
                     else if (tg.IsTile)
                     {
                         // 책상·선반: 칸을 비우고 그 자리에 큰 몸으로 선다
-                        tg.tile.respawnT = Cfg.respawn;
+                        tg.tile.respawnT = HELD;   // 변신이 풀릴 때까지는 다시 놓이지 않는다
                         Fl.tiles.Add(tg.tile);
+                        p.srcKind = 3; p.srcTx = tg.tile.x; p.srcTy = tg.tile.y;
                         G.ApplyEaten(Fl.tiles); landCache.Clear();
                         foreach (var n in Fl.npcs) n.path = null;
                         p.x = tg.land.x; p.y = tg.land.y;
                         if (view != null) view.BuildFloor(G);
                     }
-                    else { tg.obj.alive = false; tg.obj.respawnT = Cfg.respawn; }
+                    else { tg.obj.alive = false; tg.obj.respawnT = 0; p.srcKind = 2; p.srcIdx = Fl.objects.IndexOf(tg.obj); }   // 변신이 풀리면 그 자리에 다시 놓인다
                     for (int i = 0; i < 16; i++) SpawnParticle(p.x, p.y, i % 2 != 0 ? Data.Hex("#ff8a98") : Data.Hex("#ffc2ca"), U.Rand(1.5f, 4), U.Rand(0.3f, 0.7f), U.Rand(1.5f, 3));
                     bool seenEat = p.eating.seen;
                     p.eating = null; p.eatCd = Cfg.eatCooldown;
@@ -691,13 +696,7 @@ namespace Specimen07
             if (fm.type != FormType.Body && p.eating == null)
             {
                 p.timer -= dt;
-                if (p.timer <= 0)
-                {
-                    MeltParticles();
-                    p.form = "body"; p.timer = 0;
-                    Snd("melt");
-                    Toast("몸이 녹아내렸다");
-                }
+                if (p.timer <= 0) Unmorph("몸이 녹아내렸다");
             }
             // 점액 자국
             if (p.form == "body" && p.speedNow > 0.5f && !PlayerHidden())
@@ -715,6 +714,63 @@ namespace Specimen07
                 if (st != null) { GoFloor(st.to, "stairs"); return; }
             }
             if (ch == 'H' && S.heli != null && S.heli.arrived) WinGame();
+        }
+
+        /* ===== 변신 풀기 (시간이 다 되거나 Q) — 먹었던 것을 지금 자리에 뱉어낸다 ===== */
+        const float HELD = 1e9f;   // 먹혀서 주인공 몸속에 있는 동안 (다시 놓이는 타이머가 돌지 않음)
+        public void Unmorph(string msg)
+        {
+            var p = S.player;
+            if (p.form == "body" || p.eating != null) return;
+            DropSource();
+            MeltParticles();
+            p.form = "body"; p.timer = 0;
+            Snd("melt");
+            Toast(msg);
+        }
+        static readonly string[] WakeLines = { "으으… 머리야…", "어… 내가 왜 바닥에…", "뭐, 뭐였지 방금…", "꿈인가…" };
+        void DropSource()
+        {
+            var p = S.player; int k = p.srcKind; p.srcKind = 0;
+            FloorState F;
+            if (k == 0 || p.srcFloor == null || !S.floors.TryGetValue(p.srcFloor, out F)) return;
+            bool here = p.srcFloor == S.floorId;
+            if (k == 1)
+            {
+                var n = F.npcs.FirstOrDefault(q => q.id == p.srcId && !q.alive);
+                if (n == null) return;
+                n.alive = true; n.state = NpcState.Patrol; n.path = null; n.inspect = null; n.search = null; n.frozen = false;
+                n.lockT = 0; n.aim = 0; n.fleeT = 0; n.wait = 0; n.bubble = null; n.seesPlayer = false;
+                F.missing.RemoveAll(m => !m.done && m.label == n.label);   // 돌아왔으니 실종 신고도 없던 일
+                if (here)
+                {
+                    // 기절해서 그 자리에 널브러진다. 잠시 뒤 일어나 다시 순찰
+                    n.x = p.x; n.y = p.y; n.stunT = Cfg.stunTime; n.stunYaw = U.Rand(-100f, 100f);
+                    Say(n, "@_@", 1.4f);
+                }
+                else
+                {
+                    // 다른 층에서 풀렸으면 원래 층의 처음 자리로 돌아가 있다
+                    var d = FloorGeo.All[p.srcFloor].def.npcs.FirstOrDefault(q => q.id == n.id);
+                    if (d != null) { n.x = d.x; n.y = d.y; n.wp = 0; }
+                }
+            }
+            else if (k == 2)
+            {
+                if (p.srcIdx < 0 || p.srcIdx >= F.objects.Count) return;
+                var o = F.objects[p.srcIdx];
+                if (here) { o.alive = true; o.respawnT = 0; o.x = p.x; o.y = p.y; }
+                else o.respawnT = Cfg.respawn;
+            }
+            else if (k == 3)
+            {
+                var t = F.tiles.FirstOrDefault(q => q.x == p.srcTx && q.y == p.srcTy);
+                if (t == null) return;
+                string form;
+                if (here && Data.TileForms.TryGetValue(t.ch, out form))
+                    F.objects.Add(new WorldObj { form = form, x = p.x, y = p.y });   // 가구를 옮긴 셈: 원래 칸은 빈 채로, 지금 자리에 놓인다
+                else t.respawnT = Cfg.respawn;
+            }
         }
 
         void MeltParticles()
@@ -743,6 +799,12 @@ namespace Specimen07
             if (n.bubble != null) { n.bubble.t -= dt; if (n.bubble.t <= 0) n.bubble = null; }
             n.face = U.ApproachAng(n.face, n.desFace, Cfg.turnRate * dt * (n.state == NpcState.Chase || n.state == NpcState.Flee ? 1.6f : 1f));
             if (n.frozen) return;
+            if (n.stunT > 0)
+            {
+                n.stunT -= dt;
+                if (n.stunT <= 0) { n.stunT = 0; n.path = null; n.wait = 0; Say(n, U.Pick(WakeLines)); }
+                return;
+            }
             if (n.shoutCool > 0) n.shoutCool -= dt;
             if (n.state == NpcState.Chase) { UpdateChase(n, dt); return; }
             if (n.state == NpcState.Flee) { UpdateFlee(n, dt); return; }
@@ -809,7 +871,7 @@ namespace Specimen07
         static readonly string[] FleeLines = { "으아악!", "괴, 괴물이다!", "살려줘!", "저리 가!", "경비! 경비!" };
         void StartFlee(Npc n)
         {
-            if (G.def.lethal || n.C.chaser != null || !n.alive || n.frozen) return;
+            if (G.def.lethal || n.C.chaser != null || !n.alive || n.frozen || n.Stunned) return;
             bool fresh = n.state != NpcState.Flee;
             n.state = NpcState.Flee; n.fleeT = Cfg.fleeTime;
             n.inspect = null; n.search = null;
@@ -1107,6 +1169,7 @@ namespace Specimen07
                 if (Inp.Down(KeyCode.Escape)) { Pause(); return; }
                 if (Inp.Down(KeyCode.M)) { showMini = !showMini; if (hud != null) hud.SetMiniVisible(showMini); return; }
                 if (Inp.Down(KeyCode.E) || Inp.Down(KeyCode.Space)) Action();
+                if (Inp.Down(KeyCode.Q)) Unmorph("변신을 풀었다");
             }
         }
 
@@ -1318,7 +1381,7 @@ namespace Specimen07
             var p = S.player; var f = Data.Forms[p.form];
             var notice = NearNotice(); int dr = NearDoor(); var cn = NearConsole(); bool lift = NearLift(); var trap = NearTrap();
             var tgt = p.eating != null ? null : NearestEdible();
-            if (!p.moved && S.time < 8 && S.floorId == "B1") return "[WASD] 또는 방향키로 이동 · [E] 먹기 · [M] 지도";
+            if (!p.moved && S.time < 8 && S.floorId == "B1") return "[WASD] 또는 방향키로 이동 · [E] 먹기 · [Q] 변신 풀기 · [M] 지도";
             if (p.eating != null) return "꿀꺽…";
             if (dr >= 0)
             {
@@ -1341,7 +1404,7 @@ namespace Specimen07
                     "[E] " + Data.Forms[tgt.form].name + " 먹기" + (tgt.isNpc ? (p.form == "body" ? " · 뒤에서 접근할 것" : " · 변장 중이라 덮칠 수 있다") : Data.Forms[tgt.form].Big ? " · 덩치가 커서 문은 못 지나간다" : "");
             if (PlayerHidden()) return "환풍구 안 — 아무도 볼 수 없다";
             if (PlayerInDark() && !S.anySee) return "어둠 속 — 바로 옆까지 오지 않으면 못 알아챈다";
-            if (f.Big) return f.name + " — 방 안에 숨기 좋다 · 문은 너무 좁아서 못 나간다";
+            if (f.Big) return f.name + " — 방 안에 숨기 좋다 · 문은 너무 좁아서 못 나간다 · [Q] 풀기";
             if (f.type == FormType.Body) return G.def.lethal ? "본모습은 누구에게도 보이면 안 된다" : "본모습을 들키면 경보가 울린다";
             if (p.form == "cart") return "카트는 보는 앞에서도 천천히 굴러갈 수 있다";
             if (f.type == FormType.Object) return f.zone == "wall" ? "보는 앞에서는 멈출 것 · 벽에 붙어 있어야 자연스럽다" : "보는 앞에서는 멈출 것";
