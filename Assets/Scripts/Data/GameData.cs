@@ -12,6 +12,7 @@ namespace Specimen07
         public const float alarmTime = 20f, aimTime = 1.1f, catchDist = 0.8f, arriveGrace = 1.2f;
         public const float missingDelay = 20f, respawn = 45f, heliTime = 15f, waryStep = 0.75f;
         public const float eatCooldown = 2.5f;
+        public const float hearR = 1.6f, hearDelay = 0.5f, hearStare = 2.4f;   // 이 거리(칸) 안에 이 시간(초) 넘게 머물면 소리를 듣고 돌아본다 (뒤에서 재빨리 먹는 건 가능) · 돌아보고 있는 시간
         public const float stunTime = 7f;        // 변신이 풀려 뱉어진 사람이 바닥에 기절해 있는 시간 (초)
         public const float fleeTime = 6f, fleeSpeedK = 1.0f;   // 겁먹은 사람이 도망치는 시간(초)·속도 (주인공 본모습 속도 대비 배율, 1 = 똑같이)
         public const float eatNpcCooldown = 12f;             // 사람을 먹은 뒤 다음 사람을 먹을 수 있을 때까지 (물건은 eatCooldown만)                // 먹고 나서 다음에 먹을 수 있을 때까지 (초)

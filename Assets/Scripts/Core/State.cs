@@ -26,6 +26,7 @@ namespace Specimen07
         public Inspect inspect;
         public bool seesPlayer, frozen, temp;
         public float lockT, aim, repath, shoutCool, fleeT;
+        public float hearT;                    // 주인공이 가까이서 소리를 낸 시간 (hearDelay를 넘으면 돌아본다)
         public float stunT, stunYaw;           // 변신이 풀려 뱉어진 뒤 기절해 누워 있는 시간 · 누운 방향(도)
         public bool Stunned { get { return stunT > 0; } }
         public Search search;

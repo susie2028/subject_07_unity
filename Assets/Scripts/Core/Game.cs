@@ -910,6 +910,26 @@ namespace Specimen07
             MoveAlong(n, dt, Data.Forms["body"].speed * Cfg.fleeSpeedK);   // 겁먹으면 주인공만큼 빨리 뛴다
         }
 
+        /* ===== 소리: 안 보이는 곳에서 너무 가까이 가면 들린다 → 그쪽을 돌아본다. 그래도 못 보면 "착각인가?" =====
+           본모습(질척이는 소리)·먹는 중·움직이는 물건만 소리가 난다. 사람 변장·멈춰 있는 물건·환풍구 안은 조용 */
+        bool HearsPlayer(Npc n)
+        {
+            if (!n.alive || n.frozen || n.Stunned || n.state != NpcState.Patrol || n.cool > 0) return false;
+            var p = S.player; var f = Data.Forms[p.form];
+            if (PlayerHidden() || U.Dist(n.x, n.y, p.x, p.y) > Cfg.hearR) return false;
+            if (p.eating != null) return p.eating.target.npc != n;
+            if (f.type == FormType.Body) return true;
+            return f.type == FormType.Object && p.speedNow > Cfg.moveEps;
+        }
+        void StartHear(Npc n)
+        {
+            var p = S.player;
+            n.state = NpcState.Inspect; n.path = null;
+            n.inspect = new Inspect { x = p.x, y = p.y, staring = true, t = Cfg.hearStare, end = "착각인가?" };
+            Say(n, "어디서 이상한 소리가 나는데?", 2.2f);
+            Snd("huh");
+        }
+
         void StartInspect(Npc n, float x, float y, string line = null, string end = null)
         {
             var path = FindPath(n, n.x, n.y, x, y);
@@ -1035,7 +1055,13 @@ namespace Specimen07
             foreach (var n in Fl.npcs.ToArray())
             {
                 n.seesPlayer = SeesPlayer(n);
-                if (!n.seesPlayer) continue;
+                if (!n.seesPlayer)
+                {
+                    if (S.arriveT <= 0 && HearsPlayer(n)) { n.hearT += dt; if (n.hearT >= Cfg.hearDelay) { n.hearT = 0; StartHear(n); } }
+                    else n.hearT = Mathf.Max(0, n.hearT - dt);
+                    continue;
+                }
+                n.hearT = 0;
                 any = true;
                 if (S.arriveT > 0 || n.frozen) continue;
                 string v = null, k = "";
