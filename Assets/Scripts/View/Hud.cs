@@ -642,6 +642,7 @@ namespace Specimen07
                 string mark = ""; Color col = HAZARD; int size = 40;
                 if (n.lockT > 0 || (S.spotNpc == n && S.spot > 0)) { mark = n.lockT > 0 ? "!" : "?"; col = n.lockT > 0 ? ALARM : HAZARD; size = 54; }
                 else if (n.state == NpcState.Chase || n.state == NpcState.Inspect) mark = "?";
+                else if (n.state == NpcState.Flee) { mark = "!!"; col = Data.Hex("#8fd0ff"); }   // 겁먹고 도망치는 중
                 if (mark != "" && game.mode != Mode.Title && game.mode != Mode.Intro)
                 {
                     while (marks.Count <= mi) { var t = Txt(bubbleLayer, "Mark", "", 40, HAZARD, TextAnchor.LowerCenter, true); Shadow(t); t.rectTransform.anchorMin = t.rectTransform.anchorMax = new Vector2(0.5f, 0.5f); t.rectTransform.pivot = new Vector2(0.5f, 0); t.rectTransform.sizeDelta = new Vector2(80, 70); marks.Add(t); }

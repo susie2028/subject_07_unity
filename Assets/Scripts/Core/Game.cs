@@ -741,10 +741,11 @@ namespace Specimen07
         {
             if (!n.alive) return;
             if (n.bubble != null) { n.bubble.t -= dt; if (n.bubble.t <= 0) n.bubble = null; }
-            n.face = U.ApproachAng(n.face, n.desFace, Cfg.turnRate * dt * (n.state == NpcState.Chase ? 1.6f : 1f));
+            n.face = U.ApproachAng(n.face, n.desFace, Cfg.turnRate * dt * (n.state == NpcState.Chase || n.state == NpcState.Flee ? 1.6f : 1f));
             if (n.frozen) return;
             if (n.shoutCool > 0) n.shoutCool -= dt;
             if (n.state == NpcState.Chase) { UpdateChase(n, dt); return; }
+            if (n.state == NpcState.Flee) { UpdateFlee(n, dt); return; }
             if (n.cool > 0) n.cool -= dt;
 
             if (n.state == NpcState.Inspect)
@@ -801,6 +802,50 @@ namespace Specimen07
                 n.chatT = U.Rand(9, 16);
                 Say(n, U.Pick(Data.Chatter[n.ch]));
             }
+        }
+
+        /* ===== 겁먹고 도망치기: 들키면 끝나는 층이 아닌 곳에서, 쫓아오지 않는 사람(연구원·청소부·고위 연구원·소장)이
+           주인공 본모습·먹는 장면·수배된 모습을 보면 소리 지르고 반대쪽으로 달아난다 ===== */
+        static readonly string[] FleeLines = { "으아악!", "괴, 괴물이다!", "살려줘!", "저리 가!", "경비! 경비!" };
+        void StartFlee(Npc n)
+        {
+            if (G.def.lethal || n.C.chaser != null || !n.alive || n.frozen) return;
+            bool fresh = n.state != NpcState.Flee;
+            n.state = NpcState.Flee; n.fleeT = Cfg.fleeTime;
+            n.inspect = null; n.search = null;
+            if (fresh) { n.path = null; n.repath = 0; Say(n, U.Pick(FleeLines), 2.2f); }
+        }
+        void UpdateFlee(Npc n, float dt)
+        {
+            var p = S.player;
+            n.fleeT -= dt; n.repath -= dt;
+            if (n.seesPlayer) n.fleeT = Mathf.Max(n.fleeT, 2.5f);
+            if (n.fleeT <= 0)
+            {
+                n.state = NpcState.Patrol; n.path = null; n.wait = 0; n.cool = Cfg.inspectCooldown;
+                Say(n, "휴… 방금 그거 뭐였지…", 2.6f);
+                return;
+            }
+            if (n.repath <= 0 || n.path == null || n.path.Count == 0)
+            {
+                // 주변 칸 중 주인공에게서 가장 먼 곳으로
+                float best = U.Dist(n.x, n.y, p.x, p.y); Vector2? goal = null;
+                for (int i = 0; i < 24; i++)
+                {
+                    float x = U.Floor(n.x + U.Rand(-7, 7)) + 0.5f, y = U.Floor(n.y + U.Rand(-7, 7)) + 0.5f;
+                    if (NpcSolid(n, U.Floor(x), U.Floor(y))) continue;
+                    float d = U.Dist(x, y, p.x, p.y);
+                    // 주인공 쪽을 지나가지 않게: 지금 자리에서 주인공 반대 방향에 있는 곳만
+                    float dot = (x - n.x) * (n.x - p.x) + (y - n.y) * (n.y - p.y);
+                    if (dot <= 0) continue;
+                    if (d > best + 0.5f) { best = d; goal = new Vector2(x, y); }
+                }
+                n.path = goal.HasValue ? FindPath(n, n.x, n.y, goal.Value.x, goal.Value.y) : null;
+                if (n.path == null) n.path = new List<Vector2>();
+                n.repath = 1.0f;
+            }
+            if (n.path.Count == 0) n.desFace = Mathf.Atan2(n.y - p.y, n.x - p.x);   // 막다른 곳: 등지고 웅크림
+            MoveAlong(n, dt, n.C.speed * Cfg.fleeSpeedK);
         }
 
         void StartInspect(Npc n, float x, float y, string line = null, string end = null)
@@ -947,7 +992,8 @@ namespace Specimen07
                     if (z != null && !z.Allows(p.form)) { v = n.label + ": \"" + Data.Josa(f.name, "이", "가") + " 왜 " + z.name + "에 있지?\""; k = "restricted"; }
                 }
                 // 경보 중: 수배된 모습을 본 사람은 다시 신고한다
-                if (v == null && S.alarm != null && n.state != NpcState.Chase && (p.form == S.alarm.mark || f.type == FormType.Body)) RaiseAlarm(n);
+                if (v == null && S.alarm != null && n.state != NpcState.Chase && (p.form == S.alarm.mark || f.type == FormType.Body)) { RaiseAlarm(n); StartFlee(n); }
+                if (k == "body" || k == "eating") StartFlee(n);
                 if (v != null && violation == null) { violation = v; kind = k; by = n; }
             }
             S.anySee = any;

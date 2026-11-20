@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Specimen07
 {
-    public enum NpcState { Patrol, Inspect, Chase }
+    public enum NpcState { Patrol, Inspect, Chase, Flee }   // Flee: 주인공을 보고 겁먹어 도망치는 중 (연구원·청소부 등)
 
     public class Bubble { public string text; public float t; }
     public class Inspect { public float x, y, t; public bool staring; public string end; }
@@ -25,7 +25,7 @@ namespace Specimen07
         public Vector2? lastInspect;
         public Inspect inspect;
         public bool seesPlayer, frozen, temp;
-        public float lockT, aim, repath, shoutCool;
+        public float lockT, aim, repath, shoutCool, fleeT;
         public Search search;
 
         public CharDef C { get { return Data.Chars[ch]; } }
