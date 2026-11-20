@@ -79,7 +79,7 @@ namespace Specimen07
         Material TexMat(Sprite spr, bool cutout)
         {
             var tex = spr.texture; Material m;
-            if (texMats.TryGetValue(tex, out m) && (m.shader == (cutout ? cutSh : litSh))) return m;
+            if (texMats.TryGetValue(tex, out m) && m != null && (m.shader == (cutout ? cutSh : litSh))) return m;
             m = new Material(cutout ? cutSh : litSh) { mainTexture = tex };
             if (cutout) m.SetFloat("_Cutoff", 0.4f);
             texMats[tex] = m;
@@ -88,7 +88,7 @@ namespace Specimen07
         Material ColMat(Color c, bool unlit = false)
         {
             var key = unlit ? new Color(c.r, c.g, c.b, -1) : c; Material m;
-            if (colMats.TryGetValue(key, out m)) return m;
+            if (colMats.TryGetValue(key, out m) && m != null) return m;
             m = new Material(unlit ? unlitColSh : (c.a < 1 ? transSh : litSh)) { color = c };
             colMats[key] = m;
             return m;

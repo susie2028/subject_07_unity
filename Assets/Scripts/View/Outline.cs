@@ -20,7 +20,7 @@ namespace Specimen07
                 {
                     var sh = Resources.Load<Shader>("Shaders/Silhouette");
                     if (sh == null) sh = Shader.Find("GUI/Text Shader");   // 셰이더를 못 찾으면 비슷하게 동작하는 기본 셰이더
-                    sil = new Material(sh) { name = "Silhouette" };
+                    sil = new Material(sh) { name = "Silhouette" }; Art.Keep(sil);
                 }
                 return sil;
             }
@@ -37,7 +37,7 @@ namespace Specimen07
                 if (white == null)
                 {
                     var sh = Shader.Find("Sprites/Default");
-                    white = new Material(sh) { name = "OutlineUnlit" };
+                    white = new Material(sh) { name = "OutlineUnlit" }; Art.Keep(white);
                 }
                 return white;
             }
@@ -54,6 +54,7 @@ namespace Specimen07
                     var c = new Color[16]; for (int i = 0; i < 16; i++) c[i] = Color.white;
                     t.SetPixels(c); t.Apply();
                     px = Sprite.Create(t, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4);
+                    Art.Keep(t); Art.Keep(px);
                 }
                 return px;
             }

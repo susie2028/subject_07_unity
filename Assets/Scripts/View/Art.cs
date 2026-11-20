@@ -20,14 +20,19 @@ namespace Specimen07
         public const int PPU = Cfg.PPU;
 
         // 에디터에서 PNG를 새로 넣거나 바꿨을 때 다시 불러오도록 비운다
-        public static void ClearCache() { cache.Clear(); dirCache.Clear(); has.Clear(); frames.Clear(); }
+        public static void ClearCache() { cache.Clear(); dirCache.Clear(); has.Clear(); frames.Clear(); floorCache.Clear(); }
+
+        // 코드로 만든 그림은 씬 전환·플레이 종료·안 쓰는 에셋 정리 때 지워지지 않게 한다
+        // (지워진 그림을 캐시에서 다시 꺼내 쓰면 MissingReferenceException이 난다)
+        public static void Keep(UnityEngine.Object o) { if (o != null) o.hideFlags |= HideFlags.DontSave; }
+        static bool AllAlive(IList<Sprite> l) { for (int i = 0; i < l.Count; i++) if (l[i] == null) return false; return true; }
 
         // 애니메이션 프레임: 이름_0, 이름_1, … 이 있는 만큼 (없으면 빈 목록)
         static readonly Dictionary<string, List<Sprite>> frames = new Dictionary<string, List<Sprite>>();
         public static List<Sprite> Frames(string key)
         {
             List<Sprite> l;
-            if (frames.TryGetValue(key, out l)) return l;
+            if (frames.TryGetValue(key, out l) && AllAlive(l)) return l;
             l = new List<Sprite>();
             for (int i = 0; i < 64; i++) { var s = Resources.Load<Sprite>("Art/" + key + "_" + i); if (s == null) break; l.Add(s); }
             frames[key] = l;
@@ -49,7 +54,7 @@ namespace Specimen07
         public static Sprite Get(string key)
         {
             Sprite s;
-            if (cache.TryGetValue(key, out s)) return s;
+            if (cache.TryGetValue(key, out s) && s != null) return s;
             s = Resources.Load<Sprite>("Art/" + key);
             if (s == null) s = Generate(key);
             cache[key] = s;
@@ -69,7 +74,7 @@ namespace Specimen07
         {
             string ck = baseKey + "@" + floorId;
             Sprite s;
-            if (floorCache.TryGetValue(ck, out s)) return s;
+            if (floorCache.TryGetValue(ck, out s) && s != null) return s;
             var src = Get(baseKey);
             const int N = 32;
             var outPx = ReadScaled(src, N);
@@ -87,6 +92,7 @@ namespace Specimen07
             var t = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = ck };
             t.SetPixels(outPx); t.Apply();
             s = Sprite.Create(t, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N); s.name = ck;
+            Keep(t); Keep(s);
             floorCache[ck] = s;
             return s;
         }
@@ -106,7 +112,7 @@ namespace Specimen07
                 var t2 = new Texture2D(w, h, TextureFormat.RGBA32, false);
                 t2.ReadPixels(new Rect(r.x, r.y, w, h), 0, 0); t2.Apply();
                 RenderTexture.active = prev; RenderTexture.ReleaseTemporary(rt);
-                px = t2.GetPixels(); UnityEngine.Object.Destroy(t2);
+                px = t2.GetPixels(); if (Application.isPlaying) UnityEngine.Object.Destroy(t2); else UnityEngine.Object.DestroyImmediate(t2);
             }
             var o = new Color[N * N];
             for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) o[y * N + x] = px[(y * h / N) * w + (x * w / N)];
@@ -164,7 +170,7 @@ namespace Specimen07
         public static Sprite[] Dir(string key)
         {
             Sprite[] arr;
-            if (dirCache.TryGetValue(key, out arr)) return arr;
+            if (dirCache.TryGetValue(key, out arr) && (arr == null || AllAlive(arr))) return arr;
             string[] suf = { "_right", "_down", "_left", "_up" };
             arr = new Sprite[4];
             for (int i = 0; i < 4; i++) { arr[i] = Resources.Load<Sprite>("Art/" + key + suf[i]); if (arr[i] == null) { arr = null; break; } }
@@ -516,6 +522,7 @@ namespace Specimen07
                     ? Sprite.Create(t, new Rect(0, 0, w, h), pivot ?? new Vector2(0.5f, 0.5f), ppu, 0, SpriteMeshType.FullRect, border.Value)
                     : Sprite.Create(t, new Rect(0, 0, w, h), pivot ?? new Vector2(0.5f, 0.5f), ppu);
                 s.name = name;
+                Art.Keep(t); Art.Keep(s);
                 return s;
             }
         }

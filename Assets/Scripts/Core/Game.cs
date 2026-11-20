@@ -845,7 +845,7 @@ namespace Specimen07
                 n.repath = 1.0f;
             }
             if (n.path.Count == 0) n.desFace = Mathf.Atan2(n.y - p.y, n.x - p.x);   // 막다른 곳: 등지고 웅크림
-            MoveAlong(n, dt, n.C.speed * Cfg.fleeSpeedK);
+            MoveAlong(n, dt, Data.Forms["body"].speed * Cfg.fleeSpeedK);   // 겁먹으면 주인공만큼 빨리 뛴다
         }
 
         void StartInspect(Npc n, float x, float y, string line = null, string end = null)
