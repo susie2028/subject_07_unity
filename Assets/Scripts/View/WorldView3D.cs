@@ -768,9 +768,9 @@ namespace Specimen07
                     float ks = ko.pixelsPerUnit / ViewKit.CHAR_PX;
                     sr.transform.rotation = Quaternion.Euler(90, n.stunYaw + wob, 0);
                     sr.transform.localScale = Vector3.one * ks;
-                    sr.transform.position = P(n.x, 0.03f, n.y);
+                    sr.transform.position = P(n.x, 0.03f, n.y) - sr.transform.up * (ko.bounds.center.y * ks);   // 몸 가운데가 그 자리에 오게
                     sr.color = Tint(n.x, n.y);
-                    sh.transform.position = P(n.x, 0.02f, n.y); sh.transform.localScale = new Vector3(1.1f, 1.1f, 1); sh.color = new Color(0, 0, 0, 0.3f);
+                    sh.transform.position = P(n.x, 0.02f, n.y); sh.transform.localScale = new Vector3(1.25f, 1.25f, 1); sh.color = new Color(0.48f, 0.28f, 0.74f, 0.35f);   // 바닥에 흘러내린 점액 웅덩이
                     Game.Highlight kh;
                     if (hiOf.TryGetValue(n, out kh)) Pooled(outlinePool, oli++, () => SpriteOutline.Make(dynRoot)).Show(sr, kh.color, 1.6f, Vector3.down * 0.005f);
                     continue;

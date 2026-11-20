@@ -745,7 +745,7 @@ namespace Specimen07
                 if (here)
                 {
                     // 기절해서 그 자리에 널브러진다. 잠시 뒤 일어나 다시 순찰
-                    n.x = p.x; n.y = p.y; n.stunT = Cfg.stunTime; n.stunYaw = U.Rand(-100f, 100f);
+                    n.x = p.x; n.y = p.y; n.stunT = Cfg.stunTime; n.stunYaw = (U.Rand(0f, 1f) < 0.5f ? -1 : 1) * U.Rand(68f, 96f);   // 림월드처럼 옆으로 비스듬히 쓰러짐
                     Say(n, "@_@", 1.4f);
                 }
                 else

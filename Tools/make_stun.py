@@ -32,6 +32,47 @@ def draw_x(px, cx, cy, col):
         px[cx + dx, cy + dy] = col
 
 
+SLIME = (122, 72, 189)        # 주인공 몸 색 (#7a48bd)
+SLIME_DARK = (36, 18, 58)     # 주인공 테두리 색 (#24123a)
+GLOSS = (214, 186, 250)       # 점액 반짝임
+SLIME_K = 0.4                 # 덮는 세기 (0.3~0.5)
+
+
+def slime(im, seed):
+    """삼켜졌다 나온 티: 몸 전체에 주인공 색을 40% 덮고, 군데군데 점액 반짝임·뭉친 점을 찍는다"""
+    import random
+    rnd = random.Random(seed)
+    px = im.load(); W, H = im.size
+    body = []
+    for y in range(H):
+        for x in range(W):
+            r, g, b, a = px[x, y]
+            if a == 0:
+                continue
+            dark = r + g + b < 90
+            t, k = (SLIME_DARK, 0.3) if dark else (SLIME, SLIME_K)
+            px[x, y] = (round(r + (t[0] - r) * k), round(g + (t[1] - g) * k), round(b + (t[2] - b) * k), a)
+            if not dark:
+                body.append((x, y))
+    # 끈적한 덩어리: 진한 보라 2~3칸 + 그 위 반짝임 1칸
+    for _ in range(max(4, len(body) // 90)):
+        x, y = rnd.choice(body)
+        for dx, dy in ((0, 0), (1, 0), (0, 1)):
+            if (x + dx, y + dy) in body_set(body):
+                c = px[x + dx, y + dy]
+                px[x + dx, y + dy] = (round(c[0] * 0.4 + SLIME[0] * 0.6), round(c[1] * 0.4 + SLIME[1] * 0.6), round(c[2] * 0.4 + SLIME[2] * 0.6), c[3])
+        c = px[x, y]
+        px[x, y] = (round(c[0] * 0.3 + GLOSS[0] * 0.7), round(c[1] * 0.3 + GLOSS[1] * 0.7), round(c[2] * 0.3 + GLOSS[2] * 0.7), c[3])
+
+
+_bs = {}
+def body_set(body):
+    k = id(body)
+    if k not in _bs:
+        _bs.clear(); _bs[k] = set(body)
+    return _bs[k]
+
+
 def save(img, name, meta_src):
     p = os.path.join(ROOT, name + '.png')
     img.save(p)
@@ -62,6 +103,7 @@ def main():
                     px[x, y] = fill
                 cy = ys[-1]   # 아래쪽 칸 기준 (모자챙에 X 윗줄이 묻히지 않게)
                 draw_x(px, x, cy, col)
+        slime(im, kind)
         save(im, 'stun_' + kind, f + '.meta')
 
 
