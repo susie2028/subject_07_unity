@@ -622,7 +622,7 @@ namespace Specimen07
             if (t == null) return;
             if (p.eatCd > 0) { Snd("deny"); Toast("아직 소화 중… " + Mathf.CeilToInt(p.eatCd) + "초"); return; }
             if (t.isNpc && p.npcCd > 0) { Snd("deny"); Toast("사람은 아직 못 먹어… " + Mathf.CeilToInt(p.npcCd) + "초"); return; }
-            if (OthersSee(t.Ref)) { Snd("deny"); Toast("누가 보고 있다"); return; }
+            // 누가 보고 있어도 먹을 수는 있다. 대신 먹는 장면을 들켜서: 들키면 끝나는 층은 게임 오버, 아니면 경보 (경비·군인이 달려온다)
             if (t.isNpc && p.form == "body" && SeesPlayer(t.npc)) { Snd("deny"); Toast("눈이 마주쳤다 — 뒤로 돌아가거나 변장할 것"); return; }
             p.eating = new Eating { target = t, t = 0 };
             if (t.isNpc) t.npc.frozen = true;
@@ -659,9 +659,11 @@ namespace Specimen07
                     }
                     else { tg.obj.alive = false; tg.obj.respawnT = Cfg.respawn; }
                     for (int i = 0; i < 16; i++) SpawnParticle(p.x, p.y, i % 2 != 0 ? Data.Hex("#ff8a98") : Data.Hex("#ffc2ca"), U.Rand(1.5f, 4), U.Rand(0.3f, 0.7f), U.Rand(1.5f, 3));
+                    bool seenEat = p.eating.seen;
                     p.eating = null; p.eatCd = Cfg.eatCooldown;
                     if (tg.isNpc) p.npcCd = Cfg.eatNpcCooldown;
                     SetForm(tg.form);
+                    if (seenEat && S.alarm != null) S.alarm.mark = p.form;   // 먹고 변한 모습까지 봤으니 그 모습으로 수배
                     Snd("morph");
                 }
             }
@@ -930,7 +932,7 @@ namespace Specimen07
                 any = true;
                 if (S.arriveT > 0 || n.frozen) continue;
                 string v = null, k = "";
-                if (p.eating != null) { if (n != target) { v = n.label + "에게 먹는 장면을 들켰다"; k = "eating"; } }
+                if (p.eating != null) { if (n != target) { v = n.label + "에게 먹는 장면을 들켰다"; k = "eating"; p.eating.seen = true; } }
                 else if (f.type == FormType.Body) { v = n.label + "에게 본모습을 들켰다"; k = "body"; }
                 else if (f.type == FormType.Object)
                 {
@@ -1287,7 +1289,7 @@ namespace Specimen07
             if (lift) return S.alarm != null ? "경보 중 — 엘리베이터 정지" : "[E] 엘리베이터";
             if (trap != null) return "<b>" + trap.label + "</b> 가동 중 — 닿으면 죽는다";
             if (notice != null) { note = true; return notice.text; }
-            if (tgt != null) return S.anySee && OthersSee(tgt.Ref) ? "누가 보고 있어서 먹을 수 없다" :
+            if (tgt != null) return S.anySee && OthersSee(tgt.Ref) ? "[E] 보는 사람이 있다 — 먹으면 들킨다!" + (G.def.lethal ? " (이 층은 바로 끝)" : " (경보)") :
                     p.eatCd > 0 ? "소화 중… " + Mathf.CeilToInt(p.eatCd) + "초 뒤에 먹을 수 있다" :
                     tgt.isNpc && p.npcCd > 0 ? "사람은 " + Mathf.CeilToInt(p.npcCd) + "초 뒤에 먹을 수 있다 (물건은 지금 가능)" :
                     "[E] " + Data.Forms[tgt.form].name + " 먹기" + (tgt.isNpc ? (p.form == "body" ? " · 뒤에서 접근할 것" : " · 변장 중이라 덮칠 수 있다") : Data.Forms[tgt.form].Big ? " · 덩치가 커서 문은 못 지나간다" : "");

@@ -107,7 +107,7 @@ namespace Specimen07
         public float Y { get { return isNpc ? npc.y : tile != null ? tile.y + 0.5f : obj.y; } }
         public object Ref { get { return isNpc ? (object)npc : tile != null ? (object)tile : obj; } }
     }
-    public class Eating { public EatTarget target; public float t; }
+    public class Eating { public EatTarget target; public float t; public bool seen; }   // seen: 먹는 장면을 누가 봤다
 
     public class Player
     {
