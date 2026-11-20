@@ -901,13 +901,18 @@ namespace Specimen07
             }
             else
             {
-                var idleF = ViewKit.PlayerFrames("idle", dn);
-                var crawlF = ViewKit.PlayerFrames("crawl", dn); var eatF = ViewKit.PlayerFrames("eat", dn);
+                // 8방향: 대각선 그림(player_*_downside / upside, 오른쪽을 보는 그림)이 있으면 대각선일 때 그걸 쓰고 왼쪽은 뒤집는다
+                string dn8 = dn; bool flip8 = dn == "side" && faceLeft;
+                float deg = Mathf.Repeat(p.face * Mathf.Rad2Deg + 180f, 360f) - 180f, ad = Mathf.Abs(deg);
+                if (ad > 22.5f && ad < 157.5f && Mathf.Abs(ad - 90f) > 22.5f && Art.Frames("player_idle_" + (deg > 0 ? "downside" : "upside")).Count > 0)
+                { dn8 = deg > 0 ? "downside" : "upside"; flip8 = ad > 90f; }
+                var idleF = ViewKit.PlayerFrames("idle", dn8);
+                var crawlF = ViewKit.PlayerFrames("crawl", dn8); var eatF = ViewKit.PlayerFrames("eat", dn8);
                 Sprite spr = null;
                 if (p.eating != null && eatF.Count > 0) spr = eatF[Mathf.Min(eatF.Count - 1, Mathf.FloorToInt(p.eating.t / Cfg.eatTime * eatF.Count))];
                 else if (p.speedNow > 0.3f && crawlF.Count > 0) spr = crawlF[Mathf.FloorToInt(t * 10) % crawlF.Count];
                 else if (idleF.Count > 0) spr = idleF[Mathf.FloorToInt(t * 2.5f) % idleF.Count];
-                if (spr != null) { player.sprite = spr; player.flipX = dn == "side" && faceLeft; scale = spr.pixelsPerUnit / ViewKit.TILE_PX; }
+                if (spr != null) { player.sprite = spr; player.flipX = flip8; scale = spr.pixelsPerUnit / ViewKit.TILE_PX; }
                 else player.sprite = Art.Get("player_blob");
                 if (hidden) scale *= 0.8f;
                 var lit = Color.Lerp(Tint(p.x, p.y), Color.white, 0.3f); lit.a = a;   // 주인공은 조금 더 잘 보이게
