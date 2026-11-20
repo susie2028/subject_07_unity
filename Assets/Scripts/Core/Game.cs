@@ -376,7 +376,34 @@ namespace Specimen07
 
         /* 격자 BFS 경로 (NPC별 출입 권한 반영) */
         int[] bfsPrev, bfsQ;
+        /* ===== 부딪힘: 주인공은 사람과 변신 물건을 통과하지 못한다 =====
+           이미 겹쳐 있으면(사람이 주인공 쪽으로 걸어온 경우 등) 멀어지는 쪽으로는 움직일 수 있다 */
+        public const float OBJ_R = 0.3f, NPC_R = 0.28f;
+        bool BumpBlocked(float x, float y, float r, float ox, float oy)
+        {
+            if (PlayerHidden()) return false;
+            foreach (var o in Fl.objects)
+                if (o.alive && Bumps(x, y, ox, oy, o.x, o.y, r + OBJ_R)) return true;
+            foreach (var n in Fl.npcs)
+                if (n.alive && !n.frozen && Bumps(x, y, ox, oy, n.x, n.y, r + NPC_R)) return true;
+            return false;
+        }
+        static bool Bumps(float x, float y, float ox, float oy, float cx, float cy, float rr)
+        {
+            float d = U.Dist(x, y, cx, cy);
+            return d < rr && d < U.Dist(ox, oy, cx, cy) - 1e-4f;
+        }
+
+        // 사람은 물건이 놓인 칸을 피해서 돌아간다 (길이 그것밖에 없으면 그냥 지나감)
+        readonly HashSet<int> objCells = new HashSet<int>();
         List<Vector2> FindPath(Npc n, float sx, float sy, float gx, float gy)
+        {
+            objCells.Clear();
+            foreach (var o in Fl.objects) if (o.alive) objCells.Add(U.Floor(o.y) * G.w + U.Floor(o.x));
+            var p = FindPathOn(n, sx, sy, gx, gy, true);
+            return p ?? FindPathOn(n, sx, sy, gx, gy, false);
+        }
+        List<Vector2> FindPathOn(Npc n, float sx, float sy, float gx, float gy, bool avoidObjs)
         {
             int w = G.w, h = G.h;
             int s0 = U.Floor(sx), s1 = U.Floor(sy), g0 = U.Floor(gx), g1 = U.Floor(gy);
@@ -401,6 +428,7 @@ namespace Specimen07
                     if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
                     int nk = ny * w + nx;
                     if (prev[nk] != -2 || NpcSolid(n, nx, ny)) continue;
+                    if (avoidObjs && nk != gk && objCells.Contains(nk)) continue;
                     prev[nk] = k; q[qt++] = nk;
                 }
             }
@@ -647,9 +675,9 @@ namespace Specimen07
                     p.moved = true;
                     p.face = Mathf.Atan2(v.y, v.x);
                     float nx = p.x + v.x * spd * dt;
-                    if (!BoxBlocked(nx, p.y, f.radius, p.x, p.y)) p.x = nx;
+                    if (!BoxBlocked(nx, p.y, f.radius, p.x, p.y) && !BumpBlocked(nx, p.y, f.radius, p.x, p.y)) p.x = nx;
                     float ny = p.y + v.y * spd * dt;
-                    if (!BoxBlocked(p.x, ny, f.radius, p.x, p.y)) p.y = ny;
+                    if (!BoxBlocked(p.x, ny, f.radius, p.x, p.y) && !BumpBlocked(p.x, ny, f.radius, p.x, p.y)) p.y = ny;
                 }
             }
             p.speedNow = dt > 0 ? U.Dist(ox, oy, p.x, p.y) / dt : 0;
