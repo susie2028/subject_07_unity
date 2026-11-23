@@ -123,6 +123,7 @@ namespace Specimen07
             var t = Txt(rt, "Label", label, 32, BTN_TEXT, TextAnchor.MiddleLeft, true);
             t.rectTransform.anchorMin = Vector2.zero; t.rectTransform.anchorMax = Vector2.one; t.rectTransform.sizeDelta = new Vector2(-80, 0); t.rectTransform.anchoredPosition = new Vector2(0, 0);
             t.gameObject.SetActive(showText);
+            if (own == null) SkinButton(b, im, t);   // 공통 버튼 모양
             return b;
         }
 

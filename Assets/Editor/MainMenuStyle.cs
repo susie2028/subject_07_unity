@@ -38,6 +38,15 @@ namespace Specimen07.EditorTools
                 EditorUtility.SetDirty(b.gameObject);
                 changed = true;
             }
+            // 나머지 버튼(설정·확인 창 등)도 같은 버튼 모양으로
+            if (changed)
+                foreach (var ob in Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                {
+                    if (ob.GetComponent<SimpleMenuButton>() != null) continue;
+                    Undo.RegisterFullObjectHierarchyUndo(ob.gameObject, "버튼 모양");
+                    Hud.SkinButton(ob, ob.targetGraphic as UnityEngine.UI.Image ?? ob.GetComponent<UnityEngine.UI.Image>(), ob.GetComponentInChildren<UnityEngine.UI.Text>(true));
+                    EditorUtility.SetDirty(ob.gameObject);
+                }
             // 로고도 화면 가로 가운데로 (한 번만)
             if (changed)
             {

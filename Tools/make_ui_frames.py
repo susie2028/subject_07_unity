@@ -100,3 +100,42 @@ if __name__ == '__main__':
     panel().save(os.path.join(OUT, 'frame_panel.png'))
     tab().save(os.path.join(OUT, 'frame_tab.png'))
     print('wrote frame_panel.png, frame_tab.png')
+
+
+# ---------- 버튼 (aicron에서 뽑은 알약 모양 버튼을 재서 1픽셀로 다시 찍음, 20px 높이) ----------
+BTN_PAL = {
+    'K': hexc('060408'),   # 바깥 검은 테두리
+    'L': hexc('b0b0b4'),   # 위쪽 밝은 금속
+    'M': hexc('646569'),   # 위쪽 중간 금속
+    'S': hexc('1d1426'),   # 안쪽 그림자 (위)
+    'F': hexc('34203f'),   # 안쪽 보라
+    'f': hexc('2e1c39'),   # 안쪽 보라 (아래쪽 살짝 어둡게)
+    'T': hexc('1c1924'),   # 안쪽 그림자 (아래)
+    'G': hexc('55535e'),   # 아래쪽 금속
+}
+def button():
+    H, W, C = 20, 30, 6              # 높이, 폭, 끝 모서리 깎인 길이
+    inset = [max(0, C - r) for r in range(C)] + [0] * (H - 2 * C) + [max(0, C - r) for r in range(C)][::-1]
+    inside = lambda x, y: 0 <= y < H and inset[y] <= x < W - inset[y]
+    def dist(x, y):   # 바깥에서 몇 칸 안쪽인지 (체비셰프)
+        for d in range(1, 12):
+            if any(not inside(x + dx, y + dy) for dx in range(-d, d + 1) for dy in range(-d, d + 1)): return d
+        return 12
+    rows = []
+    for y in range(H):
+        r = ''
+        for x in range(W):
+            if not inside(x, y): r += '.'; continue
+            d = dist(x, y); top = y < H / 2
+            if d == 1: r += 'K'
+            elif d == 2: r += 'L' if top else 'G'
+            elif d == 3: r += 'M' if top else 'G'
+            elif d == 4: r += 'S' if top else 'T'
+            else: r += 'F' if y < H * 0.6 else 'f'
+        rows.append(r)
+    return paint(rows, BTN_PAL)
+
+
+if __name__ == '__main__':
+    button().save(os.path.join(OUT, 'frame_button.png'))
+    print('wrote frame_button.png')

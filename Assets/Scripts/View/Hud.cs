@@ -108,6 +108,25 @@ namespace Specimen07
             return t;
         }
         static void Shadow(Graphic g) { var s = g.gameObject.AddComponent<Shadow>(); s.effectColor = new Color(0, 0, 0, 0.6f); s.effectDistance = new Vector2(0, -2); }
+        // ★ 모든 버튼 모양: 알약 모양 금속 테두리 버튼 (Art/UI/frame_button, Tools/make_ui_frames.py). 그림 1픽셀 = 화면 3px
+        public const float BTN_PX = 3f;
+        static readonly ColorBlock BTN_COLORS = new ColorBlock
+        {
+            normalColor = new Color(0.86f, 0.86f, 0.9f, 1), highlightedColor = Color.white, selectedColor = new Color(0.86f, 0.86f, 0.9f, 1),
+            pressedColor = new Color(0.68f, 0.66f, 0.74f, 1), disabledColor = new Color(0.55f, 0.55f, 0.6f, 0.6f), colorMultiplier = 1, fadeDuration = 0.08f
+        };
+        public static void SkinButton(Button b, Image im, Text label)
+        {
+            var spr = Art.TryLoad("UI/frame_button");
+            if (im != null && spr != null)
+            {
+                im.sprite = spr; im.type = Image.Type.Sliced; im.color = Color.white;
+                im.pixelsPerUnitMultiplier = 100f / Art.PPU / BTN_PX;
+            }
+            if (b != null) { b.transition = Selectable.Transition.ColorTint; b.colors = BTN_COLORS; }
+            if (label != null) { label.color = Data.Hex("#ece6f7"); label.alignment = TextAnchor.MiddleCenter; }
+        }
+
         Button Btn(Transform parent, string label, Color bg, Color fg, UnityEngine.Events.UnityAction onClick, float w = 360, float h = 64)
         {
             var rt = R(parent, "Btn_" + label, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(w, h));
@@ -117,6 +136,8 @@ namespace Specimen07
             var cb = b.colors; cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f, 1); cb.disabledColor = new Color(1, 1, 1, 0.45f); b.colors = cb;
             var t = Txt(rt, "Label", label, 28, fg, TextAnchor.MiddleCenter, true);
             var trt = t.rectTransform; trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one; trt.sizeDelta = Vector2.zero; trt.anchoredPosition = Vector2.zero;
+            SkinButton(b, im, t);
+            if (bg == FLESH) t.color = Data.Hex("#d9c4ff");   // 강조 버튼은 글자만 보라 쪽으로
             var le = rt.gameObject.AddComponent<LayoutElement>(); le.preferredWidth = w; le.preferredHeight = h;
             return b;
         }

@@ -8,9 +8,9 @@ namespace Specimen07
 {
     public class SimpleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, ISelectHandler, IDeselectHandler
     {
-        public Color barColor = new Color(0.06f, 0.05f, 0.12f, 0.55f);
-        public Color barHoverColor = new Color(0.05f, 0.04f, 0.10f, 0.88f);
-        public Color textColor = new Color(0.96f, 0.95f, 1f, 1f);
+        public Color barColor = new Color(0.86f, 0.86f, 0.9f, 1f);      // 버튼 그림(frame_button)에 곱하는 색
+        public Color barHoverColor = Color.white;
+        public Color textColor = new Color(0.93f, 0.90f, 0.97f, 1f);
         public Color textHoverColor = new Color(0.82f, 0.70f, 1f, 1f);   // 주인공 보라 쪽 연한 색
         public Color textDisabledColor = new Color(0.62f, 0.60f, 0.70f, 1f);
         public float hoverExtra = 80;      // 마우스를 올리면 늘어나는 길이(px, 양쪽 합)
@@ -27,7 +27,7 @@ namespace Specimen07
             baseW = rt.sizeDelta.x;
         }
 
-        public const int STYLE = 2;   // 모양 버전 (바뀌면 에디터가 씬에 다시 입힘)
+        public const int STYLE = 3;   // 모양 버전 (바뀌면 에디터가 씬에 다시 입힘)
         public int styleVersion;
 
         // 모양 입히기: 원래 크기의 반투명 띠 + 가운데 글씨, 화면 가로 가운데에 놓는다.
@@ -40,7 +40,11 @@ namespace Specimen07
             if (styleVersion < STYLE && textPad > 29) { w -= textPad - 28; }   // 예전(왼쪽 끝까지 붙인) 모양 → 원래 길이로
             textPad = 28;
             CenterX(rt, w, h);
-            if (bar != null) { bar.sprite = null; bar.type = Image.Type.Simple; bar.color = barColor; }
+            if (bar != null)
+            {
+                bar.sprite = Resources.Load<Sprite>("Art/UI/frame_button"); bar.type = Image.Type.Sliced; bar.color = barColor;
+                bar.pixelsPerUnitMultiplier = 100f / Art.PPU / Hud.BTN_PX;
+            }
             if (btn != null) btn.transition = Selectable.Transition.None;
             if (label != null)
             {
