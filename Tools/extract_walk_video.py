@@ -3,6 +3,9 @@
 #   (영상 앞부분에 검은 선 같은 잡티가 있으면 시작 프레임을 뒤로)
 #   [좌우 흔들림 줄이기 0~1] [위아래 출렁임 줄이기 0~1]  예) 0.6 0.5 = 좌우 60%, 위아래 50% 덜 움직이게
 #   옵션: --flip (좌우 뒤집기)  --height N (그림 키를 N픽셀에 맞춤. 다른 스프라이트와 크기 맞출 때, 예: 37)
+#         --width N (그림 폭, 기본 40. 팔·소품이 양옆에서 잘리면 44처럼 짝수로 늘림 — 가운데 기준이라 위치는 그대로)
+#         --dx N (그림을 오른쪽으로 N픽셀 옮김. 걸레 같은 소품이 왼쪽 끝에서 잘릴 때)
+#   ★ 대각선(frontside/backside)은 같은 캐릭터의 정면/뒷모습보다 4픽셀 정도 크게 (--height 40~41): 3/4 각도라 작아 보여서
 #   예) python3 Tools/extract_walk_video.py Tools/art_src/walk_soldier_front.mp4 soldier front
 # 결과: Assets/Resources/Art/walk_<종류>_<방향>_0..N-1.png (40x42, 발이 맨 아래 줄)
 #  - 영상 속 그림을 원래 픽셀 격자(자동 추정)로 되돌리고, 몸 흔들림·위치는 그대로 유지
@@ -120,7 +123,15 @@ def main():
     flags = sys.argv[1:]
     flip = '--flip' in flags
     target_h = None
+    shift_x = 0
     for i, a in enumerate(flags):
+        if a == '--width' and i + 1 < len(flags):
+            global CW
+            CW = int(flags[i + 1])
+            argv = [x for x in argv if x != flags[i + 1]]
+        if a == '--dx' and i + 1 < len(flags):
+            shift_x = int(flags[i + 1])
+            argv = [x for x in argv if x != flags[i + 1]]
         if a == '--height' and i + 1 < len(flags):
             target_h = int(flags[i + 1])
             argv = [x for x in argv if x != flags[i + 1]]
@@ -144,7 +155,7 @@ def main():
     for f in fr[start:start + cycle]:
         m = np.sqrt(((f - [255, 0, 255]) ** 2).sum(-1)) > 120
         yy, xx = np.nonzero(m); xs.append(xx.mean()); ys.append(yy.max())
-    cx_v = float(np.mean(xs)); foot_v = float(np.max(ys)) + 1
+    cx_v = float(np.mean(xs)) - shift_x * P; foot_v = float(np.max(ys)) + 1
     picks = [start + int(round(k * cycle / n)) for k in range(n)]
     # 프레임마다 머리 위치(가로 중심, 맨 위)를 재서 흔들림을 일부 상쇄
     heads = []
