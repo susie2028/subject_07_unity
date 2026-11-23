@@ -523,10 +523,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 40
-    m_Right: 40
-    m_Top: 36
-    m_Bottom: 36
+    m_Left: 52
+    m_Right: 52
+    m_Top: 52
+    m_Bottom: 52
   m_ChildAlignment: 0
   m_Spacing: 18
   m_ChildForceExpandWidth: 1
@@ -549,15 +549,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.047058824, g: 0.06666667, b: 0.08235294, a: 0.96}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
+  m_Sprite: {fileID: 21300000, guid: 0a3948a0600e641c9bdcd883034f6e96, type: 3}
+  m_Type: 2
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -565,7 +565,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 0.78125
 --- !u!222 &174576052
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -877,7 +877,7 @@ MonoBehaviour:
   hoverExtra: 120
   textPad: 28
   speed: 14
-  styleVersion: 5
+  styleVersion: 6
 --- !u!1 &259135657
 GameObject:
   m_ObjectHideFlags: 0
@@ -1778,7 +1778,7 @@ MonoBehaviour:
   hoverExtra: 120
   textPad: 28
   speed: 14
-  styleVersion: 5
+  styleVersion: 6
 --- !u!1 &550116894
 GameObject:
   m_ObjectHideFlags: 0
@@ -3299,7 +3299,7 @@ MonoBehaviour:
   hoverExtra: 120
   textPad: 28
   speed: 14
-  styleVersion: 5
+  styleVersion: 6
 --- !u!1 &1486240722
 GameObject:
   m_ObjectHideFlags: 0
@@ -4410,7 +4410,7 @@ MonoBehaviour:
   hoverExtra: 120
   textPad: 28
   speed: 14
-  styleVersion: 5
+  styleVersion: 6
 --- !u!1 &1870250523
 GameObject:
   m_ObjectHideFlags: 0
@@ -4792,10 +4792,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 40
-    m_Right: 40
-    m_Top: 36
-    m_Bottom: 36
+    m_Left: 52
+    m_Right: 52
+    m_Top: 52
+    m_Bottom: 52
   m_ChildAlignment: 0
   m_Spacing: 18
   m_ChildForceExpandWidth: 1
@@ -4818,15 +4818,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.047058824, g: 0.06666667, b: 0.08235294, a: 0.96}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
+  m_Sprite: {fileID: 21300000, guid: 0a3948a0600e641c9bdcd883034f6e96, type: 3}
+  m_Type: 2
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -4834,7 +4834,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 0.78125
 --- !u!222 &2068323328
 CanvasRenderer:
   m_ObjectHideFlags: 0
