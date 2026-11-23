@@ -108,7 +108,7 @@ namespace Specimen07
                 {
                     if (tutRT != null) tutRT.Release();
                     tutRT = new RenderTexture((int)Mathf.Max(16, clip.width), (int)Mathf.Max(16, clip.height), 0);
-                    tutRT.filterMode = FilterMode.Point;
+                    tutRT.filterMode = FilterMode.Bilinear;   // 녹화 영상을 줄인 거라 부드럽게
                 }
                 tutVideo.clip = clip; tutVideo.targetTexture = tutRT; tutMedia.texture = tutRT;
                 tutVideo.Play();

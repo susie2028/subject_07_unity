@@ -776,12 +776,12 @@ namespace Specimen07
                     continue;
                 }
                 float sc0;
-                ViewKit.ApplyStand(sr, kind, n.face, out sc0, moving ? t * (n.state == NpcState.Chase ? 1.5f : 1f) + (n.id.Length % 4) * 0.13f : -1);
+                if (!ViewKit.ApplyStand(sr, kind, n.face, out sc0, moving ? t * (n.state == NpcState.Chase ? 1.5f : 1f) + (n.id.Length % 4) * 0.13f : -1)) sc0 = sr.sprite.pixelsPerUnit / ViewKit.CHAR_PX;
                 float s = 1;
                 if (p.eating != null && p.eating.target.isNpc && p.eating.target.npc == n) s = Mathf.Max(0.05f, 1 - p.eating.t / Cfg.eatTime);
                 float ph = t * (n.state == NpcState.Chase ? 18 : 12) + n.id.GetHashCode() % 7;
                 float bob = moving && !ViewKit.HasWalk(kind) ? Mathf.Abs(Mathf.Sin(ph)) * 0.07f : 0;
-                PlaceStand(sr, n.x, n.y, s * sr.sprite.pixelsPerUnit / ViewKit.CHAR_PX, bob, ViewKit.LastPose);
+                PlaceStand(sr, n.x, n.y, s * sc0, bob, ViewKit.LastPose);   // sc0: 방향별 키 맞춤 포함
                 sr.color = Tint(n.x, n.y);
                 sh.transform.position = P(n.x, 0.02f, n.y); sh.transform.localScale = new Vector3(0.75f, 0.45f, 1) * s; sh.color = new Color(0, 0, 0, 0.45f);
                 Game.Highlight nh;
@@ -910,8 +910,8 @@ namespace Specimen07
             float scale = 1;
             if (f.type == FormType.Human)
             {
-                float sc0; ViewKit.ApplyStand(player, p.form, p.face, out sc0, p.speedNow > 0.3f ? t : -1);
-                scale = player.sprite.pixelsPerUnit / ViewKit.CHAR_PX; humanPose = ViewKit.LastPose;
+                float sc0; if (!ViewKit.ApplyStand(player, p.form, p.face, out sc0, p.speedNow > 0.3f ? t : -1)) sc0 = player.sprite.pixelsPerUnit / ViewKit.CHAR_PX;
+                scale = sc0; humanPose = ViewKit.LastPose;
                 bool warn = p.timer < f.dur * 0.25f;
                 player.color = warn ? Color.Lerp(Tint(p.x, p.y), new Color(1, 0.6f, 0.65f), 0.5f + 0.5f * Mathf.Sin(t * 8)) : Tint(p.x, p.y);
             }

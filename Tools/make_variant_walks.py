@@ -237,6 +237,7 @@ def senior_badge(a, view):
 # 걷기 프레임마다 머리 위치(위아래 출렁임)를 원래 머리 실루엣으로 찾아서 그 자리에 붙인다.
 HEADS = os.path.join(HERE, 'art_src', 'senior_heads')
 NECK = {'front': 24, 'back': 24, 'side': 20}      # 이 줄 위가 머리 (서 있는 그림 기준)
+HEAD_DROP = {'front': 1, 'back': 2, 'side': 3}    # 머리를 몇 픽셀 내려 붙일지 (목 짧게 — 대각선 아래 영상 그림에 맞춤)
 _ref = {}
 
 
@@ -259,8 +260,9 @@ def new_head(a, view):
     _, dx, dy = best
     o = a.copy()
     o[:max(0, ny + dy)] = 0
+    drop = HEAD_DROP.get(view, 0)
     for y, x in zip(*np.nonzero(head[..., 3] > 0)):
-        Y, X = y + dy, x + dx
+        Y, X = y + dy + drop, x + dx
         if 0 <= Y < o.shape[0] and 0 <= X < o.shape[1]:
             o[Y, X] = head[y, x]
     if view == 'back':   # 목덜미에 남은 원래 갈색 머리 → 새 머리색
@@ -269,7 +271,63 @@ def new_head(a, view):
                 r, g, b_, al = [int(t) for t in o[y, x]]
                 if al and r > b_ + 20 and r >= g and max(r, g, b_) < 150:
                     o[y, x, :3] = (144, 141, 157) if max(r, g, b_) > 60 else (112, 106, 137)
+        o = hair_outline(soften_hair(clean_collar(o)))
     return close_outline(o)
+
+
+def clean_collar(o, rows=5):
+    """뒷모습에서 머리를 내려 붙이면 옆머리 밑에 원래 가운 테두리(검은 줄)·회색 음영 띠가 남는다 → 가운 흰색으로.
+    열마다 머리(회보라)의 맨 아랫줄을 찾고, 그 아래 rows줄 안에서 양옆이 칠해진 안쪽 픽셀만 고친다 (바깥 테두리는 그대로)"""
+    o = o.copy(); H, W = o.shape[:2]
+    WHITE = np.array([232, 232, 231], np.uint8)
+    HAIR = {(0x90, 0x8d, 0x9d), (0xb2, 0xb0, 0xbb), (0x70, 0x6a, 0x89), (0x65, 0x5d, 0x63)}   # 고위 연구원 옆머리 색 (senior_heads)
+    def hairish(c): return (int(c[0]), int(c[1]), int(c[2])) in HAIR
+    for x in range(1, W - 1):
+        hb = None
+        for y in range(H):
+            if o[y, x, 3] and hairish(o[y, x]): hb = y
+        if hb is None: continue
+        for y in range(hb + 1, min(H - 1, hb + 1 + rows)):
+            c = o[y, x]
+            if not c[3] or not (o[y, x - 1, 3] and o[y, x + 1, 3]): continue
+            r, g, b = int(c[0]), int(c[1]), int(c[2])
+            gray = max(r, g, b) - min(r, g, b) < 18
+            if (max(r, g, b) < 70) or (gray and 90 < max(r, g, b) < 215):
+                # 바로 아래가 비어 있으면 몸 바깥 테두리 → 그대로
+                if not o[y + 1, x, 3]: continue
+                o[y, x, :3] = WHITE
+    return o
+
+
+def soften_hair(o):
+    """뒷모습 옆머리의 진한 음영(구불구불한 짙은 보라) → 중간 회보라로. 바깥 테두리(검정)는 그대로"""
+    o = o.copy(); H, W = o.shape[:2]
+    MID = np.array([0x90, 0x8d, 0x9d], np.uint8)
+    for y in range(1, H - 1):
+        for x in range(1, W - 1):
+            c = o[y, x]
+            if not c[3]: continue
+            r, g, b = int(c[0]), int(c[1]), int(c[2])
+            if not (b >= r - 4 and b > g and 70 <= max(r, g, b) < 0x8c and max(r, g, b) - min(r, g, b) < 40): continue
+            if all(o[y + dy, x + dx, 3] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                o[y, x, :3] = MID
+    return o
+
+
+def hair_outline(o):
+    """뒷모습: 옆머리와 흰 가운 사이에 검은 픽셀 테두리 (다른 부분 테두리와 같은 색)"""
+    o = o.copy(); H, W = o.shape[:2]
+    OUT = np.array([0x0c, 0x08, 0x0e], np.uint8)
+    def hairish(c):
+        r, g, b = int(c[0]), int(c[1]), int(c[2])
+        return b >= r - 4 and b > g and 70 <= max(r, g, b) < 200 and max(r, g, b) - min(r, g, b) < 40
+    for x in range(W):
+        for y in range(H - 1):
+            if o[y, x, 3] and hairish(o[y, x]):
+                c = o[y + 1, x]
+                if c[3] and min(int(c[0]), int(c[1]), int(c[2])) > 190:   # 바로 아래가 흰 가운
+                    o[y + 1, x, :3] = OUT
+    return o
 
 
 def rec(a, hair=None, tie=None, skin=None):
