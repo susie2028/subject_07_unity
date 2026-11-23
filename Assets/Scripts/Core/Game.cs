@@ -1458,7 +1458,7 @@ namespace Specimen07
             var p = S.player; var f = Data.Forms[p.form];
             var notice = NearNotice(); int dr = NearDoor(); var cn = NearConsole(); bool lift = NearLift(); var trap = NearTrap();
             var tgt = p.eating != null ? null : NearestEdible();
-            if (!p.moved && S.time < 8 && S.floorId == "B1") return "[WASD] 또는 방향키로 이동 · [E] 먹기 · [Q] 변신 풀기 · [M] 지도";
+            if (!p.moved && S.time < 8 && S.floorId == "B1") return "[WASD] 또는 방향키로 이동 · [E] 먹기 · [Q] 뱉기 · [M] 지도";
             if (p.eating != null) return "꿀꺽…";
             if (dr >= 0)
             {
@@ -1481,11 +1481,8 @@ namespace Specimen07
                     "[E] " + Data.Forms[tgt.form].name + " 먹기" + (tgt.isNpc ? (p.form == "body" ? " · 뒤에서 접근할 것" : " · 변장 중이라 덮칠 수 있다") : Data.Forms[tgt.form].Big ? " · 덩치가 커서 문은 못 지나간다" : "");
             if (PlayerHidden()) return "환풍구 안 — 아무도 볼 수 없다";
             if (PlayerInDark() && !S.anySee) return "어둠 속 — 바로 옆까지 오지 않으면 못 알아챈다";
-            if (f.Big) return f.name + " — 방 안에 숨기 좋다 · 문은 너무 좁아서 못 나간다 · [Q] 풀기";
             if (f.type == FormType.Body) return G.def.lethal ? "본모습은 누구에게도 보이면 안 된다" : "본모습을 들키면 경보가 울린다";
-            if (p.form == "cart") return "카트는 보는 앞에서도 천천히 굴러갈 수 있다";
-            if (f.type == FormType.Object) return f.zone == "wall" ? "보는 앞에서는 멈출 것 · 벽에 붙어 있어야 자연스럽다" : "보는 앞에서는 멈출 것";
-            return f.name + "의 모습 — 보는 앞에서도 걸을 수 있다";
+            return "[Q] 뱉기";   // 변신 중엔 늘 뱉기 안내
         }
 
         /* 개발용: 인스펙터에서 층을 골라 바로 시작 (카드 지급) */
