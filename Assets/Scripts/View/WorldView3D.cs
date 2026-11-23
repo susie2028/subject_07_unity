@@ -729,7 +729,7 @@ namespace Specimen07
             {
                 var sr = Pooled(trailPool, ti++, () => Flat(dynRoot, "fx_dot", 1));
                 sr.transform.position = P(tr.x, 0.015f, tr.y); sr.transform.localScale = Vector3.one * (tr.r * 2 / 32f);
-                sr.color = new Color(1, 125 / 255f, 140 / 255f, 0.22f * tr.t / 3.5f);
+                sr.color = new Color(0.55f, 0.36f, 0.85f, 0.3f * tr.t / 3.5f);   // 주인공 보라 점액
             }
             HideFrom(trailPool, ti);
 
@@ -848,7 +848,7 @@ namespace Specimen07
                 float pulse = 0.5f + 0.5f * Mathf.Sin(t * 6);
                 bool blocked = S.anySee && game.OthersSee(tgt.Ref);
                 targetRing.transform.position = P(tgt.X, 0.035f, tgt.Y);
-                targetRing.color = blocked ? new Color(1, 81 / 255f, 72 / 255f, 0.5f + pulse * 0.4f) : new Color(1, 125 / 255f, 140 / 255f, 0.5f + pulse * 0.4f);
+                targetRing.color = blocked ? new Color(1, 81 / 255f, 72 / 255f, 0.5f + pulse * 0.4f) : new Color(0.66f, 0.48f, 0.95f, 0.5f + pulse * 0.4f);   // 먹기 대상 고리 = 주인공 보라
             }
 
             // 파티클 (카메라를 보게)

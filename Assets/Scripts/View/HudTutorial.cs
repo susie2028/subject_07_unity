@@ -146,7 +146,11 @@ namespace Specimen07
                 tutVideo.errorReceived -= OnTutError; tutVideo.errorReceived += OnTutError;
                 tutVideo.Prepare();
             }
-            if (tutFrameList != null && tutFrames != null) { tutFrameT = 0; tutFrames.sprite = tutFrameList[0]; }
+            if (tutFrames != null)
+            {
+                var anim = tutFrames.GetComponent<FrameAnim>() ?? tutFrames.gameObject.AddComponent<FrameAnim>();
+                anim.Play(tutFrameList, FRAME_FPS);   // 움짤은 이 컴포넌트가 직접 돌린다
+            }
         }
 
         void OnTutPrepared(VideoPlayer vp)
@@ -178,9 +182,7 @@ namespace Specimen07
 
         void UpdateTutorial(float dt)
         {
-            if (!TutorialOpen || tutFrameList == null || tutFrames == null) return;
-            tutFrameT += Time.unscaledDeltaTime;
-            tutFrames.sprite = tutFrameList[(int)(tutFrameT * FRAME_FPS) % tutFrameList.Length];
+            // 움짤은 FrameAnim이 돌린다
         }
     }
 }

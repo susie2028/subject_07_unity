@@ -1404,7 +1404,8 @@ namespace Specimen07
            strong = 지금 [E]를 누르면 반응할 대상 (굵게·맥박), 나머지는 가까이 있으면 옅게 */
         public enum HiKind { Obj, Npc, Tile, Door, Console, Lift }
         public struct Highlight { public HiKind kind; public object target; public int tx, ty; public bool strong; public Color color; }
-        static readonly Color HI_EAT = new Color(1f, 0.49f, 0.55f), HI_BLOCK = new Color(1f, 0.32f, 0.28f), HI_CONSOLE = new Color(1f, 0.83f, 0.42f), HI_LIFT = new Color(0.5f, 0.88f, 0.69f);
+        static readonly Color HI_EAT = new Color(0.66f, 0.48f, 0.95f),   // 먹을 수 있는 것 = 주인공 보라
+                               HI_BLOCK = new Color(1f, 0.32f, 0.28f), HI_CONSOLE = new Color(1f, 0.83f, 0.42f), HI_LIFT = new Color(0.5f, 0.88f, 0.69f);
         public void CollectHighlights(List<Highlight> list)
         {
             list.Clear();
