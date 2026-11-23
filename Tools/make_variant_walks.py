@@ -5,6 +5,7 @@
 #  (머리 깎기·늘이기 함수 trim_spikes / cut_short / add_long / add_bun 은 남겨 둠. 지금은 안 씀)
 # 원본(안경 쓴 연구원)은 Assets/Resources/Art 의 _src_researcher_* 로 따로 보관해 두고 거기서 다시 만든다.
 # 실행: python3 Tools/make_variant_walks.py   (영상에서 연구원 걷기를 다시 뽑았다면: --fresh)
+# 대각선 그림을 새로 뽑았으면: walk_researcher_<frontside|backside>_N.png / stand_… 를 art_src/researcher_frames 에 복사한 뒤 실행
 import colorsys
 import glob
 import os
@@ -308,7 +309,7 @@ def main():
     if fresh:   # 지금 Art에 있는 (안경 쓴) 연구원 그림을 원본으로 보관
         for p in glob.glob(os.path.join(ART, 'walk_researcher_*_[0-9].png')) + glob.glob(os.path.join(ART, 'stand_researcher_*.png')):
             name = os.path.basename(p)
-            if name.split('_')[2].split('.')[0] in ('front', 'back', 'side'):
+            if name.split('_')[2].split('.')[0] in ('front', 'back', 'side', 'frontside', 'backside'):
                 shutil.copy(p, os.path.join(SRC, name))
     srcs = sorted(glob.glob(os.path.join(SRC, '*.png')))
     set_vref([p for p in srcs if 'front' in p])
@@ -318,8 +319,13 @@ def main():
         prefix, rest = name.split('_researcher_')
         view = rest.split('_')[0].split('.')[0]
         a = np.array(Image.open(p).convert('RGBA'))
+        # 대각선(frontside/backside)은 안경 없는 연구원으로 새로 뽑은 그림 → 안경 벗기기·배지 없이 색만 바꾼다.
+        # 고위 연구원은 대각선용 대머리 그림이 없어서 건너뜀 (게임은 대각선 그림이 없으면 정면/옆/뒤를 씀)
+        diag = view in ('frontside', 'backside')
         for kind, fn in LOOKS.items():
-            out = fn(a, view)
+            if diag and kind == 'senior':
+                continue
+            out = fn(a, 'back' if diag else view)
             Image.fromarray(out, 'RGBA').save(os.path.join(ART, '%s_%s_%s' % (prefix, kind, rest)))
             n += 1
     print('ok', n)
