@@ -24,6 +24,8 @@ namespace Specimen07.EditorTools
             ti.mipmapEnabled = false;
             ti.alphaIsTransparency = true;
             // UI 틀(9-slice): 늘려도 테두리가 안 깨지게 테두리 두께를 넣어 둔다 (Tools/make_ui_frames.py)
+            // 튜토리얼 카드 움짤(녹화 영상을 줄인 그림)은 부드럽게
+            if (System.IO.Path.GetFileName(p).StartsWith("tut_")) ti.filterMode = FilterMode.Bilinear;
             Vector4 b;
             if (UiBorders.TryGetValue(System.IO.Path.GetFileNameWithoutExtension(p), out b))
             {
