@@ -383,9 +383,9 @@ namespace Specimen07
             var go = new GameObject("Label_" + text); go.transform.SetParent(floorRoot, false);
             go.transform.position = P(x, 0.02f, y); go.transform.rotation = Quaternion.Euler(90, 0, 0);
             var tm = go.AddComponent<TextMesh>();
-            tm.font = Fonts.Main; tm.text = text; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center;
-            tm.fontSize = 64; tm.characterSize = size / 6.4f; tm.color = col;
-            go.GetComponent<MeshRenderer>().sharedMaterial = Fonts.Main.material;
+            tm.font = Fonts.Bold; tm.text = text; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center;   // 바닥 방 이름은 굵은 갈무리
+            tm.fontSize = 60; tm.characterSize = size / 6.0f; tm.color = col;
+            go.GetComponent<MeshRenderer>().sharedMaterial = Fonts.Bold.material;
         }
 
         /* ===== 조명 ===== */

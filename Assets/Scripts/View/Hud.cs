@@ -21,6 +21,8 @@ namespace Specimen07
                 return bold;
             }
         }
+        // 갈무리11은 12px 격자로 그린 픽셀 글꼴 → 12의 배수 크기에서만 픽셀이 고르게 찍힌다 (18 이상은 24, 30 이상은 36 …)
+        public static int Px(int size) { return Mathf.Max(12, Mathf.RoundToInt(size / 12f) * 12); }
         public static Font Main
         {
             get
@@ -100,7 +102,7 @@ namespace Specimen07
         {
             var rt = R(parent, name, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(400, size * 1.6f));
             var t = rt.gameObject.AddComponent<Text>();
-            t.font = Fonts.Main; t.text = text; t.fontSize = size; t.color = c; t.alignment = align; t.supportRichText = true; t.raycastTarget = false;
+            t.font = Fonts.Main; t.text = text; t.fontSize = Fonts.Px(size); t.color = c; t.alignment = align; t.supportRichText = true; t.raycastTarget = false;
             if (bold) { t.font = Fonts.Bold; t.fontStyle = Fonts.Bold == Fonts.Main ? FontStyle.Bold : FontStyle.Normal; }
             t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow;
             return t;
@@ -591,7 +593,7 @@ namespace Specimen07
                 float pulse = 1 + 0.08f * Mathf.Abs(Mathf.Sin(time * (6 + beat * 10)));
                 timerBox.localScale = Vector3.one * pulse;
                 timerBox.anchoredPosition = new Vector2(60, 34) + new Vector2(Mathf.Sin(time * 47), Mathf.Cos(time * 39)) * (2 + beat * 4);
-                timerNum.fontSize = 36 + Mathf.RoundToInt(beat * 10);
+                timerNum.fontSize = beat > 0.6f ? 48 : 36;   // 픽셀 글꼴이라 12 단위로만 커진다
                 heartT -= Time.deltaTime;
                 if (heartT <= 0) { heartT = Mathf.Lerp(1.0f, 0.35f, beat); if (game.sfx != null) game.sfx.Play("heart"); }
             }
@@ -648,7 +650,7 @@ namespace Specimen07
                 {
                     while (marks.Count <= mi) { var t = Txt(bubbleLayer, "Mark", "", 40, HAZARD, TextAnchor.LowerCenter, true); Shadow(t); t.rectTransform.anchorMin = t.rectTransform.anchorMax = new Vector2(0.5f, 0.5f); t.rectTransform.pivot = new Vector2(0.5f, 0); t.rectTransform.sizeDelta = new Vector2(80, 70); marks.Add(t); }
                     var m = marks[mi++]; m.gameObject.SetActive(true);
-                    m.text = mark; m.color = col; m.fontSize = size;
+                    m.text = mark; m.color = col; m.fontSize = Fonts.Px(size);
                     m.rectTransform.anchoredPosition = markPos;
                 }
             }

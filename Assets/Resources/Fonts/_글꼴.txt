@@ -1,4 +1,6 @@
-게임 글꼴: Pretendard (무료, SIL Open Font License 1.1 — 같은 폴더의 LICENSE 참고)
-  Main.ttf = Pretendard Regular (보통 글씨)
-  Bold.ttf = Pretendard Bold    (굵은 글씨 — 가짜 굵게 대신 진짜 Bold를 써서 뭉개지지 않음)
+게임 글꼴: 갈무리11 (Galmuri11, 무료, SIL Open Font License 1.1 — 같은 폴더의 Galmuri_LICENSE 참고, https://github.com/quiple/galmuri)
+  Main.ttf = Galmuri11       (보통 글씨 — 설명·대사·안내)
+  Bold.ttf = Galmuri11-Bold  (굵은 글씨 — 제목·이름표·버튼·숫자)
+픽셀 글꼴이라 12의 배수 크기(12, 24, 36, 48 …)에서 가장 또렷하다. Hud의 Txt()가 글자 크기를 12의 배수로 맞춰 준다.
+글꼴 설정(Rendering Mode)은 Hinted Raster — 안티앨리어싱 없이 픽셀이 딱 떨어지게.
 다른 글꼴로 바꾸려면 같은 이름(Main.ttf / Bold.ttf)으로 덮어쓰면 됩니다.

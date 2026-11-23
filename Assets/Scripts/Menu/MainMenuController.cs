@@ -49,6 +49,7 @@ namespace Specimen07
             {
                 if (t.font == null || t.font.name == "LegacyRuntime" || t.font.name == "Arial") t.font = Fonts.Main;
                 if (t.fontStyle == FontStyle.Bold && Fonts.Bold != Fonts.Main) { t.font = Fonts.Bold; t.fontStyle = FontStyle.Normal; }
+                t.fontSize = Fonts.Px(t.fontSize);   // 갈무리 픽셀 글꼴: 12의 배수 크기로
             }
             if (settingsPanel != null) settingsPanel.SetActive(false);
             if (confirmPanel != null) confirmPanel.SetActive(false);

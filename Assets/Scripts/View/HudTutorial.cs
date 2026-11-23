@@ -51,7 +51,7 @@ namespace Specimen07
             // 이름표: 판넬 위 테두리에 걸치게
             var tab = R(panel, "Tab", new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 0.5f), new Vector2(0, -6), new Vector2(TUT_TAB_W, TUT_TAB_H));
             var tim = Img(tab, Color.white, "UI/frame_tab"); tim.type = Image.Type.Sliced; tim.pixelsPerUnitMultiplier = ppuMul;
-            tutTitle = Txt(tab, "Title", "", 56, Color.white, TextAnchor.MiddleCenter, true);
+            tutTitle = Txt(tab, "Title", "", 48, Color.white, TextAnchor.MiddleCenter, true);
             Fill(tutTitle.rectTransform, 40, 0, 0, 0); Shadow(tutTitle);
 
             // 영상 칸
