@@ -2,7 +2,8 @@
 // 카드 내용은 아래 Cards 표에서 바꾸면 된다. 띄우는 시점은 Game.cs의 UpdateTutorials.
 //
 // ★ 영상 넣는 법 (둘 중 하나)
-//   1) 영상: Assets/Resources/Tutorial/<media>.mp4  (H.264 mp4 권장. GIF는 유니티가 못 읽으니 mp4로 바꿔서)
+//   1) 영상: Assets/StreamingAssets/Tutorial/<media>.mp4  (H.264 mp4 권장. GIF는 유니티가 못 읽으니 mp4로 바꿔서)
+//      유니티가 영상을 변환(임포트)하지 않고 그대로 재생 → 임포트 실패로 안 뜨는 일이 없다
 //   2) 그림 여러 장: Assets/Resources/Art/UI/<media>_0.png, _1.png, ... (초당 FRAME_FPS장으로 반복)
 //   아무것도 없으면 "영상 자리" 표시가 나온다.
 using UnityEngine;
@@ -89,32 +90,52 @@ namespace Specimen07
         {
             if (ovTut == null) BuildTutorial();
             tutTitle.text = c.title; tutBody.text = c.body;
-            // 영상 → 그림 여러 장 → 자리 표시 순으로 찾는다
-            var clip = Resources.Load<VideoClip>("Tutorial/" + c.media);
+            // 꺼진 오브젝트의 VideoPlayer는 재생이 안 되므로 카드부터 켠다
+            ovTut.SetActive(true); ovTut.transform.SetAsLastSibling();
+            // 영상(StreamingAssets/Tutorial/<media>.mp4) → 그림 여러 장 → 자리 표시 순으로 찾는다
+            string url = System.IO.Path.Combine(Application.streamingAssetsPath, "Tutorial", c.media + ".mp4");
+            bool hasVideo = System.IO.File.Exists(url);
             tutFrameList = null;
-            if (clip == null)
+            if (!hasVideo)
             {
                 var list = new System.Collections.Generic.List<Sprite>();
                 for (int i = 0; ; i++) { var s = Art.TryLoad("UI/" + c.media + "_" + i); if (s == null) break; list.Add(s); }
                 if (list.Count > 0) tutFrameList = list.ToArray();
             }
-            tutMedia.gameObject.SetActive(clip != null);
+            tutMedia.gameObject.SetActive(hasVideo);
+            tutMedia.color = new Color(1, 1, 1, 0);      // 첫 장면이 준비되기 전 검은 화면이 번쩍이지 않게
             tutFrames.gameObject.SetActive(tutFrameList != null);
-            tutMediaNote.gameObject.SetActive(clip == null && tutFrameList == null);
-            tutMediaNote.text = "영상 자리\nResources/Tutorial/" + c.media + ".mp4";
-            if (clip != null)
+            tutMediaNote.gameObject.SetActive(!hasVideo && tutFrameList == null);
+            tutMediaNote.text = "영상 자리\nStreamingAssets/Tutorial/" + c.media + ".mp4";
+            if (hasVideo)
             {
-                if (tutRT == null || tutRT.width != (int)clip.width || tutRT.height != (int)clip.height)
-                {
-                    if (tutRT != null) tutRT.Release();
-                    tutRT = new RenderTexture((int)Mathf.Max(16, clip.width), (int)Mathf.Max(16, clip.height), 0);
-                    tutRT.filterMode = FilterMode.Bilinear;   // 녹화 영상을 줄인 거라 부드럽게
-                }
-                tutVideo.clip = clip; tutVideo.targetTexture = tutRT; tutMedia.texture = tutRT;
-                tutVideo.Play();
+                tutVideo.Stop();
+                tutVideo.source = VideoSource.Url; tutVideo.url = url;
+                tutVideo.prepareCompleted -= OnTutPrepared; tutVideo.prepareCompleted += OnTutPrepared;
+                tutVideo.errorReceived -= OnTutError; tutVideo.errorReceived += OnTutError;
+                tutVideo.Prepare();
             }
             if (tutFrameList != null) { tutFrameT = 0; tutFrames.sprite = tutFrameList[0]; }
-            ovTut.SetActive(true); ovTut.transform.SetAsLastSibling();
+        }
+
+        void OnTutPrepared(VideoPlayer vp)
+        {
+            int w = (int)Mathf.Max(16, vp.width), h = (int)Mathf.Max(16, vp.height);
+            if (tutRT == null || tutRT.width != w || tutRT.height != h)
+            {
+                if (tutRT != null) tutRT.Release();
+                tutRT = new RenderTexture(w, h, 0);
+                tutRT.filterMode = FilterMode.Bilinear;   // 녹화 영상을 줄인 거라 부드럽게
+            }
+            vp.targetTexture = tutRT; tutMedia.texture = tutRT; tutMedia.color = Color.white;
+            vp.Play();
+        }
+
+        void OnTutError(VideoPlayer vp, string msg)
+        {
+            Debug.LogWarning("[표본07] 튜토리얼 영상을 재생하지 못했어요: " + vp.url + " → " + msg);
+            tutMedia.gameObject.SetActive(false);
+            tutMediaNote.gameObject.SetActive(true); tutMediaNote.text = "영상을 재생하지 못했어요\n" + msg;
         }
 
         public void HideTutorial()
