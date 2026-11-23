@@ -28,7 +28,7 @@ namespace Specimen07
         };
 
         // ★ 배치 (1920×1080 기준)
-        const float TUT_W = 620, TUT_H = 780;      // 판넬 크기
+        const float TUT_W = 640, TUT_H = 880;      // 판넬 크기 (설명 4줄 + '계속'이 안 겹치게)
         const float TUT_MEDIA = 340;               // 영상 칸 (정사각형)
         const float TUT_TAB_W = 500, TUT_TAB_H = 96;   // 이름표 높이 = 16px × TUT_PX (줄무늬가 안 늘어나게)
         const float TUT_PX = 6f;                   // 판넬 그림 1픽셀이 화면에서 몇 px인지 (정수로 둬야 픽셀이 고르게 보임)

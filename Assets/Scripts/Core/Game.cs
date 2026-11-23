@@ -990,8 +990,10 @@ namespace Specimen07
                 S.alarms++;
                 S.sirenT = 0;
                 Toast("경보 발령!");
+                bool chasers = false;
                 foreach (var n in Fl.npcs) if (n.alive && n.C.chaser != null && !n.frozen)
-                    { n.state = NpcState.Chase; n.path = null; n.inspect = null; n.search = null; n.lockT = 0; n.repath = 0; }
+                    { n.state = NpcState.Chase; n.path = null; n.inspect = null; n.search = null; n.lockT = 0; n.repath = 0; chasers = true; }
+                if (chasers) Later(0.9f, Dispatch);   // 층에 있던 경비·군인이 출동 ('시야에 걸림' 소리 뒤에)
             }
             var A = S.alarm;
             A.t = Cfg.alarmTime; A.lx = p.x; A.ly = p.y;
@@ -1018,7 +1020,16 @@ namespace Specimen07
                 Fl.npcs.Add(n);
                 k++;
             }
-            if (k > 0) { if (hud != null) hud.Alert("⚠ " + Data.Chars[G.def.reinforce[0].ch].name + " " + k + "명 출동", "출입구에서 진입 중 — 숨을 곳을 찾아라"); Snd("siren"); }
+            if (k > 0) { if (hud != null) hud.Alert("⚠ " + Data.Chars[G.def.reinforce[0].ch].name + " " + k + "명 출동", "출입구에서 진입 중 — 숨을 곳을 찾아라"); Dispatch(); }
+        }
+
+        // 군인·경비 출동 소리 (Sounds/dispatch). 연달아 겹쳐 나오지 않게 3초에 한 번만
+        float lastDispatch = -99;
+        void Dispatch()
+        {
+            if (mode != Mode.Play || Time.time - lastDispatch < 3f) return;
+            lastDispatch = Time.time;
+            Snd("dispatch");
         }
 
         void EndAlarm()
@@ -1122,6 +1133,8 @@ namespace Specimen07
                 S.spot += dt; S.spotNpc = by;
                 if (S.spot >= Cfg.grace)
                 {
+                    bool freshSpot = G.def.lethal || S.alarm == null;
+                    if (freshSpot) Snd("spotted");   // 시야에 걸렸다 (경보 울리기 시작·들켜서 끝)
                     if (G.def.lethal) Die(violation, kind, by);
                     else { RaiseAlarm(by); S.spot = Cfg.grace; }
                 }
