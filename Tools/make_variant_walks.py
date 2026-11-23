@@ -237,6 +237,7 @@ def senior_badge(a, view):
 # 걷기 프레임마다 머리 위치(위아래 출렁임)를 원래 머리 실루엣으로 찾아서 그 자리에 붙인다.
 HEADS = os.path.join(HERE, 'art_src', 'senior_heads')
 NECK = {'front': 24, 'back': 24, 'side': 20}      # 이 줄 위가 머리 (서 있는 그림 기준)
+HEAD_DROP = {'front': 1, 'back': 2, 'side': 3}    # 머리를 몇 픽셀 내려 붙일지 (목 짧게 — 대각선 아래 영상 그림에 맞춤)
 _ref = {}
 
 
@@ -259,8 +260,9 @@ def new_head(a, view):
     _, dx, dy = best
     o = a.copy()
     o[:max(0, ny + dy)] = 0
+    drop = HEAD_DROP.get(view, 0)
     for y, x in zip(*np.nonzero(head[..., 3] > 0)):
-        Y, X = y + dy, x + dx
+        Y, X = y + dy + drop, x + dx
         if 0 <= Y < o.shape[0] and 0 <= X < o.shape[1]:
             o[Y, X] = head[y, x]
     if view == 'back':   # 목덜미에 남은 원래 갈색 머리 → 새 머리색
