@@ -39,46 +39,76 @@ namespace Specimen07
         Sprite[] tutFrameList; float tutFrameT;
         public bool TutorialOpen { get { return ovTut != null && ovTut.activeSelf; } }
 
+        // ★ 디자인: 메뉴 [표본07 > 튜토리얼 카드 편집] → Assets/Resources/UI/TutorialCard.prefab 이 열린다 (씬·하이어라키에서 바로 수정).
+        //   게임은 그 프리팹이 있으면 그걸 띄우고, 없으면 아래 BuildTutorialObject()로 코드에서 만든다.
+        //   이름으로 찾으니 자식 이름(Panel, Tab/Title, Media/Video, Media/Frames, Media/Note, Body, Next)은 바꾸지 말 것. 위치·크기·색·글꼴은 마음대로.
         void BuildTutorial()
         {
-            ovTut = Stretch(canvasRt, "Tutorial").gameObject;
-            var dim = Img((RectTransform)ovTut.transform, new Color(0, 0, 0, 0.45f)); dim.sprite = null; dim.raycastTarget = true;
-            ovTut.AddComponent<Button>().onClick.AddListener(() => game.CloseTutorial());
+            var pf = Resources.Load<GameObject>("UI/TutorialCard");
+            GameObject root;
+            if (pf != null) { root = Instantiate(pf); root.name = "Tutorial"; }
+            else root = BuildTutorialObject();
+            var rt = (RectTransform)root.transform;
+            rt.SetParent(canvasRt, false);
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = rt.offsetMax = Vector2.zero;
+            ovTut = root;
+            var dim = root.GetComponent<Image>(); if (dim != null) dim.raycastTarget = true;
+            var btn = root.GetComponent<Button>() ?? root.AddComponent<Button>();
+            btn.onClick.AddListener(() => game.CloseTutorial());
+            tutTitle = Child<Text>(root, "Panel/Tab/Title");
+            tutMedia = Child<RawImage>(root, "Panel/Media/Video");
+            tutFrames = Child<Image>(root, "Panel/Media/Frames");
+            tutMediaNote = Child<Text>(root, "Panel/Media/Note");
+            tutBody = Child<Text>(root, "Panel/Body");
+            // 영상 재생기 (영상 파일이 있을 때만 씀)
+            tutVideo = root.GetComponent<VideoPlayer>() ?? root.AddComponent<VideoPlayer>();
+            tutVideo.playOnAwake = false; tutVideo.isLooping = true; tutVideo.audioOutputMode = VideoAudioOutputMode.None;
+            tutVideo.renderMode = VideoRenderMode.RenderTexture;
+            ovTut.SetActive(false);
+        }
+
+        static T Child<T>(GameObject root, string path) where T : Component
+        {
+            var t = root.transform.Find(path);
+            if (t == null) { Debug.LogWarning("[표본07] 튜토리얼 카드에 '" + path + "' 이(가) 없어요 (이름을 바꾸면 안 돼요)"); return null; }
+            return t.GetComponent<T>();
+        }
+
+        // 기본 카드 모양 (프리팹이 없을 때 + 프리팹을 처음 만들 때)
+        public static GameObject BuildTutorialObject()
+        {
+            var root = new GameObject("TutorialCard", typeof(RectTransform));
+            var rrt = (RectTransform)root.transform; rrt.anchorMin = Vector2.zero; rrt.anchorMax = Vector2.one; rrt.offsetMin = rrt.offsetMax = Vector2.zero;
+            var dim = Img(rrt, new Color(0, 0, 0, 0.45f)); dim.sprite = null; dim.raycastTarget = true;
 
             float ppuMul = 100f / Art.PPU / TUT_PX;    // canvas 기준 100px = 1유닛
-            var panel = R(ovTut.transform, "Panel", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -30), new Vector2(TUT_W, TUT_H));
+            var panel = R(root.transform, "Panel", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -30), new Vector2(TUT_W, TUT_H));
             var pim = Img(panel, Color.white, "UI/frame_panel"); pim.type = Image.Type.Tiled; pim.pixelsPerUnitMultiplier = ppuMul;
 
             // 이름표: 판넬 위 테두리에 걸치게
             var tab = R(panel, "Tab", new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 0.5f), new Vector2(0, -6), new Vector2(TUT_TAB_W, TUT_TAB_H));
             var tim = Img(tab, Color.white, "UI/frame_tab"); tim.type = Image.Type.Sliced; tim.pixelsPerUnitMultiplier = ppuMul;
-            tutTitle = Txt(tab, "Title", "", 48, Color.white, TextAnchor.MiddleCenter, true);
-            Fill(tutTitle.rectTransform, 40, 0, 0, 0); Shadow(tutTitle);
+            var title = Txt(tab, "Title", "튜토리얼", 48, Color.white, TextAnchor.MiddleCenter, true);
+            Fill(title.rectTransform, 40, 0, 0, 0); Shadow(title);
 
             // 영상 칸
             var media = R(panel, "Media", new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -110), new Vector2(TUT_MEDIA, TUT_MEDIA));
             var mbg = Img(media, new Color(0.03f, 0.03f, 0.08f, 1)); mbg.sprite = null;
-            tutMedia = R(media, "Video", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero).gameObject.AddComponent<RawImage>();
-            tutMedia.raycastTarget = false;
-            tutFrames = Img(R(media, "Frames", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero), Color.white); tutFrames.sprite = null;
-            tutFrames.preserveAspect = true;
-            tutMediaNote = Txt(media, "Note", "", 20, MUTED, TextAnchor.MiddleCenter);
-            Fill(tutMediaNote.rectTransform, 20, 20, 20, 20);
+            var video = R(media, "Video", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero).gameObject.AddComponent<RawImage>();
+            video.raycastTarget = false; video.color = new Color(1, 1, 1, 0);
+            var frames = Img(R(media, "Frames", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero), Color.white);
+            frames.sprite = Art.TryLoad("UI/tut_eat_0"); frames.preserveAspect = true;   // 디자인할 때 보이게 첫 장면 (게임에선 바뀜)
+            var note = Txt(media, "Note", "", 20, MUTED, TextAnchor.MiddleCenter);
+            Fill(note.rectTransform, 20, 20, 20, 20);
 
-            // 설명
             // 설명: 영상 칸 바로 아래부터 (4줄까지 '계속' 글자와 안 겹침)
-            tutBody = Txt(panel, "Body", "", 36, FG, TextAnchor.UpperCenter);
-            var brt = tutBody.rectTransform; brt.anchorMin = new Vector2(0, 1); brt.anchorMax = new Vector2(1, 1); brt.pivot = new Vector2(0.5f, 1);
-            brt.anchoredPosition = new Vector2(0, -110 - TUT_MEDIA - 26); brt.sizeDelta = new Vector2(-80, 210); tutBody.lineSpacing = 1.1f;
+            var body = Txt(panel, "Body", Cards[0].body, 36, FG, TextAnchor.UpperCenter);
+            var brt = body.rectTransform; brt.anchorMin = new Vector2(0, 1); brt.anchorMax = new Vector2(1, 1); brt.pivot = new Vector2(0.5f, 1);
+            brt.anchoredPosition = new Vector2(0, -110 - TUT_MEDIA - 26); brt.sizeDelta = new Vector2(-80, 210); body.lineSpacing = 1.1f;
             var more = Txt(panel, "Next", "E / Space  계속", 20, MUTED, TextAnchor.MiddleCenter);
             var mrt = more.rectTransform; mrt.anchorMin = new Vector2(0, 0); mrt.anchorMax = new Vector2(1, 0); mrt.pivot = new Vector2(0.5f, 0);
             mrt.anchoredPosition = new Vector2(0, 40); mrt.sizeDelta = new Vector2(0, 30);
-
-            // 영상 재생기 (영상 파일이 있을 때만 씀)
-            tutVideo = ovTut.AddComponent<VideoPlayer>();
-            tutVideo.playOnAwake = false; tutVideo.isLooping = true; tutVideo.audioOutputMode = VideoAudioOutputMode.None;
-            tutVideo.renderMode = VideoRenderMode.RenderTexture;
-            ovTut.SetActive(false);
+            return root;
         }
 
         static void Fill(RectTransform rt, float l, float r, float t, float b)
@@ -90,7 +120,8 @@ namespace Specimen07
         public void ShowTutorial(TutorialCard c)
         {
             if (ovTut == null) BuildTutorial();
-            tutTitle.text = c.title; tutBody.text = c.body;
+            if (tutTitle != null) tutTitle.text = c.title;
+            if (tutBody != null) tutBody.text = c.body;
             // 꺼진 오브젝트의 VideoPlayer는 재생이 안 되므로 카드부터 켠다
             ovTut.SetActive(true); ovTut.transform.SetAsLastSibling();
             // 영상(StreamingAssets/Tutorial/<media>.mp4) → 그림 여러 장 → 자리 표시 순으로 찾는다
@@ -101,11 +132,10 @@ namespace Specimen07
             if (list.Count > 0) tutFrameList = list.ToArray();
             string url = System.IO.Path.Combine(Application.streamingAssetsPath, "Tutorial", c.media + ".mp4");
             bool hasVideo = tutFrameList == null && System.IO.File.Exists(url);
-            tutMedia.gameObject.SetActive(hasVideo);
-            tutMedia.color = new Color(1, 1, 1, 0);      // 첫 장면이 준비되기 전 검은 화면이 번쩍이지 않게
-            tutFrames.gameObject.SetActive(tutFrameList != null);
-            tutMediaNote.gameObject.SetActive(!hasVideo && tutFrameList == null);
-            tutMediaNote.text = "영상 자리\nArt/UI/" + c.media + "_0.png …";
+            if (tutMedia != null) { tutMedia.gameObject.SetActive(hasVideo); tutMedia.color = new Color(1, 1, 1, 0); }   // 첫 장면이 준비되기 전 검은 화면이 번쩍이지 않게
+            if (tutFrames != null) tutFrames.gameObject.SetActive(tutFrameList != null);
+            if (tutMediaNote != null) { tutMediaNote.gameObject.SetActive(!hasVideo && tutFrameList == null); tutMediaNote.text = "영상 자리\nArt/UI/" + c.media + "_0.png …"; }
+            if (tutMedia == null) hasVideo = false;
             if (hasVideo)
             {
                 tutVideo.Stop();
@@ -114,7 +144,7 @@ namespace Specimen07
                 tutVideo.errorReceived -= OnTutError; tutVideo.errorReceived += OnTutError;
                 tutVideo.Prepare();
             }
-            if (tutFrameList != null) { tutFrameT = 0; tutFrames.sprite = tutFrameList[0]; }
+            if (tutFrameList != null && tutFrames != null) { tutFrameT = 0; tutFrames.sprite = tutFrameList[0]; }
         }
 
         void OnTutPrepared(VideoPlayer vp)
@@ -146,7 +176,7 @@ namespace Specimen07
 
         void UpdateTutorial(float dt)
         {
-            if (!TutorialOpen || tutFrameList == null) return;
+            if (!TutorialOpen || tutFrameList == null || tutFrames == null) return;
             tutFrameT += Time.unscaledDeltaTime;
             tutFrames.sprite = tutFrameList[(int)(tutFrameT * FRAME_FPS) % tutFrameList.Length];
         }
