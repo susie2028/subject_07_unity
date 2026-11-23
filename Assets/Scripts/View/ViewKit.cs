@@ -173,8 +173,27 @@ namespace Specimen07
             }
             sr.sprite = spr;
             sr.flipX = flip; sr.transform.rotation = Quaternion.identity;
-            sc = sr.sprite.pixelsPerUnit / CHAR_PX;
+            sc = sr.sprite.pixelsPerUnit / CHAR_PX * HeightMul(kind, view);
             return true;
+        }
+
+        // 방향마다 그림 키가 달라서(정면·뒤 36, 옆·대각선 40 …) 돌아설 때 커졌다 작아졌다 하는 것을 막는다.
+        // 표(SpriteHeights, Tools/gen_sprite_heights.py)로 그 종류의 옆·대각선 평균 키에 맞춰 크기를 곱한다.
+        static readonly Dictionary<string, float> targetH = new Dictionary<string, float>();
+        internal static float HeightMul(string kind, string view)
+        {
+            int h;
+            if (!SpriteHeights.H.TryGetValue("stand_" + kind + "_" + view, out h) || h <= 0) return 1;
+            float tgt;
+            if (!targetH.TryGetValue(kind, out tgt))
+            {
+                float sum = 0; int n = 0; int v;
+                foreach (var w in new[] { "side", "frontside", "backside" })
+                    if (SpriteHeights.H.TryGetValue("stand_" + kind + "_" + w, out v)) { sum += v; n++; }
+                tgt = n > 0 ? sum / n : h;
+                targetH[kind] = tgt;
+            }
+            return tgt / h;
         }
 
         internal static bool HasWalk(string kind) { return Art.Has("walk_" + kind + "_front_0"); }

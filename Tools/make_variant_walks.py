@@ -271,7 +271,7 @@ def new_head(a, view):
                 r, g, b_, al = [int(t) for t in o[y, x]]
                 if al and r > b_ + 20 and r >= g and max(r, g, b_) < 150:
                     o[y, x, :3] = (144, 141, 157) if max(r, g, b_) > 60 else (112, 106, 137)
-        o = soften_hair(clean_collar(o))
+        o = hair_outline(soften_hair(clean_collar(o)))
     return close_outline(o)
 
 
@@ -311,6 +311,22 @@ def soften_hair(o):
             if not (b >= r - 4 and b > g and 70 <= max(r, g, b) < 0x8c and max(r, g, b) - min(r, g, b) < 40): continue
             if all(o[y + dy, x + dx, 3] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
                 o[y, x, :3] = MID
+    return o
+
+
+def hair_outline(o):
+    """뒷모습: 옆머리와 흰 가운 사이에 검은 픽셀 테두리 (다른 부분 테두리와 같은 색)"""
+    o = o.copy(); H, W = o.shape[:2]
+    OUT = np.array([0x0c, 0x08, 0x0e], np.uint8)
+    def hairish(c):
+        r, g, b = int(c[0]), int(c[1]), int(c[2])
+        return b >= r - 4 and b > g and 70 <= max(r, g, b) < 200 and max(r, g, b) - min(r, g, b) < 40
+    for x in range(W):
+        for y in range(H - 1):
+            if o[y, x, 3] and hairish(o[y, x]):
+                c = o[y + 1, x]
+                if c[3] and min(int(c[0]), int(c[1]), int(c[2])) > 190:   # 바로 아래가 흰 가운
+                    o[y + 1, x, :3] = OUT
     return o
 
 
