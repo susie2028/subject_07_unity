@@ -23,6 +23,20 @@ namespace Specimen07.EditorTools
             ti.textureCompression = TextureImporterCompression.Uncompressed;
             ti.mipmapEnabled = false;
             ti.alphaIsTransparency = true;
+            // UI 틀(9-slice): 늘려도 테두리가 안 깨지게 테두리 두께를 넣어 둔다 (Tools/make_ui_frames.py)
+            Vector4 b;
+            if (UiBorders.TryGetValue(System.IO.Path.GetFileNameWithoutExtension(p), out b))
+            {
+                ti.spriteBorder = b;
+                ti.wrapMode = TextureWrapMode.Clamp;
+            }
         }
+
+        // 왼쪽, 아래, 오른쪽, 위 (픽셀)
+        static readonly System.Collections.Generic.Dictionary<string, Vector4> UiBorders = new System.Collections.Generic.Dictionary<string, Vector4>
+        {
+            { "ui_panel", new Vector4(8, 8, 8, 8) },   // 큰 판넬 — Image Type: Tiled 권장 (가운데 스캔라인이 안 뭉개짐)
+            { "ui_tab", new Vector4(8, 3, 4, 3) },     // 이름표 — 왼쪽 노랑 줄무늬는 고정, 가운데만 늘어남 (Sliced)
+        };
     }
 }
