@@ -35,8 +35,8 @@ namespace Specimen07.EditorTools
         // 왼쪽, 아래, 오른쪽, 위 (픽셀)
         static readonly System.Collections.Generic.Dictionary<string, Vector4> UiBorders = new System.Collections.Generic.Dictionary<string, Vector4>
         {
-            { "ui_panel", new Vector4(8, 8, 8, 8) },   // 큰 판넬 — Image Type: Tiled 권장 (가운데 스캔라인이 안 뭉개짐)
-            { "ui_tab", new Vector4(8, 3, 4, 3) },     // 이름표 — 왼쪽 노랑 줄무늬는 고정, 가운데만 늘어남 (Sliced)
+            { "frame_panel", new Vector4(8, 8, 8, 8) },   // 큰 판넬 — Image Type: Tiled 권장 (가운데 스캔라인이 안 뭉개짐)
+            { "frame_tab", new Vector4(8, 3, 4, 3) },     // 이름표 — 왼쪽 노랑 줄무늬는 고정, 가운데만 늘어남 (Sliced)
         };
     }
 }

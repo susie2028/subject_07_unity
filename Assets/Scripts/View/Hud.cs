@@ -372,7 +372,7 @@ namespace Specimen07
         }
 
         /* ================= 화면 전환 ================= */
-        public void HideAllOverlays() { HideMenu(); HidePause(); ovHowTo.SetActive(false); ovIntro.SetActive(false); ovLift.SetActive(false); ovOver.SetActive(false); ovClear.SetActive(false); }
+        public void HideAllOverlays() { HideMenu(); HidePause(); HideTutorial(); ovHowTo.SetActive(false); ovIntro.SetActive(false); ovLift.SetActive(false); ovOver.SetActive(false); ovClear.SetActive(false); }
         public void ShowTitle() { HideAllOverlays(); ShowMenu(); hudRoot.SetActive(false); }
         public void ShowHowTo() { ovHowTo.SetActive(true); ovHowTo.transform.SetAsLastSibling(); }
 
@@ -465,6 +465,7 @@ namespace Specimen07
         void Update()
         {
             float dt = Time.deltaTime;
+            UpdateTutorial(dt);
             if (toastT >= 0)
             {
                 toastT += dt; float a = toastT < 0.22f ? toastT / 0.22f : toastT > 1.44f ? 1 - (toastT - 1.44f) / 0.36f : 1;

@@ -2,8 +2,8 @@
 # 원본: Tools/art_src/ui/panel_src.jpg, tab_src.jpg (AI로 뽑은 큰 그림, 마젠타 배경)
 # 원본은 픽셀 크기가 들쭉날쭉해서(1칸 ≈ 14.6px / 22.5px), 원본에서 색과 구조(테두리 두께, 리벳, 줄무늬)를 재서
 # 진짜 1픽셀 크기로 깔끔하게 다시 찍는다. 네 모서리는 대칭.
-#  → Assets/Resources/Art/UI/ui_panel.png (20×20, 테두리 8px, 가운데 스캔라인 — Image Type: Tiled 권장)
-#  → Assets/Resources/Art/UI/ui_tab.png   (14×16, 왼쪽 8 / 오른쪽 4 / 위아래 3px — Sliced)
+#  → Assets/Resources/Art/UI/frame_panel.png (20×20, 테두리 8px, 가운데 스캔라인 — Image Type: Tiled 권장)
+#  → Assets/Resources/Art/UI/frame_tab.png   (14×16, 왼쪽 8 / 오른쪽 4 / 위아래 3px — Sliced)
 # 테두리(9-slice) 값은 Assets/Editor/ArtImporter.cs가 자동으로 넣는다.
 import os
 from PIL import Image
@@ -97,6 +97,6 @@ def tab():
 
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
-    panel().save(os.path.join(OUT, 'ui_panel.png'))
-    tab().save(os.path.join(OUT, 'ui_tab.png'))
-    print('wrote ui_panel.png, ui_tab.png')
+    panel().save(os.path.join(OUT, 'frame_panel.png'))
+    tab().save(os.path.join(OUT, 'frame_tab.png'))
+    print('wrote frame_panel.png, frame_tab.png')

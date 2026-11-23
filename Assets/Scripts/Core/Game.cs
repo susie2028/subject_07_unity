@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Specimen07
 {
-    public enum Mode { Title, Intro, Play, Lift, Dying, Over, Clear, Pause }
+    public enum Mode { Title, Intro, Play, Lift, Dying, Over, Clear, Pause, Tutorial }
 
     public class Game : MonoBehaviour
     {
@@ -125,6 +125,7 @@ namespace Specimen07
         public void NewRun()
         {
             deaths = 0;
+            tutSeen.Clear(); tutSpitT = 0;
             lastVia = "start";
             runInSession = true; pausedFromPlay = false;
             NewGame();
@@ -235,6 +236,36 @@ namespace Specimen07
         }
 
         /* 엘리베이터 */
+        /* ===== 튜토리얼 카드 (내용·모양은 HudTutorial.cs) — 처음부터 시작할 때마다 한 번씩 =====
+           eat: B1에서 시작하고 잠시 뒤 / spit: 처음으로 무언가로 변신하고 잠시 뒤 */
+        readonly HashSet<string> tutSeen = new HashSet<string>();
+        float tutSpitT;
+        void UpdateTutorials(float dt)
+        {
+            var p = S.player;
+            if (!tutSeen.Contains("eat") && S.floorId == "B1" && S.elapsed > 1.2f) { ShowTutorial("eat"); return; }
+            if (!tutSeen.Contains("spit") && p.form != "body" && p.eating == null)
+            {
+                tutSpitT += dt;
+                if (tutSpitT > 0.8f) ShowTutorial("spit");
+            }
+        }
+        void ShowTutorial(string id)
+        {
+            tutSeen.Add(id);
+            if (hud == null) return;
+            var card = System.Array.Find(Hud.Cards, c => c.id == id);
+            if (card == null) return;
+            mode = Mode.Tutorial;
+            hud.ShowTutorial(card);
+        }
+        public void CloseTutorial()
+        {
+            if (mode != Mode.Tutorial) return;
+            if (hud != null) hud.HideTutorial();
+            mode = Mode.Play;
+        }
+
         void OpenLift() { mode = Mode.Lift; if (hud != null) hud.ShowLift(); }
         public void CloseLift() { if (hud != null) hud.HideLift(); mode = Mode.Play; }
         public void ChooseLift(string fid)
@@ -1180,6 +1211,11 @@ namespace Specimen07
                 if (Inp.Down(KeyCode.Return)) { if (HasSave()) Continue(); else StartGame(); }
                 return;
             }
+            if (mode == Mode.Tutorial)
+            {
+                if (Inp.Down(KeyCode.E) || Inp.Down(KeyCode.Space) || Inp.Down(KeyCode.Return) || Inp.Down(KeyCode.Escape)) CloseTutorial();
+                return;
+            }
             if (mode == Mode.Lift)
             {
                 if (Inp.Down(KeyCode.Escape)) CloseLift();
@@ -1221,6 +1257,8 @@ namespace Specimen07
             if (mode != Mode.Play) return;
             UpdateDoors(dt);
             Detect(dt);
+            if (mode != Mode.Play) return;
+            UpdateTutorials(dt);
             if (mode != Mode.Play) return;
             // 경보
             if (S.alarm != null)
