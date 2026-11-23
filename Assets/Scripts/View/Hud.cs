@@ -116,6 +116,16 @@ namespace Specimen07
             normalColor = new Color(0.86f, 0.86f, 0.9f, 1), highlightedColor = Color.white, selectedColor = new Color(0.86f, 0.86f, 0.9f, 1),
             pressedColor = new Color(0.68f, 0.66f, 0.74f, 1), disabledColor = new Color(0.55f, 0.55f, 0.6f, 0.6f), colorMultiplier = 1, fadeDuration = 0.08f
         };
+        // ★ 모든 창(판넬) 바탕: 튜토리얼 카드와 같은 보라 판넬 (Art/UI/frame_panel, Tiled). 그림 1픽셀 = 화면 4px
+        public const float PANEL_PX = 4f;
+        public static void SkinPanel(Image im)
+        {
+            var spr = Art.TryLoad("UI/frame_panel");
+            if (im == null || spr == null) return;
+            im.sprite = spr; im.type = Image.Type.Tiled; im.color = Color.white;
+            im.pixelsPerUnitMultiplier = 100f / Art.PPU / PANEL_PX;
+        }
+
         public static void SkinButton(Button b, Image im, Text label)
         {
             var spr = Art.TryLoad("UI/frame_button");
