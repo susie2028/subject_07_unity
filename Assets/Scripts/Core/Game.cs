@@ -237,13 +237,16 @@ namespace Specimen07
 
         /* 엘리베이터 */
         /* ===== 튜토리얼 카드 (내용·모양은 HudTutorial.cs) — 처음부터 시작할 때마다 한 번씩 =====
-           eat: B1에서 시작하고 잠시 뒤 / spit: 처음으로 무언가로 변신하고 잠시 뒤 */
+           eat: B1에서 시작하고 잠시 뒤 / sight: 처음으로 사람이 6칸 안에 들어왔을 때 / spit: 처음으로 무언가로 변신하고 잠시 뒤 */
         readonly HashSet<string> tutSeen = new HashSet<string>();
         float tutSpitT;
         void UpdateTutorials(float dt)
         {
             var p = S.player;
             if (!tutSeen.Contains("eat") && S.floorId == "B1" && S.elapsed > 1.2f) { ShowTutorial("eat"); return; }
+            // 시야: 처음으로 사람이 가까이(6칸) 보일 때 — 들키기 전에 알려 준다
+            if (tutSeen.Contains("eat") && !tutSeen.Contains("sight") && p.eating == null &&
+                Fl.npcs.Exists(n => n.alive && U.Dist(n.x, n.y, p.x, p.y) < 6f)) { ShowTutorial("sight"); return; }
             if (!tutSeen.Contains("spit") && p.form != "body" && p.eating == null)
             {
                 tutSpitT += dt;
