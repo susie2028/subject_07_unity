@@ -4,6 +4,7 @@
 #   [좌우 흔들림 줄이기 0~1] [위아래 출렁임 줄이기 0~1]  예) 0.6 0.5 = 좌우 60%, 위아래 50% 덜 움직이게
 #   옵션: --flip (좌우 뒤집기)  --height N (그림 키를 N픽셀에 맞춤. 다른 스프라이트와 크기 맞출 때, 예: 37)
 #         --width N (그림 폭, 기본 40. 팔·소품이 양옆에서 잘리면 44처럼 짝수로 늘림 — 가운데 기준이라 위치는 그대로)
+#         --beam (손전등 불빛처럼 배경에 번진 흰 빛을 지움)
 #         --dx N (그림을 오른쪽으로 N픽셀 옮김. 걸레 같은 소품이 왼쪽 끝에서 잘릴 때)
 #   ★ 대각선(frontside/backside)은 같은 캐릭터의 정면/뒷모습보다 4픽셀 정도 크게 (--height 40~41): 3/4 각도라 작아 보여서
 #   예) python3 Tools/extract_walk_video.py Tools/art_src/walk_soldier_front.mp4 soldier front
@@ -39,8 +40,13 @@ def frames_of(path):
     return fr
 
 
+BEAM = False   # --beam: 배경 위에 번진 반투명 흰 빛(손전등 불빛 등) = 분홍빛 → 배경으로
+
+
 def is_bg(col):
     r, g, b = col
+    if BEAM and r > 185 and b > 185 and g < min(r, b) - 20:
+        return True
     return np.sqrt(((col - [255, 0, 255]) ** 2).sum()) < 130 or (r > 150 and b > 150 and g < 120) or (r > g + 35 and b > g + 35)
 
 
@@ -122,6 +128,8 @@ def main():
     argv = [a for a in sys.argv if not a.startswith('--')]
     flags = sys.argv[1:]
     flip = '--flip' in flags
+    global BEAM
+    BEAM = '--beam' in flags
     target_h = None
     shift_x = 0
     for i, a in enumerate(flags):

@@ -312,7 +312,7 @@ def main():
             if name.split('_')[2].split('.')[0] in ('front', 'back', 'side', 'frontside', 'backside'):
                 shutil.copy(p, os.path.join(SRC, name))
     srcs = sorted(glob.glob(os.path.join(SRC, '*.png')))
-    set_vref([p for p in srcs if 'front' in p])
+    set_vref([p for p in srcs if '_front_' in p or p.endswith('_front.png')])   # 정면만 (frontside 제외 — 색 기준이 바뀌지 않게)
     n = 0
     for p in srcs:
         name = os.path.basename(p)                       # walk_researcher_front_3.png / stand_researcher_side.png
