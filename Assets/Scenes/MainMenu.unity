@@ -817,7 +817,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.06, g: 0.05, b: 0.12, a: 0.55}
+  m_Color: {r: 0.86, g: 0.86, b: 0.9, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -874,15 +874,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c27ec819be9496b8e9cec1156ce5697, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  barColor: {r: 0.06, g: 0.05, b: 0.12, a: 0.55}
-  barHoverColor: {r: 0.05, g: 0.04, b: 0.1, a: 0.88}
-  textColor: {r: 0.96, g: 0.95, b: 1, a: 1}
-  textHoverColor: {r: 0.82, g: 0.7, b: 1, a: 1}
-  textDisabledColor: {r: 0.62, g: 0.6, b: 0.7, a: 1}
   hoverExtra: 120
   textPad: 28
   speed: 14
-  styleVersion: 4
+  styleVersion: 5
 --- !u!1 &259135657
 GameObject:
   m_ObjectHideFlags: 0
@@ -1723,7 +1718,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.06, g: 0.05, b: 0.12, a: 0.55}
+  m_Color: {r: 0.86, g: 0.86, b: 0.9, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1780,15 +1775,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c27ec819be9496b8e9cec1156ce5697, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  barColor: {r: 0.06, g: 0.05, b: 0.12, a: 0.55}
-  barHoverColor: {r: 0.05, g: 0.04, b: 0.1, a: 0.88}
-  textColor: {r: 0.96, g: 0.95, b: 1, a: 1}
-  textHoverColor: {r: 0.82, g: 0.7, b: 1, a: 1}
-  textDisabledColor: {r: 0.62, g: 0.6, b: 0.7, a: 1}
   hoverExtra: 120
   textPad: 28
   speed: 14
-  styleVersion: 4
+  styleVersion: 5
 --- !u!1 &550116894
 GameObject:
   m_ObjectHideFlags: 0
@@ -1839,7 +1829,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.96, g: 0.95, b: 1, a: 1}
+  m_Color: {r: 0.93, g: 0.9, b: 0.97, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2075,7 +2065,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.96, g: 0.95, b: 1, a: 1}
+  m_Color: {r: 0.93, g: 0.9, b: 0.97, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2154,7 +2144,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.96, g: 0.95, b: 1, a: 1}
+  m_Color: {r: 0.93, g: 0.9, b: 0.97, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2894,7 +2884,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.96, g: 0.95, b: 1, a: 1}
+  m_Color: {r: 0.93, g: 0.9, b: 0.97, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -3249,7 +3239,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.06, g: 0.05, b: 0.12, a: 0.55}
+  m_Color: {r: 0.86, g: 0.86, b: 0.9, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -3306,15 +3296,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c27ec819be9496b8e9cec1156ce5697, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  barColor: {r: 0.06, g: 0.05, b: 0.12, a: 0.55}
-  barHoverColor: {r: 0.05, g: 0.04, b: 0.1, a: 0.88}
-  textColor: {r: 0.96, g: 0.95, b: 1, a: 1}
-  textHoverColor: {r: 0.82, g: 0.7, b: 1, a: 1}
-  textDisabledColor: {r: 0.62, g: 0.6, b: 0.7, a: 1}
   hoverExtra: 120
   textPad: 28
   speed: 14
-  styleVersion: 4
+  styleVersion: 5
 --- !u!1 &1486240722
 GameObject:
   m_ObjectHideFlags: 0
@@ -4365,7 +4350,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.06, g: 0.05, b: 0.12, a: 0.55}
+  m_Color: {r: 0.86, g: 0.86, b: 0.9, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -4422,15 +4407,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c27ec819be9496b8e9cec1156ce5697, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  barColor: {r: 0.06, g: 0.05, b: 0.12, a: 0.55}
-  barHoverColor: {r: 0.05, g: 0.04, b: 0.1, a: 0.88}
-  textColor: {r: 0.96, g: 0.95, b: 1, a: 1}
-  textHoverColor: {r: 0.82, g: 0.7, b: 1, a: 1}
-  textDisabledColor: {r: 0.62, g: 0.6, b: 0.7, a: 1}
   hoverExtra: 120
   textPad: 28
   speed: 14
-  styleVersion: 4
+  styleVersion: 5
 --- !u!1 &1870250523
 GameObject:
   m_ObjectHideFlags: 0
