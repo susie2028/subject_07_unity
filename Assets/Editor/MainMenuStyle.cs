@@ -31,12 +31,23 @@ namespace Specimen07.EditorTools
             {
                 if (b == null) continue;
                 var s = b.GetComponent<SimpleMenuButton>();
-                if (s != null && !force) continue;
+                if (s != null && !force && s.styleVersion >= SimpleMenuButton.STYLE) continue;
                 if (s == null) s = Undo.AddComponent<SimpleMenuButton>(b.gameObject);
                 Undo.RegisterFullObjectHierarchyUndo(b.gameObject, "메인 메뉴 버튼 모양");
                 s.ApplyStyle();
                 EditorUtility.SetDirty(b.gameObject);
                 changed = true;
+            }
+            // 로고도 화면 가로 가운데로 (한 번만)
+            if (changed)
+            {
+                var logo = GameObject.Find("Logo");
+                if (logo != null && logo.transform is RectTransform lrt)
+                {
+                    Undo.RecordObject(lrt, "로고 가운데");
+                    SimpleMenuButton.CenterX(lrt, lrt.rect.width, lrt.rect.height);
+                    EditorUtility.SetDirty(lrt);
+                }
             }
             if (changed) { EditorSceneManager.MarkSceneDirty(scene); EditorSceneManager.SaveScene(scene); Debug.Log("[표본07] 메인 메뉴 버튼 모양을 씬에 입혔어요"); }
         }
