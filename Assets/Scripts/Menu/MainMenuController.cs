@@ -57,7 +57,7 @@ namespace Specimen07
             // 메인 버튼 4개: 심플한 띠 모양 (SimpleMenuButton.cs). 이어하기가 없으면 회색 글씨
             if (continueButton != null) continueButton.interactable = has;
             foreach (var b in new[] { newGameButton, continueButton, settingsButton, quitButton })
-                if (b != null && b.GetComponent<SimpleMenuButton>() == null) b.gameObject.AddComponent<SimpleMenuButton>();
+                if (b != null && b.GetComponent<SimpleMenuButton>() == null) b.gameObject.AddComponent<SimpleMenuButton>().ApplyStyle();   // 씬에 아직 안 입혀졌으면
             if (continueButton != null)
             {
                 var label = continueButton.GetComponentInChildren<Text>(true);
