@@ -55,7 +55,7 @@ namespace Specimen07
             rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = rt.offsetMax = Vector2.zero;
             ovTut = root;
             var dim = root.GetComponent<Image>(); if (dim != null) dim.raycastTarget = true;
-            var btn = root.GetComponent<Button>() ?? root.AddComponent<Button>();
+            var btn = Comp<Button>(root);
             btn.onClick.AddListener(() => game.CloseTutorial());
             tutTitle = Child<Text>(root, "Panel/Tab/Title");
             tutMedia = Child<RawImage>(root, "Panel/Media/Video");
@@ -63,10 +63,17 @@ namespace Specimen07
             tutMediaNote = Child<Text>(root, "Panel/Media/Note");
             tutBody = Child<Text>(root, "Panel/Body");
             // 영상 재생기 (영상 파일이 있을 때만 씀)
-            tutVideo = root.GetComponent<VideoPlayer>() ?? root.AddComponent<VideoPlayer>();
+            tutVideo = Comp<VideoPlayer>(root);
             tutVideo.playOnAwake = false; tutVideo.isLooping = true; tutVideo.audioOutputMode = VideoAudioOutputMode.None;
             tutVideo.renderMode = VideoRenderMode.RenderTexture;
             ovTut.SetActive(false);
+        }
+
+        // 주의: 유니티의 GetComponent는 없을 때 '가짜 null'을 돌려줄 수 있어서 ?? 로 쓰면 안 된다 (AddComponent가 안 불림)
+        static T Comp<T>(GameObject go) where T : Component
+        {
+            var c = go.GetComponent<T>();
+            return c != null ? c : go.AddComponent<T>();
         }
 
         static T Child<T>(GameObject root, string path) where T : Component
@@ -148,7 +155,7 @@ namespace Specimen07
             }
             if (tutFrames != null)
             {
-                var anim = tutFrames.GetComponent<FrameAnim>() ?? tutFrames.gameObject.AddComponent<FrameAnim>();
+                var anim = Comp<FrameAnim>(tutFrames.gameObject);
                 anim.Play(tutFrameList, FRAME_FPS);   // 움짤은 이 컴포넌트가 직접 돌린다
             }
         }

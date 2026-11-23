@@ -91,7 +91,7 @@ namespace Specimen07
             pauseMini = SettingRow(card, "지도", null, null, "바꾸기", () => { game.showMini = !game.showMini; Settings.Minimap = game.showMini; SetMiniVisible(game.showMini); RefreshPause(); });
             Txt(card, "Msg", "메인 화면으로 나가면 이어하기는 이 층에 도착한 시점부터예요.", 20, MUTED);
             var row = Row(card, "Buttons", 12);
-            Btn(row, "계속하기", FLESH, Data.Hex("#1a0d10"), () => game.Resume(), 220, 60);
+            Btn(row, "계속하기", FLESH, Data.Hex("#170c24"), () => game.Resume(), 220, 60);
             Btn(row, "게임 방법", PANEL, FG, ShowHowTo, 180, 60);
             Btn(row, "메인 화면으로", PANEL, FG, () => game.GoToMenu(), 200, 60);
         }
@@ -157,7 +157,7 @@ namespace Specimen07
             var card = confirmPanel.transform.Find("Card");
             Txt(card, "Msg", "이어하던 진행이 사라집니다.", 24, MUTED);
             var row = Row(card, "Buttons", 12);
-            Btn(row, "새로 시작", FLESH, Data.Hex("#1a0d10"), () => { confirmPanel.SetActive(false); game.StartGame(); }, 220, 60);
+            Btn(row, "새로 시작", FLESH, Data.Hex("#170c24"), () => { confirmPanel.SetActive(false); game.StartGame(); }, 220, 60);
             Btn(row, "취소", PANEL, FG, () => confirmPanel.SetActive(false), 220, 60);
         }
 

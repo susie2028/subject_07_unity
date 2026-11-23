@@ -40,7 +40,7 @@ namespace Specimen07
     public partial class Hud : MonoBehaviour
     {
         static readonly Color BG = Data.Hex("#0c1115"), PANEL = Data.Hex("#141b21"), FG = Data.Hex("#dde6e3"), MUTED = Data.Hex("#8a9a99"),
-                              FLESH = Data.Hex("#ff7d8c"), HAZARD = Data.Hex("#f3b04a"), ALARM = Data.Hex("#ff5148"), EXIT = Data.Hex("#7fe0b0");
+                              FLESH = Data.Hex("#a47be6"), HAZARD = Data.Hex("#f3b04a"), ALARM = Data.Hex("#ff5148"), EXIT = Data.Hex("#7fe0b0");
 
         Game game; Camera cam;
         RectTransform canvasRt;
@@ -145,7 +145,7 @@ namespace Specimen07
             Color panel = new Color(10 / 255f, 12 / 255f, 34 / 255f, 0.86f);
 
             dangerVig = Img(Stretch(hr, "DangerVignette"), new Color(1, 40 / 255f, 40 / 255f, 0), "ui_vignette");
-            timerVig = Img(Stretch(hr, "TimerVignette"), new Color(1, 125 / 255f, 140 / 255f, 0), "ui_vignette");
+            timerVig = Img(Stretch(hr, "TimerVignette"), new Color(0.64f, 0.48f, 0.9f, 0), "ui_vignette");
             bubbleLayer = Stretch(hr, "Bubbles");
 
             // ── 왼쪽 아래: 현재 형태 카드
@@ -293,7 +293,7 @@ namespace Specimen07
             // 게임 방법 (메인 화면 → 설정 → 게임 방법)
             ovHowTo = Overlay("HowTo", out card, 1100).gameObject;
             Tag(card, "SPECIMEN 07 · 모방성 유기체 · 처분 예정 09:00");
-            Txt(card, "Title", "표본 <color=#ff7d8c>07</color>", 150, FG, TextAnchor.UpperLeft, true);
+            Txt(card, "Title", "표본 <color=#a47be6>07</color>", 150, FG, TextAnchor.UpperLeft, true);
             Txt(card, "Lede", "먹은 것의 모습이 되고, 그 사람의 출입 카드도 내 것이 된다. 지하 격리동에서 깨어나 층을 오르내리며 잠긴 문과 함정을 풀고, 4층 소장실에서 연구소장을 먹은 뒤 옥상 헬기로 빠져나가자.", 26, FG);
             var rules = Row(card, "Rules", 24); rules.GetComponent<HorizontalLayoutGroup>().childForceExpandWidth = true; rules.GetComponent<HorizontalLayoutGroup>().childAlignment = TextAnchor.UpperLeft;
             Rule(rules, "본모습", "B1~1F에서는 누구 눈에 띄어도 끝. 2F부터는 경보가 울리고 경비원·군인이 달려온다.", FLESH);
@@ -323,7 +323,7 @@ namespace Specimen07
             overReason = Txt(card, "Reason", "", 34, FG);
             overTip = Txt(card, "Tip", "", 22, MUTED);
             row = Row(card, "Buttons", 14);
-            Btn(row, "층 도착 시점부터 (R)", FLESH, Data.Hex("#1a0d10"), () => game.Retry(), 380, 70);
+            Btn(row, "층 도착 시점부터 (R)", FLESH, Data.Hex("#170c24"), () => game.Retry(), 380, 70);
             Btn(row, "처음부터", PANEL, FG, () => game.NewRun(), 220, 70);
             Btn(row, "메인 화면", PANEL, FG, () => game.GoToMenu(), 220, 70);
 
@@ -335,7 +335,7 @@ namespace Specimen07
             var stats = Row(card, "Stats", 60);
             stTime = Stat(stats, "걸린 시간"); stDeaths = Stat(stats, "재시도"); stAlarms = Stat(stats, "경보");
             row = Row(card, "Buttons", 12);
-            Btn(row, "처음부터 다시", FLESH, Data.Hex("#1a0d10"), () => game.NewRun(), 300, 70);
+            Btn(row, "처음부터 다시", FLESH, Data.Hex("#170c24"), () => game.NewRun(), 300, 70);
             Btn(row, "메인 화면", PANEL, FG, () => game.GoToMenu(), 220, 70);
 
             BuildMenu(); // 메인 화면 (HudMenu.cs)
@@ -429,7 +429,7 @@ namespace Specimen07
                 var b = Btn(liftList, fid, here ? Data.Hex("#1d2a26") : PANEL, FG, () => game.ChooseLift(fid), 560, 60);
                 var t = b.GetComponentInChildren<Text>();
                 t.alignment = TextAnchor.MiddleLeft; t.rectTransform.sizeDelta = new Vector2(-40, 0);
-                t.text = "<color=#ff7d8c>" + fid + "</color> " + FloorGeo.All[fid].name + "   <size=18><color=#8a9a99>" + small + "</color></size>";
+                t.text = "<color=#a47be6>" + fid + "</color> " + FloorGeo.All[fid].name + "   <size=18><color=#8a9a99>" + small + "</color></size>";
                 b.interactable = !here && ok;
             }
             ovLift.SetActive(true);
@@ -457,7 +457,7 @@ namespace Specimen07
         public void Toast(string text) { toast.text = text; toastT = 0; toast.gameObject.SetActive(true); }
         public void Banner(string fid, string sub)
         {
-            bannerTitle.text = "<color=#ff7d8c>" + fid + "</color> " + FloorGeo.All[fid].name; bannerSub.text = sub; bannerT = 0;
+            bannerTitle.text = "<color=#a47be6>" + fid + "</color> " + FloorGeo.All[fid].name; bannerSub.text = sub; bannerT = 0;
             bannerTitle.gameObject.SetActive(true); bannerSub.gameObject.SetActive(true);
         }
         public void Alert(string title, string sub) { alertText.text = title; alertSub.text = sub; alertT = 0; alertBox.SetActive(true); }
@@ -527,7 +527,7 @@ namespace Specimen07
                 }
             }
             string ob = game.Objective();
-            if (ob != lastObj) { lastObj = ob; objective.text = "목표  " + ob.Replace("<b>", "<color=#ff7d8c>").Replace("</b>", "</color>"); }
+            if (ob != lastObj) { lastObj = ob; objective.text = "목표  " + ob.Replace("<b>", "<color=#a47be6>").Replace("</b>", "</color>"); }
             if (S.alarm != null)
             {
                 alarmBox.SetActive(true);

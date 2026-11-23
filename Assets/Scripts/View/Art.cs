@@ -337,10 +337,10 @@ namespace Specimen07
                     return q.ToSprite(key);
                 case "player_blob":
                     q = new Painter(32, 32);
-                    q.Ellipse(16, 16.5f, 13.5f, 13.5f, H("#6e1f33"));
-                    q.Ellipse(16, 16.5f, 12.3f, 12.3f, H("#d9566c"));
-                    q.Ellipse(15, 15, 9.5f, 9.5f, H("#ff7d8c"));
-                    q.Ellipse(13, 12, 4, 4, H("#ffc0c8"));
+                    q.Ellipse(16, 16.5f, 13.5f, 13.5f, H("#24123a"));
+                    q.Ellipse(16, 16.5f, 12.3f, 12.3f, H("#7a48bd"));
+                    q.Ellipse(15, 15, 9.5f, 9.5f, H("#9a6ad8"));
+                    q.Ellipse(13, 12, 4, 4, H("#d4bdfa"));
                     // 눈 (오른쪽을 보는 상태)
                     q.Circle(20.5f, 20.5f, 3.4f, H("#fff6ea")); q.Circle(20.5f, 11.5f, 3.4f, H("#fff6ea")); q.Circle(17, 16.5f, 2, H("#fff6ea"));
                     q.Circle(21.9f, 20.5f, 1.7f, H("#2a0d14")); q.Circle(21.9f, 11.5f, 1.7f, H("#2a0d14")); q.Circle(17.8f, 16.5f, 1, H("#2a0d14"));

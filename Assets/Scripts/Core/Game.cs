@@ -112,7 +112,7 @@ namespace Specimen07
             if (hud != null) hud.Flash();
             NewRun();
             var st = G.def.Arrive("start");
-            for (int i = 0; i < 26; i++) SpawnParticle(st.x, st.y, i % 3 != 0 ? Data.Hex("#9fd8d6") : Data.Hex("#ff8a98"), U.Rand(2, 6), U.Rand(0.5f, 1.1f), U.Rand(1.5f, 3.5f));
+            for (int i = 0; i < 26; i++) SpawnParticle(st.x, st.y, i % 3 != 0 ? Data.Hex("#9fd8d6") : Data.Hex("#a47be6"), U.Rand(2, 6), U.Rand(0.5f, 1.1f), U.Rand(1.5f, 3.5f));
             Toast("쨍그랑.");
         }
 
@@ -697,7 +697,7 @@ namespace Specimen07
                         if (view != null) view.BuildFloor(G);
                     }
                     else { tg.obj.alive = false; tg.obj.respawnT = 0; p.srcKind = 2; p.srcIdx = Fl.objects.IndexOf(tg.obj); }   // 변신이 풀리면 그 자리에 다시 놓인다
-                    for (int i = 0; i < 16; i++) SpawnParticle(p.x, p.y, i % 2 != 0 ? Data.Hex("#ff8a98") : Data.Hex("#ffc2ca"), U.Rand(1.5f, 4), U.Rand(0.3f, 0.7f), U.Rand(1.5f, 3));
+                    for (int i = 0; i < 16; i++) SpawnParticle(p.x, p.y, i % 2 != 0 ? Data.Hex("#a47be6") : Data.Hex("#d4bdfa"), U.Rand(1.5f, 4), U.Rand(0.3f, 0.7f), U.Rand(1.5f, 3));
                     bool seenEat = p.eating.seen;
                     p.eating = null; p.eatCd = Cfg.eatCooldown;
                     if (tg.isNpc) p.npcCd = Cfg.eatNpcCooldown;
@@ -810,7 +810,7 @@ namespace Specimen07
         void MeltParticles()
         {
             var p = S.player;
-            for (int i = 0; i < 20; i++) SpawnParticle(p.x, p.y, i % 2 != 0 ? Data.Hex("#ff7d8c") : Data.Hex("#c2405a"), U.Rand(0.8f, 3), U.Rand(0.5f, 1.1f), U.Rand(2, 4));
+            for (int i = 0; i < 20; i++) SpawnParticle(p.x, p.y, i % 2 != 0 ? Data.Hex("#a47be6") : Data.Hex("#7a48bd"), U.Rand(0.8f, 3), U.Rand(0.5f, 1.1f), U.Rand(2, 4));
         }
 
         float NpcSpeed(Npc n) { return n.C.speed * (n.state == NpcState.Chase ? Cfg.chaseK : Cfg.patrolK); }
