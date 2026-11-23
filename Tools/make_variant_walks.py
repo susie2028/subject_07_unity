@@ -271,7 +271,47 @@ def new_head(a, view):
                 r, g, b_, al = [int(t) for t in o[y, x]]
                 if al and r > b_ + 20 and r >= g and max(r, g, b_) < 150:
                     o[y, x, :3] = (144, 141, 157) if max(r, g, b_) > 60 else (112, 106, 137)
+        o = soften_hair(clean_collar(o))
     return close_outline(o)
+
+
+def clean_collar(o, rows=5):
+    """뒷모습에서 머리를 내려 붙이면 옆머리 밑에 원래 가운 테두리(검은 줄)·회색 음영 띠가 남는다 → 가운 흰색으로.
+    열마다 머리(회보라)의 맨 아랫줄을 찾고, 그 아래 rows줄 안에서 양옆이 칠해진 안쪽 픽셀만 고친다 (바깥 테두리는 그대로)"""
+    o = o.copy(); H, W = o.shape[:2]
+    WHITE = np.array([232, 232, 231], np.uint8)
+    HAIR = {(0x90, 0x8d, 0x9d), (0xb2, 0xb0, 0xbb), (0x70, 0x6a, 0x89), (0x65, 0x5d, 0x63)}   # 고위 연구원 옆머리 색 (senior_heads)
+    def hairish(c): return (int(c[0]), int(c[1]), int(c[2])) in HAIR
+    for x in range(1, W - 1):
+        hb = None
+        for y in range(H):
+            if o[y, x, 3] and hairish(o[y, x]): hb = y
+        if hb is None: continue
+        for y in range(hb + 1, min(H - 1, hb + 1 + rows)):
+            c = o[y, x]
+            if not c[3] or not (o[y, x - 1, 3] and o[y, x + 1, 3]): continue
+            r, g, b = int(c[0]), int(c[1]), int(c[2])
+            gray = max(r, g, b) - min(r, g, b) < 18
+            if (max(r, g, b) < 70) or (gray and 90 < max(r, g, b) < 215):
+                # 바로 아래가 비어 있으면 몸 바깥 테두리 → 그대로
+                if not o[y + 1, x, 3]: continue
+                o[y, x, :3] = WHITE
+    return o
+
+
+def soften_hair(o):
+    """뒷모습 옆머리의 진한 음영(구불구불한 짙은 보라) → 중간 회보라로. 바깥 테두리(검정)는 그대로"""
+    o = o.copy(); H, W = o.shape[:2]
+    MID = np.array([0x90, 0x8d, 0x9d], np.uint8)
+    for y in range(1, H - 1):
+        for x in range(1, W - 1):
+            c = o[y, x]
+            if not c[3]: continue
+            r, g, b = int(c[0]), int(c[1]), int(c[2])
+            if not (b >= r - 4 and b > g and 70 <= max(r, g, b) < 0x8c and max(r, g, b) - min(r, g, b) < 40): continue
+            if all(o[y + dy, x + dx, 3] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                o[y, x, :3] = MID
+    return o
 
 
 def rec(a, hair=None, tie=None, skin=None):
