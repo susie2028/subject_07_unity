@@ -29,7 +29,7 @@ namespace Specimen07
             baseW = rt.sizeDelta.x;
         }
 
-        public const int STYLE = 5;   // 모양 버전 (바뀌면 에디터가 씬에 다시 입힘)
+        public const int STYLE = 6;   // 모양 버전 (바뀌면 에디터가 씬에 다시 입힘)
         public int styleVersion;
 
         // 모양 입히기: 원래 크기의 반투명 띠 + 가운데 글씨, 화면 가로 가운데에 놓는다.

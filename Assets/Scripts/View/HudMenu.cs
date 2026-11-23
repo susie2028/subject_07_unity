@@ -170,8 +170,8 @@ namespace Specimen07
             var panelSprite = Art.TryLoad("ui_panel_bg");
             var bg = card.gameObject.AddComponent<Image>(); bg.raycastTarget = true;
             if (panelSprite != null) { bg.sprite = panelSprite; bg.color = Color.white; if (panelSprite.border != Vector4.zero) bg.type = Image.Type.Sliced; }
-            else { bg.sprite = Art.Get("ui_panel"); bg.color = new Color(BG.r, BG.g, BG.b, 0.96f); }
-            VStack(card, 18, 40);
+            else SkinPanel(bg);   // 튜토리얼 카드와 같은 판넬
+            VStack(card, 18, 52);
             card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             Txt(card, "Title", title, 40, FG, TextAnchor.UpperLeft, true);
             root.gameObject.SetActive(false);

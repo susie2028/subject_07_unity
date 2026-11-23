@@ -47,6 +47,18 @@ namespace Specimen07.EditorTools
                     Hud.SkinButton(ob, ob.targetGraphic as UnityEngine.UI.Image ?? ob.GetComponent<UnityEngine.UI.Image>(), ob.GetComponentInChildren<UnityEngine.UI.Text>(true));
                     EditorUtility.SetDirty(ob.gameObject);
                 }
+            // 창 바탕(설정·확인 창의 Card)은 튜토리얼 카드와 같은 판넬로
+            if (changed)
+                foreach (var t in Object.FindObjectsByType<RectTransform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                {
+                    if (t.name != "Card" || t.parent == null || !(t.parent.name.EndsWith("Panel"))) continue;
+                    var im = t.GetComponent<UnityEngine.UI.Image>(); if (im == null) continue;
+                    Undo.RecordObject(im, "창 판넬");
+                    Hud.SkinPanel(im);
+                    var lg = t.GetComponent<UnityEngine.UI.LayoutGroup>();
+                    if (lg != null) { Undo.RecordObject(lg, "창 여백"); lg.padding = new RectOffset(52, 52, 52, 52); }
+                    EditorUtility.SetDirty(t.gameObject);
+                }
             // 로고도 화면 가로 가운데로 (한 번만)
             if (changed)
             {
