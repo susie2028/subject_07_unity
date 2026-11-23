@@ -27,7 +27,7 @@ namespace Specimen07
             baseW = rt.sizeDelta.x;
         }
 
-        public const int STYLE = 3;   // 모양 버전 (바뀌면 에디터가 씬에 다시 입힘)
+        public const int STYLE = 4;   // 모양 버전 (바뀌면 에디터가 씬에 다시 입힘)
         public int styleVersion;
 
         // 모양 입히기: 원래 크기의 반투명 띠 + 가운데 글씨, 화면 가로 가운데에 놓는다.
@@ -49,6 +49,7 @@ namespace Specimen07
             if (label != null)
             {
                 label.alignment = TextAnchor.MiddleCenter;
+                label.font = Fonts.Main; label.fontStyle = FontStyle.Normal; label.fontSize = Hud.BTN_FONT;
                 var lr = label.rectTransform; lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one; lr.pivot = new Vector2(0.5f, 0.5f);
                 lr.offsetMin = Vector2.zero; lr.offsetMax = Vector2.zero;
                 label.horizontalOverflow = HorizontalWrapMode.Overflow;

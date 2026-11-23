@@ -114,8 +114,9 @@ BTN_PAL = {
     'G': hexc('55535e'),   # 아래쪽 금속
 }
 def button():
-    H, W, C = 20, 30, 6              # 높이, 폭, 끝 모서리 깎인 길이
-    inset = [max(0, C - r) for r in range(C)] + [0] * (H - 2 * C) + [max(0, C - r) for r in range(C)][::-1]
+    H, W = 20, 30                    # 높이, 폭
+    CAP = [4, 2, 1, 1]               # 위·아래 줄마다 안쪽으로 들어간 칸 수 (둥근 끝)
+    inset = CAP + [0] * (H - 2 * len(CAP)) + CAP[::-1]
     inside = lambda x, y: 0 <= y < H and inset[y] <= x < W - inset[y]
     def dist(x, y):   # 바깥에서 몇 칸 안쪽인지 (체비셰프)
         for d in range(1, 12):

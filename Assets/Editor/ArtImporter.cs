@@ -39,7 +39,7 @@ namespace Specimen07.EditorTools
         {
             { "frame_panel", new Vector4(8, 8, 8, 8) },   // 큰 판넬 — Image Type: Tiled 권장 (가운데 스캔라인이 안 뭉개짐)
             { "frame_tab", new Vector4(8, 3, 4, 3) },
-            { "frame_button", new Vector4(9, 5, 9, 5) },  // 모든 버튼 — 양 끝은 고정, 가운데만 늘어남 (Sliced)     // 이름표 — 왼쪽 노랑 줄무늬는 고정, 가운데만 늘어남 (Sliced)
+            { "frame_button", new Vector4(8, 5, 8, 5) },  // 모든 버튼 — 양 끝은 고정, 가운데만 늘어남 (Sliced)     // 이름표 — 왼쪽 노랑 줄무늬는 고정, 가운데만 늘어남 (Sliced)
         };
     }
 }

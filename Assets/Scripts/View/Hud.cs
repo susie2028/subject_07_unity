@@ -110,6 +110,7 @@ namespace Specimen07
         static void Shadow(Graphic g) { var s = g.gameObject.AddComponent<Shadow>(); s.effectColor = new Color(0, 0, 0, 0.6f); s.effectDistance = new Vector2(0, -2); }
         // ★ 모든 버튼 모양: 알약 모양 금속 테두리 버튼 (Art/UI/frame_button, Tools/make_ui_frames.py). 그림 1픽셀 = 화면 3px
         public const float BTN_PX = 3f;
+        public const int BTN_FONT = 24;
         static readonly ColorBlock BTN_COLORS = new ColorBlock
         {
             normalColor = new Color(0.86f, 0.86f, 0.9f, 1), highlightedColor = Color.white, selectedColor = new Color(0.86f, 0.86f, 0.9f, 1),
@@ -124,7 +125,11 @@ namespace Specimen07
                 im.pixelsPerUnitMultiplier = 100f / Art.PPU / BTN_PX;
             }
             if (b != null) { b.transition = Selectable.Transition.ColorTint; b.colors = BTN_COLORS; }
-            if (label != null) { label.color = Data.Hex("#ece6f7"); label.alignment = TextAnchor.MiddleCenter; }
+            if (label != null)
+            {
+                label.color = Data.Hex("#ece6f7"); label.alignment = TextAnchor.MiddleCenter;
+                label.font = Fonts.Main; label.fontStyle = FontStyle.Normal; label.fontSize = BTN_FONT;   // 버튼 글씨: 보통 굵기, 24
+            }
         }
 
         Button Btn(Transform parent, string label, Color bg, Color fg, UnityEngine.Events.UnityAction onClick, float w = 360, float h = 64)
