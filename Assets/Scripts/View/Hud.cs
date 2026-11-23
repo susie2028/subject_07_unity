@@ -234,12 +234,9 @@ namespace Specimen07
             mini = mrt.gameObject.AddComponent<RawImage>(); mini.raycastTarget = false;
             miniLabels = Stretch(mrt, "Labels");   // 방 이름 (본 방만)
 
-            // ── 오른쪽 위: 설정 버튼 + 기록
-            var setBtn = Btn(hr, "설정", panel, FG, () => game.Pause(), 128, 58);
-            var srt = (RectTransform)setBtn.transform; srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(1, 1); srt.anchoredPosition = new Vector2(-30, -30);
-            setBtn.GetComponent<Image>().sprite = Art.Get("ui_round"); setBtn.GetComponent<Image>().type = Image.Type.Sliced;
-            meta = Txt(hr, "Meta", "", 17, MUTED, TextAnchor.UpperRight);
-            meta.rectTransform.anchorMin = meta.rectTransform.anchorMax = meta.rectTransform.pivot = new Vector2(1, 1); meta.rectTransform.anchoredPosition = new Vector2(-30, -96); meta.rectTransform.sizeDelta = new Vector2(500, 26);
+            // ── 오른쪽 위: 기록 (설정은 Esc)
+            meta = Txt(hr, "Meta", "", 24, Data.Hex("#c9c3d8"), TextAnchor.UpperRight); Shadow(meta);
+            meta.rectTransform.anchorMin = meta.rectTransform.anchorMax = meta.rectTransform.pivot = new Vector2(1, 1); meta.rectTransform.anchoredPosition = new Vector2(-30, -28); meta.rectTransform.sizeDelta = new Vector2(700, 34);
 
             // ── 위 가운데: 경보
             alarmBox = R(hr, "Alarm", new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -28), new Vector2(440, 50)).gameObject;
@@ -265,7 +262,8 @@ namespace Specimen07
             var hrt = R(hr, "Hint", new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 118), new Vector2(900, 80));
             hintBg = Img(hrt, new Color(6 / 255f, 7 / 255f, 22 / 255f, 0.62f), "ui_round"); hintBg.type = Image.Type.Sliced;
             hint = Txt(hrt, "T", "", 34, FG, TextAnchor.MiddleCenter, true); Shadow(hint);
-            hint.rectTransform.anchorMin = Vector2.zero; hint.rectTransform.anchorMax = Vector2.one; hint.rectTransform.sizeDelta = new Vector2(-40, -16);
+            var ho = hint.gameObject.AddComponent<Outline>(); ho.effectColor = new Color(0.02f, 0.02f, 0.08f, 0.9f); ho.effectDistance = new Vector2(2, -2);   // 바탕 없이도 잘 읽히게
+            hint.rectTransform.anchorMin = hint.rectTransform.anchorMax = new Vector2(0.5f, 0.5f); hint.rectTransform.pivot = new Vector2(0.5f, 0.5f); hint.rectTransform.anchoredPosition = Vector2.zero;
 
             // ── 화면 가운데: 변신 풀리기 직전 카운트다운
             countdown = Txt(hr, "Countdown", "", 220, new Color(1, 0.35f, 0.42f, 0), TextAnchor.MiddleCenter, true); Shadow(countdown);
@@ -328,15 +326,15 @@ namespace Specimen07
             RectTransform card;
             // 게임 방법 (메인 화면 → 설정 → 게임 방법)
             ovHowTo = Overlay("HowTo", out card, 1100).gameObject;
-            Tag(card, "SPECIMEN 07 · 모방성 유기체 · 처분 예정 09:00");
+            Tag(card, "SPECIMEN 07   모방성 유기체   처분 예정 09:00");
             Txt(card, "Title", "표본 <color=#a47be6>07</color>", 150, FG, TextAnchor.UpperLeft, true);
             Txt(card, "Lede", "먹은 것의 모습이 되고, 그 사람의 출입 카드도 내 것이 된다. 지하 격리동에서 깨어나 층을 오르내리며 잠긴 문과 함정을 풀고, 4층 소장실에서 연구소장을 먹은 뒤 옥상 헬기로 빠져나가자.", 26, FG);
             var rules = Row(card, "Rules", 24); rules.GetComponent<HorizontalLayoutGroup>().childForceExpandWidth = true; rules.GetComponent<HorizontalLayoutGroup>().childAlignment = TextAnchor.UpperLeft;
-            Rule(rules, "본모습", "B1~1F에서는 누구 눈에 띄어도 끝. 2F부터는 경보가 울리고 경비원·군인이 달려온다.", FLESH);
+            Rule(rules, "본모습", "B1~1F에서는 누구 눈에 띄어도 끝. 2F부터는 경보가 울리고 경비원과 군인이 달려온다.", FLESH);
             Rule(rules, "물건", "보는 앞에서는 꼼짝 말 것. 제자리가 아니면 의심받는다. 카트만 천천히 굴러갈 수 있다.", HAZARD);
             Rule(rules, "사람", "먹으면 그 사람의 카드를 얻는다. 보는 앞에서도 걷고, 문을 연다. 단, 있으면 안 되는 구역이 있다.", Data.Hex("#8fb4d6"));
             CharTable(card);
-            Txt(card, "Keys", "<b>WASD / 방향키</b> 이동     <b>E / Space</b> 먹기 · 열기 · 조작     <b>Q</b> 뱉기     <b>M</b> 지도     <b>R</b> 층 도착 시점부터", 20, MUTED);
+            Txt(card, "Keys", "<b>WASD / 방향키</b> 이동     <b>E / Space</b> 먹기, 열기, 조작     <b>Q</b> 뱉기     <b>M</b> 지도     <b>R</b> 층 도착 시점부터", 20, MUTED);
             var row = Row(card, "Buttons", 12);
             Btn(row, "닫기", PANEL, FG, () => ovHowTo.SetActive(false), 220, 64);
 
@@ -348,10 +346,10 @@ namespace Specimen07
 
             // 엘리베이터
             ovLift = Overlay("Lift", out card, 560).gameObject;
-            Tag(card, "엘리베이터 · 층 선택");
+            Tag(card, "엘리베이터   층 선택");
             liftList = R(card, "List", new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(560, 400));
             VStack(liftList, 8);
-            Txt(card, "Skip", "1~5 층 선택 · Esc 닫기", 18, MUTED);
+            Txt(card, "Skip", "1~5 층 선택   Esc 닫기", 18, MUTED);
 
             // 게임 오버
             ovOver = Overlay("Over", out card, 1000).gameObject;
@@ -365,7 +363,7 @@ namespace Specimen07
 
             // 클리어
             ovClear = Overlay("Clear", out card, 1000).gameObject;
-            Tag(card, "비행 기록 · 소장 전용기 이륙 · 탑승자 1명(소장)");
+            Tag(card, "비행 기록   소장 전용기 이륙   탑승자 1명(소장)");
             Txt(card, "Head", "탈출 성공", 130, EXIT, TextAnchor.UpperLeft, true);
             Txt(card, "Lede", "연구소장의 얼굴로 헬기에 올랐다. 조종사는 아무것도 묻지 않았다. 남은 비행 시간은 40분 — 그동안 이 모습이 버텨 주기만 하면 된다.", 26, FG);
             var stats = Row(card, "Stats", 60);
@@ -461,7 +459,7 @@ namespace Specimen07
             {
                 string fid = e[0], req = e[1];
                 bool here = fid == S.floorId, ok = game.HasCard(req);
-                string small = here ? "현재 층" : ok ? (req != null ? Data.Cards[req].name + " 카드 인증됨" : "") : Data.Cards[req].name + " 카드 필요 · " + Data.Cards[req].from;
+                string small = here ? "현재 층" : ok ? (req != null ? Data.Cards[req].name + " 카드 인증됨" : "") : Data.Cards[req].name + " 카드 필요, " + Data.Cards[req].from;
                 var b = Btn(liftList, fid, here ? Data.Hex("#1d2a26") : PANEL, FG, () => game.ChooseLift(fid), 560, 60);
                 var t = b.GetComponentInChildren<Text>();
                 t.alignment = TextAnchor.MiddleLeft; t.rectTransform.sizeDelta = new Vector2(-40, 0);
@@ -477,7 +475,7 @@ namespace Specimen07
             var S = game.S; string head;
             overHead.text = Data.Heads.TryGetValue(S.deathKind, out head) ? head : "발각";
             overReason.text = S.deathReason;
-            string tip; overTip.text = Data.Tips.TryGetValue(S.deathKind, out tip) ? tip : "";
+            overTip.text = "";   // 공략 문구는 안 띄움
             ovOver.SetActive(true);
             hint.transform.parent.gameObject.SetActive(false);
         }
@@ -567,7 +565,7 @@ namespace Specimen07
             if (S.alarm != null)
             {
                 alarmBox.SetActive(true);
-                alarmText.text = "경보 · " + (game.AnyLocked() ? "추적 중" : "수색 중") + " " + Mathf.CeilToInt(S.alarm.t);
+                alarmText.text = "경보   " + (game.AnyLocked() ? "추적 중" : "수색 중") + " " + Mathf.CeilToInt(S.alarm.t);
                 alarmBox.GetComponent<Image>().color = Mathf.Repeat(Time.time, 0.8f) < 0.4f ? ALARM : Data.Hex("#8f1f1a");
             }
             else alarmBox.SetActive(false);
@@ -579,7 +577,7 @@ namespace Specimen07
             bool cd = mode == Mode.Play && (p.eatCd > 0 || p.npcCd > 0);
             pillCd.SetActive(cd);
             if (cd) pillCdText.text = p.eatCd > 0 ? "소화 중 " + Mathf.CeilToInt(p.eatCd) : "사람 소화 중 " + Mathf.CeilToInt(p.npcCd);
-            meta.text = "재시도 " + game.deaths + "회 · 경보 " + S.alarms + "회 · " + Data.FmtTime(S.elapsed);
+            meta.text = "재시도 " + game.deaths + "회   경보 " + S.alarms + "회   " + Data.FmtTime(S.elapsed);
 
             // 위험 테두리
             float danger = mode == Mode.Dying ? 1 : Mathf.Max(Mathf.Min(1, S.spot / Cfg.grace), S.Fl.npcs.Exists(n => n.alive && n.lockT > 0) ? 0.6f + 0.3f * Mathf.Sin(S.time * 10) : 0);
@@ -603,13 +601,15 @@ namespace Specimen07
                 hint.text = h;
                 hint.alignment = note ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter;
                 hint.color = note ? Data.Hex("#f1e3c4") : FG;
-                hintBg.color = note ? new Color(36 / 255f, 30 / 255f, 20 / 255f, 0.9f) : new Color(6 / 255f, 7 / 255f, 22 / 255f, 0.62f);
+                hintBg.color = new Color(36 / 255f, 30 / 255f, 20 / 255f, 0.9f);
+                hintBg.enabled = note;   // 보통 안내는 바탕 없이 글자만 (게시물 읽을 때만 종이 바탕)
                 float maxW = 1240;
                 var settings = hint.GetGenerationSettings(new Vector2(maxW - 40, 0));
                 float pw = Mathf.Min(maxW, hint.cachedTextGeneratorForLayout.GetPreferredWidth(h, settings) / hint.pixelsPerUnit + 64);
                 settings = hint.GetGenerationSettings(new Vector2(pw - 40, 0));
                 float ph = hint.cachedTextGeneratorForLayout.GetPreferredHeight(h, settings) / hint.pixelsPerUnit + 28;
                 hintBg.rectTransform.sizeDelta = new Vector2(pw, ph);
+                hint.rectTransform.sizeDelta = new Vector2(pw - 40, ph);   // 글자 칸 = 바탕 칸 (가운데 정렬이 어긋나지 않게)
             }
         }
 

@@ -1158,7 +1158,7 @@ namespace Specimen07
             var reporter = cands[0];
             Say(reporter, m.label + ", 어디 갔지?", 3.2f);
             F.wary = Mathf.Min(2, F.wary + 1);
-            Toast("실종이 알려졌다 · 경계 강화");
+            Toast("실종이 알려졌다, 경계 강화");
             // 경비·군인이 있으면 마지막 위치를 확인하러 간다
             var checker = cands.FirstOrDefault(n => n.C.chaser != null) ?? reporter;
             StartInspect(checker, m.x, m.y, "확인해 보지.", "아무도 없는데…");
@@ -1393,7 +1393,7 @@ namespace Specimen07
             var need = new List<string>();
             if (!S.trapsOff.Contains("G4")) need.Add("2F 통제실에서 <b>가스 해제</b>");
             if (!has("mil")) need.Add("<b>군인</b> 카드");
-            if (need.Count > 0) return "4F 소장실 준비 · " + string.Join(" · ", need.ToArray());
+            if (need.Count > 0) return "4F 소장실 준비:  " + string.Join(", ", need.ToArray());
             return "4F <b>소장실</b>에서 연구소장을 먹어라";
         }
 
@@ -1462,19 +1462,19 @@ namespace Specimen07
             var p = S.player; var f = Data.Forms[p.form];
             var notice = NearNotice(); int dr = NearDoor(); var cn = NearConsole(); bool lift = NearLift(); var trap = NearTrap();
             var tgt = p.eating != null ? null : NearestEdible();
-            if (!p.moved && S.time < 8 && S.floorId == "B1") return "[WASD] 또는 방향키로 이동 · [E] 먹기 · [Q] 뱉기 · [M] 지도";
+            if (!p.moved && S.time < 8 && S.floorId == "B1") return "[WASD] 또는 방향키로 이동   [E] 먹기   [Q] 뱉기   [M] 지도";
             if (p.eating != null) return "꿀꺽…";
             if (dr >= 0)
             {
                 var d = G.def.doors[dr];
-                return HasCard(d.req) ? "[E] " + d.label + " 열기" : d.label + " · <b>" + Data.Cards[d.req].name + " 카드</b> 필요 (" + Data.Cards[d.req].from + ")";
+                return HasCard(d.req) ? "[E] " + d.label + " 열기" : d.label + ", <b>" + Data.Cards[d.req].name + " 카드</b> 필요 (" + Data.Cards[d.req].from + ")";
             }
             if (cn != null)
             {
-                if (cn.heli) return S.heli != null ? "헬기 호출됨" : HasCard(cn.req) ? "[E] 소장 인증으로 헬기 호출" : "헬기 호출 콘솔 · <b>소장 카드</b> 필요";
+                if (cn.heli) return S.heli != null ? "헬기 호출됨" : HasCard(cn.req) ? "[E] 소장 인증으로 헬기 호출" : "헬기 호출 콘솔, <b>소장 카드</b> 필요";
                 var info = FloorGeo.TrapInfo[cn.trap]; string fl = FloorGeo.TrapFloor[cn.trap];
-                return S.trapsOff.Contains(cn.trap) ? cn.label + " · " + fl + " " + info.label + " 꺼짐" :
-                       HasCard(cn.req) ? "[E] " + cn.label + " — " + fl + " " + info.label + " 끄기" : cn.label + " (" + fl + " " + info.label + ") · <b>" + Data.Cards[cn.req].name + " 카드</b> 필요";
+                return S.trapsOff.Contains(cn.trap) ? cn.label + ", " + fl + " " + info.label + " 꺼짐" :
+                       HasCard(cn.req) ? "[E] " + cn.label + " — " + fl + " " + info.label + " 끄기" : cn.label + " (" + fl + " " + info.label + "), <b>" + Data.Cards[cn.req].name + " 카드</b> 필요";
             }
             if (lift) return S.alarm != null ? "경보 중 — 엘리베이터 정지" : "[E] 엘리베이터";
             if (trap != null) return "<b>" + trap.label + "</b> 가동 중 — 닿으면 죽는다";
@@ -1482,7 +1482,7 @@ namespace Specimen07
             if (tgt != null) return S.anySee && OthersSee(tgt.Ref) ? "[E] 보는 사람이 있다 — 먹으면 들킨다!" + (G.def.lethal ? " (이 층은 바로 끝)" : " (경보)") :
                     p.eatCd > 0 ? "소화 중… " + Mathf.CeilToInt(p.eatCd) + "초 뒤에 먹을 수 있다" :
                     tgt.isNpc && p.npcCd > 0 ? "사람은 " + Mathf.CeilToInt(p.npcCd) + "초 뒤에 먹을 수 있다 (물건은 지금 가능)" :
-                    "[E] " + Data.Forms[tgt.form].name + " 먹기" + (tgt.isNpc ? (p.form == "body" ? " · 뒤에서 접근할 것" : " · 변장 중이라 덮칠 수 있다") : Data.Forms[tgt.form].Big ? " · 덩치가 커서 문은 못 지나간다" : "");
+                    "[E] " + Data.Forms[tgt.form].name + " 먹기" + (tgt.isNpc ? (p.form == "body" ? ", 뒤에서 접근할 것" : ", 변장 중이라 덮칠 수 있다") : Data.Forms[tgt.form].Big ? ", 덩치가 커서 문은 못 지나간다" : "");
             if (PlayerHidden()) return "환풍구 안 — 아무도 볼 수 없다";
             if (PlayerInDark() && !S.anySee) return "어둠 속 — 바로 옆까지 오지 않으면 못 알아챈다";
             if (f.type == FormType.Body) return G.def.lethal ? "본모습은 누구에게도 보이면 안 된다" : "본모습을 들키면 경보가 울린다";

@@ -146,7 +146,7 @@ namespace Specimen07
 
         public static readonly string[] IntroLines =
         {
-            "실험 기록 · 제3연구소 B1 격리동",
+            "실험 기록   제3연구소 B1 격리동",
             "표본 07 — 섭취한 대상의 형태와 소지품을 일시적으로 복제함.",
             "          유지 시간은 대상에 따라 다름.",
             "외부 반출 경로 — 옥상 헬기(소장 전용)뿐.",

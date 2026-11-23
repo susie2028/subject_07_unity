@@ -12,7 +12,7 @@ namespace Specimen07
         {
             new FloorDef {
                 id = "B1", name = "격리동", w = 56, h = 34, lethal = true, dark = 0.66f,
-                sub = "발각 즉시 끝 · 늙은 청소부를 노려라",
+                sub = "발각 즉시 끝, 늙은 청소부를 노려라",
                 rooms = new RoomDef[] {
                     new RoomDef("격리실 A", 1, 1, 14, 10, "iso", new string[] { "researcher", "senior", "director" }, true),
                     new RoomDef("관찰실", 16, 1, 12, 10, "lab", null, true),
@@ -138,7 +138,7 @@ namespace Specimen07
                     new FillDef('M', 33, 31, 1, 1) },
                 doors = new DoorDef[] { new DoorDef(34, 21, "sec", "기계실"), new DoorDef(49, 21, "clean", "직원 출입문") },
                 consoles = new ConsoleDef[] { new ConsoleDef(36, 32, "sec", "L3", false, "레이저 차단 장치") },
-                notices = new NoticeDef[] { new NoticeDef(20, 1, "[관찰 일지 · 표본 07]\n먹이 급여 절대 금지. 먹은 것과 똑같아짐.\n※ 청소부는 격리실 출입 금지 (또 의자 사라짐)"), new NoticeDef(2, 32, "[세탁실 안내]\n직원 출입문(의무실 쪽) — 청소 카드로 열림.\n위층 엘리베이터는 연구원 카드 이상."), new NoticeDef(31, 32, "[기계실]\n3F 실험동 레이저 그리드 수동 차단 장치.\n보안 카드(경비원) 인증 필요.") },
+                notices = new NoticeDef[] { new NoticeDef(20, 1, "[관찰 일지  표본 07]\n먹이 급여 절대 금지. 먹은 것과 똑같아짐.\n※ 청소부는 격리실 출입 금지 (또 의자 사라짐)"), new NoticeDef(2, 32, "[세탁실 안내]\n직원 출입문(의무실 쪽) — 청소 카드로 열림.\n위층 엘리베이터는 연구원 카드 이상."), new NoticeDef(31, 32, "[기계실]\n3F 실험동 레이저 그리드 수동 차단 장치.\n보안 카드(경비원) 인증 필요.") },
                 stairs = new StairsDef[] { new StairsDef(50, 29, 2, 2, "1F", '>') },
                 arriveStart = new Vector2(6.5f, 5.5f), arriveStairs = new Vector2(47.5f, 25.5f), arriveLift = null,
                 tank = new Vector2(6.5f, 5.5f),
@@ -194,7 +194,7 @@ namespace Specimen07
             },
             new FloorDef {
                 id = "1F", name = "연구동", w = 64, h = 38, lethal = true, dark = 0.55f,
-                sub = "발각 즉시 끝 · 연구원의 권한을 빼앗아라",
+                sub = "발각 즉시 끝, 연구원의 권한을 빼앗아라",
                 rooms = new RoomDef[] {
                     new RoomDef("연구실 1", 1, 1, 14, 10, "lab", null, true),
                     new RoomDef("회의실", 16, 1, 14, 10, "office", null, true),
@@ -695,7 +695,7 @@ namespace Specimen07
             },
             new FloorDef {
                 id = "3F", name = "실험동", w = 72, h = 42, lethal = false, dark = 0.6f,
-                sub = "레이저 그리드와 환풍구 · 고위 연구원을 찾아라",
+                sub = "레이저 그리드와 환풍구, 고위 연구원을 찾아라",
                 rooms = new RoomDef[] {
                     new RoomDef("엘리베이터 홀", 1, 1, 10, 10, "lift", null, true),
                     new RoomDef("화학 창고", 1, 12, 10, 29, "store", null, true),
@@ -980,7 +980,7 @@ namespace Specimen07
                     new FillDef('T', 64, 35, 2, 2) },
                 doors = new DoorDef[0],
                 consoles = new ConsoleDef[0],
-                notices = new NoticeDef[] { new NoticeDef(47, 14, "[격리 윙 경고]\n레이저 그리드 가동 중. 인가 인원만 통과.\n수동 차단: B1 기계실 (보안 카드)."), new NoticeDef(2, 40, "[환기 설비 점검표]\n실험실 B 동쪽 벽 환풍구 ↔ 격리 윙 연결.\n사람은 못 들어감. 쥐 주의."), new NoticeDef(62, 1, "[연구 노트 · 박사 한]\n표본 07 — 고위직 신원 복제 가능성.\n4F 소장실 전실 가스는 2F 통제실에서 관리.") },
+                notices = new NoticeDef[] { new NoticeDef(47, 14, "[격리 윙 경고]\n레이저 그리드 가동 중. 인가 인원만 통과.\n수동 차단: B1 기계실 (보안 카드)."), new NoticeDef(2, 40, "[환기 설비 점검표]\n실험실 B 동쪽 벽 환풍구 ↔ 격리 윙 연결.\n사람은 못 들어감. 쥐 주의."), new NoticeDef(62, 1, "[연구 노트, 박사 한]\n표본 07 — 고위직 신원 복제 가능성.\n4F 소장실 전실 가스는 2F 통제실에서 관리.") },
                 stairs = new StairsDef[0],
                 arriveStart = null, arriveStairs = null, arriveLift = new Vector2(2.5f, 5.5f),
                 lift = new Vector2Int[] { new Vector2Int(0,4), new Vector2Int(0,5), new Vector2Int(0,6) },
@@ -1076,7 +1076,7 @@ namespace Specimen07
             },
             new FloorDef {
                 id = "4F", name = "소장실층", w = 76, h = 44, lethal = false, dark = 0.6f,
-                sub = "군인은 사방을 본다 · 등 바로 뒤만 사각지대",
+                sub = "군인은 사방을 본다, 등 바로 뒤만 사각지대",
                 rooms = new RoomDef[] {
                     new RoomDef("비품 창고", 1, 1, 10, 15, "store", null, true),
                     new RoomDef("엘리베이터 홀", 1, 17, 10, 10, "lift", null, true),
@@ -1347,7 +1347,7 @@ namespace Specimen07
                     new FillDef('T', 69, 38, 2, 2) },
                 doors = new DoorDef[] { new DoorDef(48, 21, "mil", "소장실") },
                 consoles = new ConsoleDef[0],
-                notices = new NoticeDef[] { new NoticeDef(41, 26, "[경고] 비상 가스 장치 가동 중.\n해제: 2F 보안 통제실.\n소장실 출입 — 경호(군) 카드."), new NoticeDef(36, 1, "[소장 일정]\n소장님은 소장실에서 거의 나오지 않으심.\n경호병 동행 시에만 면담 가능."), new NoticeDef(60, 1, "[군 대기실]\n순찰 — 로비·복도 상시. 사방 경계.\n※ 등 뒤 확인 철저히 할 것 (지난주 사고).") },
+                notices = new NoticeDef[] { new NoticeDef(41, 26, "[경고] 비상 가스 장치 가동 중.\n해제: 2F 보안 통제실.\n소장실 출입 — 경호(군) 카드."), new NoticeDef(36, 1, "[소장 일정]\n소장님은 소장실에서 거의 나오지 않으심.\n경호병 동행 시에만 면담 가능."), new NoticeDef(60, 1, "[군 대기실]\n순찰 — 로비,복도 상시. 사방 경계.\n※ 등 뒤 확인 철저히 할 것 (지난주 사고).") },
                 stairs = new StairsDef[0],
                 arriveStart = null, arriveStairs = null, arriveLift = new Vector2(2.5f, 22.5f),
                 lift = new Vector2Int[] { new Vector2Int(0,21), new Vector2Int(0,22), new Vector2Int(0,23) },
