@@ -8,11 +8,12 @@ namespace Specimen07
 {
     public class SimpleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, ISelectHandler, IDeselectHandler
     {
-        public Color barColor = new Color(0.86f, 0.86f, 0.9f, 1f);      // 버튼 그림(frame_button)에 곱하는 색
-        public Color barHoverColor = Color.white;
-        public Color textColor = new Color(0.93f, 0.90f, 0.97f, 1f);
-        public Color textHoverColor = new Color(0.82f, 0.70f, 1f, 1f);   // 주인공 보라 쪽 연한 색
-        public Color textDisabledColor = new Color(0.62f, 0.60f, 0.70f, 1f);
+        // 색은 코드에 고정 (씬에 저장된 예전 값이 남지 않게). 바꾸려면 여기서
+        static readonly Color barColor = new Color(0.86f, 0.86f, 0.9f, 1f);      // 버튼 그림(frame_button)에 곱하는 색
+        static readonly Color barHoverColor = Color.white;
+        static readonly Color textColor = new Color(0.93f, 0.90f, 0.97f, 1f);
+        static readonly Color textHoverColor = new Color(0.82f, 0.70f, 1f, 1f);   // 주인공 보라 쪽 연한 색
+        static readonly Color textDisabledColor = new Color(0.62f, 0.60f, 0.70f, 1f);
         public float hoverExtra = 80;      // 마우스를 올리면 늘어나는 길이(px, 양쪽 합)
         public float textPad = 28;         // 글자 왼쪽 여백(px)
         public float speed = 14;
@@ -24,10 +25,11 @@ namespace Specimen07
         {
             btn = GetComponent<Button>(); bar = GetComponent<Image>(); rt = (RectTransform)transform;
             label = GetComponentInChildren<Text>(true);
+            if (styleVersion < STYLE) ApplyStyle();   // 씬이 아직 예전 모양이면 실행할 때라도 새 모양으로
             baseW = rt.sizeDelta.x;
         }
 
-        public const int STYLE = 4;   // 모양 버전 (바뀌면 에디터가 씬에 다시 입힘)
+        public const int STYLE = 5;   // 모양 버전 (바뀌면 에디터가 씬에 다시 입힘)
         public int styleVersion;
 
         // 모양 입히기: 원래 크기의 반투명 띠 + 가운데 글씨, 화면 가로 가운데에 놓는다.
