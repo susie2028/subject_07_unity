@@ -245,6 +245,8 @@ namespace Specimen07
         {
             var p = S.player;
             if (!tutSeen.Contains("eat") && S.floorId == "B1" && S.elapsed > 1.2f) { ShowTutorial("eat"); return; }
+            // 달리기: 먹기 카드 뒤 조금 돌아다닌 다음
+            if (tutSeen.Contains("eat") && !tutSeen.Contains("run") && S.elapsed > 9f && p.moved) { ShowTutorial("run"); return; }
             // 시야: 처음으로 사람이 가까이(6칸) 보일 때 — 들키기 전에 알려 준다
             if (tutSeen.Contains("eat") && !tutSeen.Contains("sight") && p.eating == null &&
                 Fl.npcs.Exists(n => n.alive && U.Dist(n.x, n.y, p.x, p.y) < 6f)) { ShowTutorial("sight"); return; }

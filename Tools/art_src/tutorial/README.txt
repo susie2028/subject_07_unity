@@ -7,4 +7,5 @@ ffmpeg -i tut_spit_src.mp4 -vf "crop=760:760:880:320" -an tut_spit.mp4
 ffmpeg -i tut_eat.mp4 -vf "fps=12,scale=380:380:flags=lanczos" -start_number 0 ../../../Assets/Resources/Art/UI/tut_eat_%d.png
 3) 시야 카드
 ffmpeg -i tut_sight_src.mp4 -vf "crop=1000:1000:820:150,fps=12,scale=380:380:flags=lanczos" -start_number 0 ../../../Assets/Resources/Art/UI/tut_sight_%d.png
+4) 달리기 카드: 위에 체력·스태미너 바(원본 왼쪽 위), 아래에 주인공을 따라가는 화면 — Tools 없이 파이썬으로 합성 (대화 기록 참고)
 (영상 파일을 Assets/StreamingAssets/Tutorial/<이름>.mp4 에 두면 그림이 없을 때 영상 재생기로도 시도한다)

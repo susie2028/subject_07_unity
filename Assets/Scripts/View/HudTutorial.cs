@@ -23,6 +23,8 @@ namespace Specimen07
         {
             new TutorialCard { id = "eat", title = "튜토리얼", media = "tut_eat",
                 body = "사물이나 사람에 접근한 후\n<color=#ffd84a>E</color>를 누르면 그것을 먹어\n변신할 수 있습니다." },
+            new TutorialCard { id = "run", title = "튜토리얼", media = "tut_run",
+                body = "<color=#ffd84a>Shift</color>를 누르고 있으면\n빠르게 달릴 수 있습니다.\n달리는 동안 스태미너가 줄어듭니다." },
             new TutorialCard { id = "sight", title = "튜토리얼", media = "tut_sight",
                 body = "사람들의 시야 안에 들어가면\n걸리게 됩니다.\n시야를 잘 피해서 움직이세요." },
             new TutorialCard { id = "spit", title = "튜토리얼", media = "tut_spit",
