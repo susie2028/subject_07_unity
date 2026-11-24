@@ -89,11 +89,10 @@ namespace Specimen07
             pauseMusic = SettingRow(card, "배경음악", "－", () => { Settings.MusicVolume = Settings.Step(Settings.MusicVolume, -0.1f); RefreshPause(); }, "＋", () => { Settings.MusicVolume = Settings.Step(Settings.MusicVolume, 0.1f); RefreshPause(); });
             pauseVol = SettingRow(card, "효과음", "－", () => { Settings.SfxVolume = Settings.Step(Settings.SfxVolume, -0.1f); RefreshPause(); }, "＋", () => { Settings.SfxVolume = Settings.Step(Settings.SfxVolume, 0.1f); RefreshPause(); });
             pauseMini = SettingRow(card, "지도", null, null, "바꾸기", () => { game.showMini = !game.showMini; Settings.Minimap = game.showMini; SetMiniVisible(game.showMini); RefreshPause(); });
-            Txt(card, "Msg", "메인 화면으로 나가면 이어하기는 이 층에 도착한 시점부터예요.", 20, MUTED);
             var row = Row(card, "Buttons", 12);
             Btn(row, "계속하기", FLESH, Data.Hex("#170c24"), () => game.Resume(), 220, 60);
             Btn(row, "게임 방법", PANEL, FG, ShowHowTo, 180, 60);
-            Btn(row, "메인 화면으로", PANEL, FG, () => game.GoToMenu(), 200, 60);
+            Btn(row, "메인 화면", PANEL, FG, () => game.GoToMenu(), 200, 60);
         }
         Text pauseVol, pauseMusic, pauseMini;
         void RefreshPause() { if (pauseVol != null) { pauseVol.text = Settings.Pct(Settings.SfxVolume); pauseMusic.text = Settings.Pct(Settings.MusicVolume); pauseMini.text = game.showMini ? "켜짐" : "꺼짐"; } }
