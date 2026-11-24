@@ -230,18 +230,18 @@ namespace Specimen07
             pillCd = Pill(pills, "소화 중 3", Data.Hex("#ffb38a")); pillCdText = pillCd.GetComponentInChildren<Text>();
 
             // ── 왼쪽 위(지도 아래): 체력·스태미너 바
-            var bars = R(hr, "Bars", new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(26, -26 - MINI_H - 18), new Vector2(MINI_W, 70));
-            hpFill = Bar(bars, "HP", "체력", 0, "slider_fill_hp");
-            stFill = Bar(bars, "Stamina", "스태미너", -36, "slider_fill");
+            var bars = R(hr, "Bars", new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(30, -30), new Vector2(BAR_W, 60));
+            hpFill = Bar(bars, "HP", 0, "bar_hp");
+            stFill = Bar(bars, "Stamina", -33, "bar_stamina");
             hurt = Img(Stretch(canvasRt, "Hurt"), new Color(0.85f, 0.1f, 0.18f, 0)); hurt.sprite = null;
 
             // ── 왼쪽 위: 지도 (본 곳만)
-            var mrt = R(hr, "Minimap", new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(26, -26), new Vector2(MINI_W, MINI_H));
+            var mrt = R(hr, "Minimap", new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1), new Vector2(-26, -26), new Vector2(MINI_W, MINI_H));   // 오른쪽 위
             mini = mrt.gameObject.AddComponent<RawImage>(); mini.raycastTarget = false;
             miniLabels = Stretch(mrt, "Labels");   // 방 이름 (본 방만)
 
             // ── 오른쪽 위: 기록 (설정은 Esc)
-            meta = Txt(hr, "Meta", "", 24, Data.Hex("#c9c3d8"), TextAnchor.UpperRight); Shadow(meta);
+            meta = Txt(hr, "Meta", "", 24, Data.Hex("#c9c3d8"), TextAnchor.UpperRight); meta.gameObject.SetActive(false);   // 기록 문구는 안 띄움
             meta.rectTransform.anchorMin = meta.rectTransform.anchorMax = meta.rectTransform.pivot = new Vector2(1, 1); meta.rectTransform.anchoredPosition = new Vector2(-30, -28); meta.rectTransform.sizeDelta = new Vector2(700, 34);
 
             // ── 위 가운데: 경보
@@ -452,15 +452,17 @@ namespace Specimen07
 
         // 체력·스태미너 바: 이름 + 얇은 픽셀 바 (채운 칸 길이로 값 표시)
         RectTransform hpFill, stFill; Image hurt; float hurtA;
-        RectTransform Bar(RectTransform parent, string name, string label, float y, string fillSpr)
+        const float BAR_W = 460;
+        // 바: 빈 칸(slider_track) 안쪽 테두리 안에 색 칸(bar_hp / bar_stamina)을 채운다. 글자 없음
+        RectTransform Bar(RectTransform parent, string name, float y, string fillSpr)
         {
-            float mul = 100f / Art.PPU / PixelSlider.PX, h = 7 * PixelSlider.PX;
-            var row = R(parent, name, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, y), new Vector2(MINI_W, 30));
-            var t = Txt(row, "L", label, 24, FG); t.rectTransform.anchoredPosition = new Vector2(0, 2); t.rectTransform.sizeDelta = new Vector2(120, 30); Shadow(t);
-            var track = R(row, "Track", new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(120, 0), new Vector2(MINI_W - 120, h));
+            float px = PixelSlider.PX, mul = 100f / Art.PPU / px, h = 7 * px;
+            var track = R(parent, name, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, y), new Vector2(BAR_W, h));
             var ti = Img(track, Color.white); ti.sprite = Art.TryLoad("UI/slider_track"); ti.type = Image.Type.Sliced; ti.pixelsPerUnitMultiplier = mul;
-            var fill = R(track, "Fill", Vector2.zero, Vector2.one, new Vector2(0, 0.5f), Vector2.zero, Vector2.zero);
-            fill.anchorMax = new Vector2(1, 1); fill.offsetMin = fill.offsetMax = Vector2.zero;
+            var area = R(track, "Area", Vector2.zero, Vector2.one, new Vector2(0, 0.5f), Vector2.zero, Vector2.zero);
+            area.offsetMin = new Vector2(2 * px, 2 * px); area.offsetMax = new Vector2(-2 * px, -2 * px);   // 테두리(2픽셀) 안쪽
+            var fill = R(area, "Fill", Vector2.zero, Vector2.one, new Vector2(0, 0.5f), Vector2.zero, Vector2.zero);
+            fill.offsetMin = fill.offsetMax = Vector2.zero;
             var fi = Img(fill, Color.white); fi.sprite = Art.TryLoad("UI/" + fillSpr); fi.type = Image.Type.Sliced; fi.pixelsPerUnitMultiplier = mul;
             return fill;
         }
@@ -479,7 +481,7 @@ namespace Specimen07
         {
             v = Mathf.Clamp01(v);
             f.gameObject.SetActive(v > 0.01f);
-            f.anchorMax = new Vector2(Mathf.Max(v, 0.12f), 1);   // 너무 짧으면 둥근 끝이 겹치니까 최소 길이
+            f.anchorMax = new Vector2(v, 1);
         }
 
         public void OnFloorChanged()
