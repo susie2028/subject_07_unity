@@ -27,20 +27,21 @@ namespace Specimen07.EditorTools
             var frames = new System.Collections.Generic.List<Sprite>();
             for (int i = 0; ; i++) { var s = Resources.Load<Sprite>("Art/Menu/water_" + i); if (s == null) break; frames.Add(s); }
             if (frames.Count == 0) return false;
-            RectTransform Full(string n)
-            {
-                var go = new GameObject(n, typeof(RectTransform));
-                Undo.RegisterCreatedObjectUndo(go, "메인 배경");
-                var rt = (RectTransform)go.transform; rt.SetParent(bg.transform, false);
-                rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = rt.offsetMax = Vector2.zero;
-                return rt;
-            }
-            var water = Full("Water");
+            var water = Full(bg, "Water");
             var im = water.gameObject.AddComponent<UnityEngine.UI.Image>(); im.sprite = frames[0]; im.raycastTarget = false;
             var anim = water.gameObject.AddComponent<FrameAnim>(); anim.frames = frames.ToArray(); anim.fps = 12;
-            var vig = Full("Vignette");
+            var vig = Full(bg, "Vignette");
             var vim = vig.gameObject.AddComponent<UnityEngine.UI.Image>(); vim.sprite = Resources.Load<Sprite>("Art/Menu/vignette"); vim.raycastTarget = false;
             return true;
+        }
+
+        static RectTransform Full(GameObject bg, string n)
+        {
+            var go = new GameObject(n, typeof(RectTransform));
+            Undo.RegisterCreatedObjectUndo(go, "메인 배경");
+            var rt = (RectTransform)go.transform; rt.SetParent(bg.transform, false);
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = rt.offsetMax = Vector2.zero;
+            return rt;
         }
 
         static void Apply(bool force)
