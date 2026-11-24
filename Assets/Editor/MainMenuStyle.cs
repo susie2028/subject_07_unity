@@ -19,29 +19,18 @@ namespace Specimen07.EditorTools
         [MenuItem("표본07/메인 메뉴 버튼 모양 다시 입히기", false, 32)]
         static void Reapply() { Apply(true); }
 
-        // 메인 화면 배경: 수조 물 움짤(Art/Menu/water_N, 초당 12장) + 가장자리 비네트. Background 아래에 한 번 만든다
-        static bool AddWater()
+        // 예전에 넣었던 물 배경(Water, Vignette)이 씬에 남아 있으면 지워서 원래 배경으로
+        static bool RemoveWater()
         {
             var bg = GameObject.Find("Background");
-            if (bg == null || bg.transform.Find("Water") != null) return false;
-            var frames = new System.Collections.Generic.List<Sprite>();
-            for (int i = 0; ; i++) { var s = Resources.Load<Sprite>("Art/Menu/water_" + i); if (s == null) break; frames.Add(s); }
-            if (frames.Count == 0) return false;
-            var water = Full(bg, "Water");
-            var im = water.gameObject.AddComponent<UnityEngine.UI.Image>(); im.sprite = frames[0]; im.raycastTarget = false;
-            var anim = water.gameObject.AddComponent<FrameAnim>(); anim.frames = frames.ToArray(); anim.fps = 12;
-            var vig = Full(bg, "Vignette");
-            var vim = vig.gameObject.AddComponent<UnityEngine.UI.Image>(); vim.sprite = Resources.Load<Sprite>("Art/Menu/vignette"); vim.raycastTarget = false;
-            return true;
-        }
-
-        static RectTransform Full(GameObject bg, string n)
-        {
-            var go = new GameObject(n, typeof(RectTransform));
-            Undo.RegisterCreatedObjectUndo(go, "메인 배경");
-            var rt = (RectTransform)go.transform; rt.SetParent(bg.transform, false);
-            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = rt.offsetMax = Vector2.zero;
-            return rt;
+            if (bg == null) return false;
+            bool any = false;
+            foreach (var n in new[] { "Water", "Vignette" })
+            {
+                var t = bg.transform.Find(n);
+                if (t != null) { Undo.DestroyObjectImmediate(t.gameObject); any = true; }
+            }
+            return any;
         }
 
         static void Apply(bool force)
@@ -95,7 +84,7 @@ namespace Specimen07.EditorTools
                     EditorUtility.SetDirty(lrt);
                 }
             }
-            changed |= AddWater();
+            changed |= RemoveWater();
             if (changed) { EditorSceneManager.MarkSceneDirty(scene); EditorSceneManager.SaveScene(scene); Debug.Log("[표본07] 메인 메뉴 버튼 모양을 씬에 입혔어요"); }
         }
     }
