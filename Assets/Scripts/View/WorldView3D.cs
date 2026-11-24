@@ -242,7 +242,7 @@ namespace Specimen07
             playerXray = Stand(dynRoot, "player_blob");
             if (xrayMat != null) playerXray.sharedMaterial = xrayMat;
             targetRing = Flat(dynRoot, "fx_ring", 34f / 32f);
-            heli = Flat(dynRoot, "heli", 1); heliRotor = Flat(dynRoot, "heli_rotor", 1);
+            heli = Stand(dynRoot, "heli"); heliRotor = Flat(dynRoot, "heli_rotor", 1);   // 헬기: Art/Heli/heli_N 그림(프로펠러 도는 6장)을 세워서 보여 준다
             var lgo = new GameObject("PlayerLight"); lgo.transform.SetParent(dynRoot, false);
             playerLight = lgo.AddComponent<Light>(); playerLight.type = LightType.Point; playerLight.range = PLAYER_LIGHT_R; playerLight.intensity = PLAYER_LIGHT_I;
             playerLight.color = new Color(0.78f, 0.62f, 1f); playerLight.shadows = LightShadows.None;   // 길게 늘어지는 그림자 없음 (캐릭터 발밑 그림자만)
@@ -938,6 +938,7 @@ namespace Specimen07
             if (hidden) playerShadow.gameObject.SetActive(false);
         }
 
+        const float HELI_W = 6.5f, HELI_FPS = 20; const int HELI_FRAMES = 6;
         void DrawHeli(float t)
         {
             var S = game.S;
@@ -949,6 +950,16 @@ namespace Specimen07
             var pad = G.def.pad.Value;
             float cx = pad.x + pad.w / 2f, cy = pad.y + pad.h / 2f, h = 0.6f + (1 - k) * 9f;
             float a = Mathf.Min(1, k * 1.5f);
+            var fr = Art.TryLoad("Heli/heli_" + ((int)(t * HELI_FPS) % HELI_FRAMES));
+            if (fr != null)
+            {
+                // 픽셀 헬기 (세운 그림): 폭 HELI_W칸, 발(스키드)이 패드 가운데에 닿게
+                heliRotor.gameObject.SetActive(false);
+                heli.sprite = fr; heli.color = new Color(1, 1, 1, a);
+                float sc = HELI_W / (fr.rect.width / fr.pixelsPerUnit);
+                PlaceStand(heli, cx, cy, sc, h - 0.6f);
+                return;
+            }
             heli.transform.position = P(cx, h, cy); heli.color = new Color(1, 1, 1, a);
             heliRotor.transform.position = P(cx, h + 0.05f, cy); heliRotor.color = new Color(1, 1, 1, a);
             heliRotor.transform.rotation = Quaternion.Euler(90, t * 18 * Mathf.Rad2Deg, 0);
