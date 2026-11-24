@@ -41,6 +41,8 @@ namespace Specimen07
         {
             AudioListener.volume = 1f;
             EnsureMusicRow();
+            UseSlider(volumeValue, () => Settings.SfxVolume, v => { Settings.SfxVolume = v; RefreshSettings(); });
+            UseSlider(musicValue, () => Settings.MusicVolume, v => { Settings.MusicVolume = v; RefreshSettings(); });
             foreach (var c in FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None)) c.pixelPerfect = true;   // 글자 또렷하게
             // 이 씬의 모든 버튼에 클릭 소리
             foreach (var btn in FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)) btn.onClick.AddListener(UiSound.Click);
@@ -120,6 +122,16 @@ namespace Specimen07
         public void OnMusicUp() { Settings.MusicVolume = Settings.Step(Settings.MusicVolume, 0.1f); RefreshSettings(); }
 
         // 예전에 만든 메인 메뉴 씬(소리 크기 한 줄)도 그대로 쓰도록: 그 줄을 '효과음'으로 바꾸고, 복사해서 '배경음악' 줄을 위에 추가
+        // 음량 줄의 −/+ 버튼을 숨기고 그 자리에 끌 수 있는 바를 넣는다 (값 칸 바로 앞)
+        void UseSlider(Text value, System.Func<float> get, System.Action<float> set)
+        {
+            if (value == null) return;
+            var row = value.transform.parent;
+            foreach (var b in row.GetComponentsInChildren<Button>(true)) b.gameObject.SetActive(false);
+            var bar = PixelSlider.Create(row, "Bar", 230, get(), set);
+            bar.transform.SetSiblingIndex(value.transform.GetSiblingIndex());
+        }
+
         void EnsureMusicRow()
         {
             if (musicValue != null || volumeValue == null) return;

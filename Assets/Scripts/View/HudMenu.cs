@@ -86,16 +86,26 @@ namespace Specimen07
         {
             pausePanel = ModalPanel(canvasRt, "Pause", "설정", 640);
             var card = pausePanel.transform.Find("Card");
-            pauseMusic = SettingRow(card, "배경음악", "－", () => { Settings.MusicVolume = Settings.Step(Settings.MusicVolume, -0.1f); RefreshPause(); }, "＋", () => { Settings.MusicVolume = Settings.Step(Settings.MusicVolume, 0.1f); RefreshPause(); });
-            pauseVol = SettingRow(card, "효과음", "－", () => { Settings.SfxVolume = Settings.Step(Settings.SfxVolume, -0.1f); RefreshPause(); }, "＋", () => { Settings.SfxVolume = Settings.Step(Settings.SfxVolume, 0.1f); RefreshPause(); });
+            pauseMusic = VolumeRow(card, "배경음악", () => Settings.MusicVolume, v => { Settings.MusicVolume = v; RefreshPause(); }, out pauseMusicBar);
+            pauseVol = VolumeRow(card, "효과음", () => Settings.SfxVolume, v => { Settings.SfxVolume = v; RefreshPause(); }, out pauseVolBar);
             pauseMini = SettingRow(card, "지도", null, null, "바꾸기", () => { game.showMini = !game.showMini; Settings.Minimap = game.showMini; SetMiniVisible(game.showMini); RefreshPause(); });
             var row = Row(card, "Buttons", 12);
             Btn(row, "계속하기", FLESH, Data.Hex("#170c24"), () => game.Resume(), 220, 60);
             Btn(row, "게임 방법", PANEL, FG, ShowHowTo, 180, 60);
             Btn(row, "메인 화면", PANEL, FG, () => game.GoToMenu(), 200, 60);
         }
-        Text pauseVol, pauseMusic, pauseMini;
-        void RefreshPause() { if (pauseVol != null) { pauseVol.text = Settings.Pct(Settings.SfxVolume); pauseMusic.text = Settings.Pct(Settings.MusicVolume); pauseMini.text = game.showMini ? "켜짐" : "꺼짐"; } }
+        Text pauseVol, pauseMusic, pauseMini; Slider pauseVolBar, pauseMusicBar;
+        // 음량 줄: 이름 + 끌 수 있는 바 + %
+        Text VolumeRow(Transform card, string label, System.Func<float> get, System.Action<float> set, out Slider bar)
+        {
+            var row = Row(card, "Row_" + label, 16);
+            var l = Txt(row, "L", label, 26, FG); Fixed(l, 200, 56);
+            bar = PixelSlider.Create(row, "Bar", 230, get(), set);
+            Text value = Txt(row, "V", "", 26, Data.Hex("#b48cf0"), TextAnchor.MiddleRight, true); Fixed(value, 96, 56);
+            return value;
+        }
+        void RefreshPause() { if (pauseVolBar != null) { pauseVolBar.SetValueWithoutNotify(Mathf.Round(Settings.SfxVolume * 10)); pauseMusicBar.SetValueWithoutNotify(Mathf.Round(Settings.MusicVolume * 10)); }
+            if (pauseVol != null) { pauseVol.text = Settings.Pct(Settings.SfxVolume); pauseMusic.text = Settings.Pct(Settings.MusicVolume); pauseMini.text = game.showMini ? "켜짐" : "꺼짐"; } }
         public void ShowPause() { RefreshPause(); pausePanel.SetActive(true); pausePanel.transform.SetAsLastSibling(); }
         public void HidePause() { pausePanel.SetActive(false); }
 

@@ -200,6 +200,7 @@ namespace Specimen07
         static readonly Dictionary<string, float> tweaks = new Dictionary<string, float>
         {
             { "researcher|backside", 1.1f },   // 연구원 대각선 위: 몸이 홀쭉하게 나와 작아 보임
+            { "researcher|side", 1.08f },      // 연구원 옆모습도 작아 보임
         };
         static float Tweak(string kind, string view)
         {

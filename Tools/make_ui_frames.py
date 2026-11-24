@@ -140,3 +140,36 @@ def button():
 if __name__ == '__main__':
     button().save(os.path.join(OUT, 'frame_button.png'))
     print('wrote frame_button.png')
+
+
+# ---------- 음량 바 (aicron 게이지 바를 얇게 다시 찍음) ----------
+SL_PAL = {
+    'K': hexc('060408'), 'L': hexc('a79ae2'),            # 검은 테두리, 연보라 선
+    'N': hexc('0d0c22'), 'n': hexc('12112b'),            # 빈 칸 남색 (+스캔라인)
+    'P': hexc('7a48bd'), 'p': hexc('9a6bd9'),            # 채운 칸 보라 (+위쪽 밝은 줄)
+    'M': hexc('4a4560'), 'H': hexc('8a86a0'), 'D': hexc('2c2838'),   # 손잡이 금속
+}
+def slider_bar(fill):
+    W = 16
+    inner = ['p', 'P', 'P'] if fill else ['N', 'n', 'N']
+    rows = ['.' + 'K' * (W - 2) + '.', 'K' + 'L' * (W - 2) + 'K']
+    rows += ['KL' + c * (W - 4) + 'LK' for c in inner]
+    rows += ['K' + 'L' * (W - 2) + 'K', '.' + 'K' * (W - 2) + '.']
+    return paint(rows, SL_PAL)
+def slider_knob():
+    rows = ['.KKKKK.',
+            'KHHHHHK',
+            'KHMMMDK',
+            'KHMMMDK',
+            'KHMMMDK',
+            'KHMMMDK',
+            'KHMMMDK',
+            'KDDDDDK',
+            '.KKKKK.']
+    return paint(rows, SL_PAL)
+
+if __name__ == '__main__':
+    slider_bar(False).save(os.path.join(OUT, 'slider_track.png'))
+    slider_bar(True).save(os.path.join(OUT, 'slider_fill.png'))
+    slider_knob().save(os.path.join(OUT, 'slider_knob.png'))
+    print('wrote slider_track/fill/knob.png')
