@@ -229,6 +229,12 @@ namespace Specimen07
             pillDark = Pill(pills, "어둠 속에 숨음", Data.Hex("#8fa2ff"));
             pillCd = Pill(pills, "소화 중 3", Data.Hex("#ffb38a")); pillCdText = pillCd.GetComponentInChildren<Text>();
 
+            // ── 왼쪽 위(지도 아래): 체력·스태미너 바
+            var bars = R(hr, "Bars", new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(26, -26 - MINI_H - 18), new Vector2(MINI_W, 70));
+            hpFill = Bar(bars, "HP", "체력", 0, "slider_fill_hp");
+            stFill = Bar(bars, "Stamina", "스태미너", -36, "slider_fill");
+            hurt = Img(Stretch(canvasRt, "Hurt"), new Color(0.85f, 0.1f, 0.18f, 0)); hurt.sprite = null;
+
             // ── 왼쪽 위: 지도 (본 곳만)
             var mrt = R(hr, "Minimap", new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(26, -26), new Vector2(MINI_W, MINI_H));
             mini = mrt.gameObject.AddComponent<RawImage>(); mini.raycastTarget = false;
@@ -334,7 +340,7 @@ namespace Specimen07
             Rule(rules, "물건", "보는 앞에서는 꼼짝 말 것. 제자리가 아니면 의심받는다. 카트만 천천히 굴러갈 수 있다.", HAZARD);
             Rule(rules, "사람", "먹으면 그 사람의 카드를 얻는다. 보는 앞에서도 걷고, 문을 연다. 단, 있으면 안 되는 구역이 있다.", Data.Hex("#8fb4d6"));
             CharTable(card);
-            Txt(card, "Keys", "<b>WASD / 방향키</b> 이동     <b>E / Space</b> 먹기, 열기, 조작     <b>Q</b> 뱉기     <b>M</b> 지도     <b>R</b> 층 도착 시점부터", 20, MUTED);
+            Txt(card, "Keys", "<b>WASD / 방향키</b> 이동     <b>Shift</b> 달리기     <b>E / Space</b> 먹기, 열기, 조작     <b>Q</b> 뱉기     <b>M</b> 지도     <b>R</b> 층 도착 시점부터", 20, MUTED);
             var row = Row(card, "Buttons", 12);
             Btn(row, "닫기", PANEL, FG, () => ovHowTo.SetActive(false), 220, 64);
 
@@ -444,6 +450,38 @@ namespace Specimen07
         }
         public void SetMiniVisible(bool v) { mini.gameObject.SetActive(v); }
 
+        // 체력·스태미너 바: 이름 + 얇은 픽셀 바 (채운 칸 길이로 값 표시)
+        RectTransform hpFill, stFill; Image hurt; float hurtA;
+        RectTransform Bar(RectTransform parent, string name, string label, float y, string fillSpr)
+        {
+            float mul = 100f / Art.PPU / PixelSlider.PX, h = 7 * PixelSlider.PX;
+            var row = R(parent, name, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, y), new Vector2(MINI_W, 30));
+            var t = Txt(row, "L", label, 24, FG); t.rectTransform.anchoredPosition = new Vector2(0, 2); t.rectTransform.sizeDelta = new Vector2(120, 30); Shadow(t);
+            var track = R(row, "Track", new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(120, 0), new Vector2(MINI_W - 120, h));
+            var ti = Img(track, Color.white); ti.sprite = Art.TryLoad("UI/slider_track"); ti.type = Image.Type.Sliced; ti.pixelsPerUnitMultiplier = mul;
+            var fill = R(track, "Fill", Vector2.zero, Vector2.one, new Vector2(0, 0.5f), Vector2.zero, Vector2.zero);
+            fill.anchorMax = new Vector2(1, 1); fill.offsetMin = fill.offsetMax = Vector2.zero;
+            var fi = Img(fill, Color.white); fi.sprite = Art.TryLoad("UI/" + fillSpr); fi.type = Image.Type.Sliced; fi.pixelsPerUnitMultiplier = mul;
+            return fill;
+        }
+        public void Hurt() { hurtA = 0.45f; }
+        void UpdateBars(float dt)
+        {
+            if (hpFill == null || game == null || game.S == null) return;
+            var p = game.S.player;
+            SetFill(hpFill, p.hp / Cfg.hpMax); SetFill(stFill, p.stamina / Cfg.staminaMax);
+            stFill.GetComponent<Image>().color = p.winded ? new Color(0.6f, 0.6f, 0.65f) : Color.white;   // 지쳐서 못 뛸 때 회색
+            hurtA = Mathf.Max(0, hurtA - dt * 1.2f);
+            float low = p.hp < Cfg.hpMax * 0.35f ? 0.08f + 0.05f * Mathf.Sin(Time.time * 6) : 0;   // 체력이 낮으면 화면이 붉게 숨쉰다
+            hurt.color = new Color(hurt.color.r, hurt.color.g, hurt.color.b, Mathf.Max(hurtA, low));
+        }
+        static void SetFill(RectTransform f, float v)
+        {
+            v = Mathf.Clamp01(v);
+            f.gameObject.SetActive(v > 0.01f);
+            f.anchorMax = new Vector2(Mathf.Max(v, 0.12f), 1);   // 너무 짧으면 둥근 끝이 겹치니까 최소 길이
+        }
+
         public void OnFloorChanged()
         {
             var G = game.G;
@@ -512,6 +550,7 @@ namespace Specimen07
         {
             float dt = Time.deltaTime;
             UpdateTutorial(dt);
+            UpdateBars(dt);
             if (toastT >= 0)
             {
                 toastT += dt; float a = toastT < 0.22f ? toastT / 0.22f : toastT > 1.44f ? 1 - (toastT - 1.44f) / 0.36f : 1;

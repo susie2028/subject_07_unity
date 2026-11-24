@@ -148,10 +148,11 @@ SL_PAL = {
     'N': hexc('0d0c22'), 'n': hexc('12112b'),            # 빈 칸 남색 (+스캔라인)
     'P': hexc('7a48bd'), 'p': hexc('9a6bd9'),            # 채운 칸 보라 (+위쪽 밝은 줄)
     'M': hexc('4a4560'), 'H': hexc('8a86a0'), 'D': hexc('2c2838'),   # 손잡이 금속
+    'R': hexc('d9485e'), 'r': hexc('f2798a'),            # 체력 바 빨강 (+위쪽 밝은 줄)
 }
-def slider_bar(fill):
+def slider_bar(fill, red=False):
     W = 16
-    inner = ['p', 'P', 'P'] if fill else ['N', 'n', 'N']
+    inner = (['r', 'R', 'R'] if red else ['p', 'P', 'P']) if fill else ['N', 'n', 'N']
     rows = ['.' + 'K' * (W - 2) + '.', 'K' + 'L' * (W - 2) + 'K']
     rows += ['KL' + c * (W - 4) + 'LK' for c in inner]
     rows += ['K' + 'L' * (W - 2) + 'K', '.' + 'K' * (W - 2) + '.']
@@ -172,4 +173,5 @@ if __name__ == '__main__':
     slider_bar(False).save(os.path.join(OUT, 'slider_track.png'))
     slider_bar(True).save(os.path.join(OUT, 'slider_fill.png'))
     slider_knob().save(os.path.join(OUT, 'slider_knob.png'))
+    slider_bar(True, red=True).save(os.path.join(OUT, 'slider_fill_hp.png'))
     print('wrote slider_track/fill/knob.png')

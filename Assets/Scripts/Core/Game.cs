@@ -225,6 +225,7 @@ namespace Specimen07
             p.x = a.x; p.y = a.y; p.eating = null;
             if (Data.Forms[p.form].Big) { DropSource(); p.form = "body"; p.timer = 0; }   // 큰 가구 모습은 층을 옮기면 풀린다 (도착 자리가 좁을 수 있다). 가구는 원래 층 제자리로
             S.alarm = null; S.trail.Clear(); S.particles.Clear(); S.spot = 0; S.spotNpc = null; S.arriveT = Cfg.arriveGrace;
+            p.hp = Cfg.hpMax; p.stamina = Cfg.staminaMax; p.winded = false;   // 층에 도착하면 체력·스태미너 회복
             foreach (var n in Fl.npcs) { n.state = NpcState.Patrol; n.path = null; n.lockT = 0; n.aim = 0; n.search = null; n.inspect = null; n.frozen = false; }
             Fl.npcs.RemoveAll(n => n.temp && !Held(n));   // 지원병이라도 지금 삼키고 있는 사람은 남겨 둔다 (뱉어야 하니까)
             if (hud != null) hud.Fade();
@@ -279,6 +280,18 @@ namespace Specimen07
             CloseLift();
             Snd("lift");
             GoFloor(fid, "lift");
+        }
+
+        // 군인 사격: 체력이 깎인다. 바닥나면 끝
+        void Shoot(Npc n)
+        {
+            var p = S.player;
+            n.aim = -Cfg.shotRecover;   // 다음 조준까지 잠깐 틈
+            p.hp -= Cfg.shotDamage; p.hurtT = 0;
+            if (p.hp <= 0) { p.hp = 0; Die(n.label + "의 총에 맞았다", "shot", n); return; }
+            Snd("shot");
+            if (hud != null) hud.Hurt();
+            S.shotFrom = new Vector2(n.x, n.y);
         }
 
         void Die(string reason, string kind, Npc n)
@@ -710,6 +723,10 @@ namespace Specimen07
             {
                 var v = Inp.Move(); var f = Data.Forms[p.form];
                 float spd = f.speed;
+                // Shift: 달리기 (스태미너가 바닥나면 조금 찰 때까지 못 뜀)
+                bool wantRun = (Inp.Held(KeyCode.LeftShift) || Inp.Held(KeyCode.RightShift)) && (v.x != 0 || v.y != 0);
+                p.sprinting = wantRun && !p.winded && p.stamina > 0;
+                if (p.sprinting) spd *= Cfg.sprintMul;
                 if (f.seenSpeed > 0 && S.anySee) spd = Mathf.Min(spd, f.seenSpeed * 0.95f);
                 if (v.x != 0 || v.y != 0)
                 {
@@ -724,6 +741,14 @@ namespace Specimen07
             p.speedNow = dt > 0 ? U.Dist(ox, oy, p.x, p.y) / dt : 0;
             if (p.eatCd > 0) p.eatCd -= dt;
             if (p.npcCd > 0) p.npcCd -= dt;
+            if (p.eating != null) p.sprinting = false;
+            // 스태미너
+            if (p.sprinting) { p.stamina = Mathf.Max(0, p.stamina - Cfg.staminaUse * dt); p.restT = Cfg.staminaDelay; if (p.stamina <= 0) p.winded = true; }
+            else if ((p.restT -= dt) <= 0) p.stamina = Mathf.Min(Cfg.staminaMax, p.stamina + Cfg.staminaRegen * dt);
+            if (p.winded && p.stamina >= Cfg.staminaResume) p.winded = false;
+            // 체력: 한동안 안 맞으면 천천히 회복
+            p.hurtT += dt;
+            if (p.hurtT > Cfg.hpRegenDelay) p.hp = Mathf.Min(Cfg.hpMax, p.hp + Cfg.hpRegen * dt);
 
             // 변신 타이머
             var fm = Data.Forms[p.form];
@@ -1067,7 +1092,7 @@ namespace Specimen07
                     n.desFace = Mathf.Atan2(ty - n.y, tx - n.x);
                     n.path = null;
                     n.aim += dt;
-                    if (n.aim >= Cfg.aimTime) Die(n.label + "의 총에 맞았다", "shot", n);
+                    if (n.aim >= Cfg.aimTime) Shoot(n);
                     return;
                 }
                 n.aim = Mathf.Max(0, n.aim - dt * 2);
@@ -1486,7 +1511,7 @@ namespace Specimen07
             var p = S.player; var f = Data.Forms[p.form];
             var notice = NearNotice(); int dr = NearDoor(); var cn = NearConsole(); bool lift = NearLift(); var trap = NearTrap();
             var tgt = p.eating != null ? null : NearestEdible();
-            if (!p.moved && S.time < 8 && S.floorId == "B1") return "[WASD] 또는 방향키로 이동   [E] 먹기   [Q] 뱉기   [M] 지도";
+            if (!p.moved && S.time < 8 && S.floorId == "B1") return "[WASD] 이동   [Shift] 달리기   [E] 먹기   [Q] 뱉기   [M] 지도";
             // 안내는 할 수 있는 행동만 짧게 (설명·공략 문구 없음)
             if (p.eating != null) return "";
             if (dr >= 0)

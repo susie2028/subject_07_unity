@@ -116,7 +116,8 @@ namespace Specimen07
     {
         public float x, y; public string form = "body"; public float timer, face, speedNow, eatCd, npcCd; public Eating eating; public bool moved;
         // 지금 모습의 원래 주인 (변신이 풀리면 그 자리에 뱉어낸다). srcKind: 0 없음, 1 사람(srcId), 2 물건(srcIdx), 3 붙박이 가구(srcTx,srcTy)
-        public int srcKind, srcIdx, srcTx, srcTy; public string srcFloor, srcId;   // eatCd: 뭐든 먹은 뒤 잠깐, npcCd: 사람을 먹은 뒤 사람만 못 먹는 시간
+        public int srcKind, srcIdx, srcTx, srcTy; public string srcFloor, srcId;
+        public float hp = Cfg.hpMax, stamina = Cfg.staminaMax, hurtT, restT; public bool sprinting, winded;   // 체력·스태미너 (Shift 달리기, 총 맞으면 체력 감소)   // eatCd: 뭐든 먹은 뒤 잠깐, npcCd: 사람을 먹은 뒤 사람만 못 먹는 시간
         public Player Clone() { var p = (Player)MemberwiseClone(); p.eating = null; return p; }
     }
 
