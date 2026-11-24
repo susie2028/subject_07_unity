@@ -132,12 +132,12 @@ namespace Specimen07
             foreach (var t in row.GetComponentsInChildren<Text>(true)) if (t.text == "소리 크기") t.text = "효과음";
             var buttons = copy.GetComponentsInChildren<Button>(true);
             foreach (var t in copy.GetComponentsInChildren<Text>(true))
-            {
                 if (t.text == "소리 크기" || t.text == "효과음") t.text = "배경음악";
-                else if (t.GetComponentInParent<Button>() == null && t.text.EndsWith("%")) musicValue = t;
-            }
-            if (musicValue == null)   // 값 칸을 이름으로 찾기
-                foreach (var t in copy.GetComponentsInChildren<Text>(true)) if (t.GetComponentInParent<Button>() == null && t.text != "배경음악") musicValue = t;
+            // 값 칸 = 효과음 줄에서 값 칸이 있던 것과 같은 위치 (창이 꺼져 있을 때 복사해서 버튼 안 글자와 헷갈리지 않게 경로로 찾음)
+            string path = "";
+            for (var t = volumeValue.transform; t != row; t = t.parent) path = t.name + (path == "" ? "" : "/" + path);
+            var mv = copy.transform.Find(path);
+            if (mv != null) musicValue = mv.GetComponent<Text>();
             for (int i = 0; i < buttons.Length; i++)
             {
                 buttons[i].onClick = new Button.ButtonClickedEvent();         // 복사된 연결(효과음) 지우기
