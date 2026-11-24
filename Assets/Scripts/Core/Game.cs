@@ -226,7 +226,7 @@ namespace Specimen07
             if (Data.Forms[p.form].Big) { DropSource(); p.form = "body"; p.timer = 0; }   // 큰 가구 모습은 층을 옮기면 풀린다 (도착 자리가 좁을 수 있다). 가구는 원래 층 제자리로
             S.alarm = null; S.trail.Clear(); S.particles.Clear(); S.spot = 0; S.spotNpc = null; S.arriveT = Cfg.arriveGrace;
             foreach (var n in Fl.npcs) { n.state = NpcState.Patrol; n.path = null; n.lockT = 0; n.aim = 0; n.search = null; n.inspect = null; n.frozen = false; }
-            Fl.npcs.RemoveAll(n => n.temp);
+            Fl.npcs.RemoveAll(n => n.temp && !Held(n));   // 지원병이라도 지금 삼키고 있는 사람은 남겨 둔다 (뱉어야 하니까)
             if (hud != null) hud.Fade();
             EnterFloorVisual();
             bool first = !S.visited.Contains(id);
@@ -763,6 +763,7 @@ namespace Specimen07
             Toast(msg);
         }
         static readonly string[] WakeLines = { "으으… 머리야…", "어… 내가 왜 바닥에…", "뭐, 뭐였지 방금…", "꿈인가…" };
+        bool Held(Npc n) { var p = S.player; return p.srcKind == 1 && !n.alive && n.id == p.srcId; }
         void DropSource()
         {
             var p = S.player; int k = p.srcKind; p.srcKind = 0;
@@ -776,25 +777,23 @@ namespace Specimen07
                 n.alive = true; n.state = NpcState.Patrol; n.path = null; n.inspect = null; n.search = null; n.frozen = false;
                 n.lockT = 0; n.aim = 0; n.fleeT = 0; n.wait = 0; n.bubble = null; n.seesPlayer = false;
                 F.missing.RemoveAll(m => !m.done && m.label == n.label);   // 돌아왔으니 실종 신고도 없던 일
-                if (here)
+                if (!here)
                 {
-                    // 기절해서 그 자리에 널브러진다. 잠시 뒤 일어나 다시 순찰
-                    n.x = p.x; n.y = p.y; n.stunT = Cfg.stunTime; n.stunYaw = (U.Rand(0f, 1f) < 0.5f ? -1 : 1) * U.Rand(68f, 96f);   // 림월드처럼 옆으로 비스듬히 쓰러짐
-                    Say(n, "@_@", 1.4f);
+                    // 다른 층에서 풀려도 지금 자리에 뱉는다: 이 층 사람이 된다 (원래 순찰길은 없으니 그 자리에서 두리번)
+                    F.npcs.Remove(n); Fl.npcs.Add(n);
+                    n.route = new RouteWp[0]; n.wp = 0;
+                    if (Fl.npcs.Any(q => q != n && q.id == n.id)) n.id = n.id + "_" + S.floorId;
                 }
-                else
-                {
-                    // 다른 층에서 풀렸으면 원래 층의 처음 자리로 돌아가 있다
-                    var d = FloorGeo.All[p.srcFloor].def.npcs.FirstOrDefault(q => q.id == n.id);
-                    if (d != null) { n.x = d.x; n.y = d.y; n.wp = 0; }
-                }
+                // 기절해서 그 자리에 널브러진다. 잠시 뒤 일어나 다시 순찰
+                n.x = p.x; n.y = p.y; n.stunT = Cfg.stunTime; n.stunYaw = (U.Rand(0f, 1f) < 0.5f ? -1 : 1) * U.Rand(68f, 96f);   // 림월드처럼 옆으로 비스듬히 쓰러짐
+                Say(n, "@_@", 1.4f);
             }
             else if (k == 2)
             {
                 if (p.srcIdx < 0 || p.srcIdx >= F.objects.Count) return;
                 var o = F.objects[p.srcIdx];
                 if (here) { o.alive = true; o.respawnT = 0; o.x = p.x; o.y = p.y; }
-                else o.respawnT = Cfg.respawn;
+                else Fl.objects.Add(new WorldObj { form = o.form, x = p.x, y = p.y, rot = o.rot });   // 원래 층의 것은 사라진 채로, 지금 자리에 놓인다
             }
             else if (k == 3)
             {
@@ -1038,7 +1037,7 @@ namespace Specimen07
         void EndAlarm()
         {
             S.alarm = null;
-            Fl.npcs.RemoveAll(n => n.temp);
+            Fl.npcs.RemoveAll(n => n.temp && !Held(n));   // 지원병이라도 지금 삼키고 있는 사람은 남겨 둔다 (뱉어야 하니까)
             foreach (var n in Fl.npcs) if (n.state == NpcState.Chase)
             {
                 n.state = NpcState.Patrol; n.path = null; n.wait = 0; n.search = null; n.lockT = 0; n.aim = 0;
