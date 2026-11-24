@@ -1431,8 +1431,6 @@ namespace Specimen07
                         new RouteWp[] { new RouteWp(67.5f, 17.5f, 1.8f, 0.0f), new RouteWp(72.5f, 27.5f, 1.6f, 180.0f), new RouteWp(67.5f, 27.5f, 1.4f, -90.0f) }),
                     new NpcDef("f4g2", "guard", "guard", "의무실 경비", 62.5f, 34.5f, 0.0f,
                         new RouteWp[] { new RouteWp(62.5f, 34.5f, 1.6f, 0.0f), new RouteWp(72.5f, 40.5f, 1.6f, 180.0f), new RouteWp(64.5f, 40.5f, 1.2f, 90.0f) }),
-                    new NpcDef("f4s", "senior", "senior", "고위 연구원 오", 32.5f, 5.5f, 0.0f,
-                        new RouteWp[] { new RouteWp(32.5f, 5.5f, 2.4f, 0.0f), new RouteWp(38.5f, 10.5f, 1.4f, 129.0f), new RouteWp(30.5f, 20.5f, 1.0f, -82.0f), new RouteWp(32.5f, 5.5f, 1.0f, 0.0f) }),
                     new NpcDef("f4r1", "researcher", "researcher", "회의실 연구원 1", 15.5f, 4.5f, 0.0f,
                         new RouteWp[] { new RouteWp(15.5f, 4.5f, 2.4f, 0.0f), new RouteWp(25.5f, 10.5f, 1.6f, 180.0f) }),
                     new NpcDef("f4r2", "researcher", "researcher2", "회의실 연구원 2", 24.5f, 4.5f, 180.0f,

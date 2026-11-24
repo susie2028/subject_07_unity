@@ -19,7 +19,7 @@ namespace Specimen07
         public const float darkHide = 0.62f, darkSeeR = 1.7f;  // 이만큼 어두운 칸에 있으면 NPC가 이 거리 안에서만 알아챈다
         public const float viewMul = 1.25f;      // NPC 시야 거리 배율 (피드백: 너무 쉬워서 넓힘)
         public const float waitMul = 0.55f;      // 순찰 지점에서 멈추는 시간 배율 (더 자주 돌아다니게)
-        public const float lookAmp = 45f, lookStep = 1.1f;   // 멈춰 있는 동안 정해진 순서로 둘러보기: 가운데 → 오른쪽 → 가운데 → 왼쪽 (각도, 한 칸 시간)
+        public const float lookAmp = 45f, lookStep = 1.8f, lookTurnRate = 1.8f;   // lookTurnRate: 멈춰서 둘러볼 때 고개 돌리는 속도(라디안/초, 걸을 때 turnRate보다 느리게)   // 멈춰 있는 동안 정해진 순서로 둘러보기: 가운데 → 오른쪽 → 가운데 → 왼쪽 (각도, 한 칸 시간)
         public const float patrolK = 0.42f, chaseK = 0.5f;   // NPC 속도 배율 (피드백: 전체적으로 빠르게)
         // 군인(원형 시야)의 등 뒤 사각지대: 정면 기준 ±140° 바깥(등 뒤 80°)은 이 거리까지만 보임
         public const float rearBlindFrom = 140f, rearRange = 0.6f;   // 먹기 사거리(1.15)보다 짧아서 등 뒤 0.6~1.15칸에서 먹을 수 있음
@@ -77,7 +77,7 @@ namespace Specimen07
             { "researcher", new CharDef("researcher", "연구원",      4, ViewShape.Cone,   4,  "보통",     1.0f,  new[] { "clean", "lab" }, 25, null) },
             { "guard",      new CharDef("guard",      "경비원",      5, ViewShape.Half,   6,  "높음",     0.6f,  new[] { "clean", "lab", "sec" }, 25, "catch") },
             { "senior",     new CharDef("senior",     "고위 연구원", 6, ViewShape.Half,   8,  "보통",     1.0f,  new[] { "clean", "lab", "sec", "senior" }, 28, null) },
-            { "soldier",    new CharDef("soldier",    "군인",        8, ViewShape.Circle, 10, "매우 높음", 0.35f, new[] { "clean", "lab", "sec", "mil" }, 30, "shoot") },
+            { "soldier",    new CharDef("soldier",    "군인",        7, ViewShape.Half, 10, "매우 높음", 0.35f, new[] { "clean", "lab", "sec", "mil" }, 30, "shoot") },
             { "director",   new CharDef("director",   "연구소장",    4, ViewShape.Cone,   4,  "매우 낮음", 2.6f,  new[] { "clean", "lab", "sec", "senior", "mil", "dir" }, 40, null) },
         };
         public static readonly string[] CharOrder = { "cleaner", "researcher", "guard", "senior", "soldier", "director" };

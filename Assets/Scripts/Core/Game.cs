@@ -830,7 +830,9 @@ namespace Specimen07
         {
             if (!n.alive) return;
             if (n.bubble != null) { n.bubble.t -= dt; if (n.bubble.t <= 0) n.bubble = null; }
-            n.face = U.ApproachAng(n.face, n.desFace, Cfg.turnRate * dt * (n.state == NpcState.Chase || n.state == NpcState.Flee ? 1.6f : 1f));
+            bool looking = (n.state == NpcState.Patrol && n.wait > 0) || (n.search != null && n.search.looking && (n.lockT <= 0));
+            float turn = looking ? Cfg.lookTurnRate : Cfg.turnRate * (n.state == NpcState.Chase || n.state == NpcState.Flee ? 1.6f : 1f);
+            n.face = U.ApproachAng(n.face, n.desFace, turn * dt);
             if (n.frozen) return;
             if (n.stunT > 0)
             {
@@ -1080,13 +1082,14 @@ namespace Specimen07
             var s = n.search;
             if (!s.looking)
             {
-                if (n.path == null) { n.path = FindPath(n, n.x, n.y, s.x, s.y) ?? new List<Vector2>(); if (n.path.Count == 0) { s.looking = true; s.t = 2.2f; } }
-                if (!s.looking && MoveAlong(n, dt, spd * 0.75f)) { s.looking = true; s.t = 2.2f; n.path = null; }
+                if (n.path == null) { n.path = FindPath(n, n.x, n.y, s.x, s.y) ?? new List<Vector2>(); if (n.path.Count == 0) { s.looking = true; s.t = 3f; s.baseFace = n.face; } }
+                if (!s.looking && MoveAlong(n, dt, spd * 0.75f)) { s.looking = true; s.t = 3f; s.baseFace = n.face; n.path = null; }
             }
             else
             {
                 s.t -= dt;
-                n.desFace = n.face + 1.2f;
+                // 빙글빙글 돌지 말고 왼쪽 → 오른쪽으로 천천히 둘러본다
+                n.desFace = s.baseFace + (s.t > 1.5f ? 1f : -1f) * Data.Rad(70);
                 if (s.t <= 0) { var w = WanderPoint(n, A.lx, A.ly, 7); n.search = new Search { x = w.x, y = w.y, looking = false, t = 0 }; n.path = null; }
             }
         }

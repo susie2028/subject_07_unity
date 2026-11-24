@@ -8,7 +8,7 @@ namespace Specimen07
 
     public class Bubble { public string text; public float t; }
     public class Inspect { public float x, y, t; public bool staring; public string end; }
-    public class Search { public float x, y, t; public bool looking; }
+    public class Search { public float x, y, t, baseFace; public bool looking; }
 
     public class Npc
     {
