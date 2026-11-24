@@ -193,7 +193,22 @@ namespace Specimen07
                 tgt = n > 0 ? sum / n : h;
                 targetH[kind] = tgt;
             }
-            return tgt / h;
+            return tgt / h * Tweak(kind, view);
+        }
+
+        // 키는 같아도 눈으로 보기에 작아 보이는 그림 손보기 (종류 앞부분이 같으면 변형까지 적용)
+        static readonly Dictionary<string, float> tweaks = new Dictionary<string, float>
+        {
+            { "researcher|backside", 1.1f },   // 연구원 대각선 위: 몸이 홀쭉하게 나와 작아 보임
+        };
+        static float Tweak(string kind, string view)
+        {
+            foreach (var kv in tweaks)
+            {
+                int bar = kv.Key.IndexOf('|');
+                if (view == kv.Key.Substring(bar + 1) && kind.StartsWith(kv.Key.Substring(0, bar))) return kv.Value;
+            }
+            return 1;
         }
 
         internal static bool HasWalk(string kind) { return Art.Has("walk_" + kind + "_front_0"); }
