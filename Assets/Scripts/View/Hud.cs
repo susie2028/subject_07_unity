@@ -459,11 +459,21 @@ namespace Specimen07
             {
                 string fid = e[0], req = e[1];
                 bool here = fid == S.floorId, ok = game.HasCard(req);
-                string small = here ? "현재 층" : ok ? (req != null ? Data.Cards[req].name + " 카드 인증됨" : "") : Data.Cards[req].name + " 카드 필요, " + Data.Cards[req].from;
-                var b = Btn(liftList, fid, here ? Data.Hex("#1d2a26") : PANEL, FG, () => game.ChooseLift(fid), 560, 60);
+                string small = here ? "현재 층" : ok ? "" : Data.Cards[req].name + " 카드 필요";
+                var b = Btn(liftList, fid, here ? Data.Hex("#1d2a26") : PANEL, FG, () => game.ChooseLift(fid), 640, 72);
                 var t = b.GetComponentInChildren<Text>();
-                t.alignment = TextAnchor.MiddleLeft; t.rectTransform.sizeDelta = new Vector2(-40, 0);
-                t.text = "<color=#a47be6>" + fid + "</color> " + FloorGeo.All[fid].name + "   <size=18><color=#8a9a99>" + small + "</color></size>";
+                // 버튼 둥근 끝(양쪽 8px×3)을 피해서 안쪽에 맞춤: 왼쪽 층 이름, 오른쪽 작은 안내
+                t.alignment = TextAnchor.MiddleLeft; t.fontSize = 24;
+                t.rectTransform.anchorMin = Vector2.zero; t.rectTransform.anchorMax = Vector2.one;
+                t.rectTransform.offsetMin = new Vector2(40, 0); t.rectTransform.offsetMax = new Vector2(-40, 0);
+                t.text = "<color=#b48cf0>" + fid + "</color>  " + FloorGeo.All[fid].name;
+                if (small != "")
+                {
+                    var st = Txt(b.transform, "Small", small, 24, Data.Hex("#9a96ab"), TextAnchor.MiddleRight);
+                    st.rectTransform.anchorMin = Vector2.zero; st.rectTransform.anchorMax = Vector2.one;
+                    st.rectTransform.offsetMin = new Vector2(40, 0); st.rectTransform.offsetMax = new Vector2(-40, 0);
+                    st.raycastTarget = false;
+                }
                 b.interactable = !here && ok;
             }
             ovLift.SetActive(true);
