@@ -1402,7 +1402,7 @@ namespace Specimen07
         // 화면 아래 안내 문구. note=true면 게시물(종이) 스타일
         /* ===== 상호작용 테두리: 먹을 수 있는 것·문·콘솔·엘리베이터 =====
            strong = 지금 [E]를 누르면 반응할 대상 (굵게·맥박), 나머지는 가까이 있으면 옅게 */
-        public enum HiKind { Obj, Npc, Tile, Door, Console, Lift }
+        public enum HiKind { Obj, Npc, Tile, Door, Console, Lift, Vent }
         public struct Highlight { public HiKind kind; public object target; public int tx, ty; public bool strong; public Color color; }
         static readonly Color HI_EAT = new Color(0.66f, 0.48f, 0.95f),   // 먹을 수 있는 것 = 주인공 보라
                                HI_BLOCK = new Color(1f, 0.32f, 0.28f), HI_CONSOLE = new Color(1f, 0.83f, 0.42f), HI_LIFT = new Color(0.5f, 0.88f, 0.69f);
@@ -1449,11 +1449,33 @@ namespace Specimen07
                 bool st = ReferenceEquals(c, cn);
                 list.Add(new Highlight { kind = HiKind.Console, target = c, tx = c.x, ty = c.y, strong = st, color = A(HI_CONSOLE, st ? pulse : 0.55f) });
             }
+            // 환풍구: 가까이 있으면 테두리 (본모습이면 진하게 — 지나갈 수 있으니까)
+            int nv = NearVent();
+            for (int ty = py - 3; ty <= py + 3; ty++) for (int tx = px - 3; tx <= px + 3; tx++)
+            {
+                if (TileAt(tx, ty) != 'v' || (tx == px && ty == py)) continue;
+                if (U.Dist(p.x, p.y, tx + 0.5f, ty + 0.5f) > 3f) continue;
+                bool st = nv == ty * G.w + tx && p.form == "body";
+                list.Add(new Highlight { kind = HiKind.Vent, tx = tx, ty = ty, strong = st, color = A(HI_EAT, st ? pulse : 0.5f) });
+            }
             if (G.def.lift != null) foreach (var t in G.def.lift)
             {
                 if (U.Dist(p.x, p.y, t.x + 0.5f, t.y + 0.5f) > 3f) continue;
                 list.Add(new Highlight { kind = HiKind.Lift, tx = t.x, ty = t.y, strong = lift, color = A(HI_LIFT, lift ? pulse : 0.55f) });
             }
+        }
+
+        // 바로 옆(1.3칸 안)에 있는 환풍구 칸 (y*w+x), 없으면 -1
+        int NearVent()
+        {
+            var p = S.player; int px = U.Floor(p.x), py = U.Floor(p.y), best = -1; float bd = 1.3f;
+            for (int ty = py - 1; ty <= py + 1; ty++) for (int tx = px - 1; tx <= px + 1; tx++)
+            {
+                if (TileAt(tx, ty) != 'v') continue;
+                float d = U.Dist(p.x, p.y, tx + 0.5f, ty + 0.5f);
+                if (d < bd) { bd = d; best = ty * G.w + tx; }
+            }
+            return best;
         }
 
         public string Hint(out bool note)
@@ -1481,6 +1503,8 @@ namespace Specimen07
                 return p.eatCd > 0 ? Mathf.CeilToInt(p.eatCd) + "초 뒤 먹기" :
                        tgt.isNpc && p.npcCd > 0 ? Mathf.CeilToInt(p.npcCd) + "초 뒤 먹기" :
                        "[E] " + Data.Forms[tgt.form].name + " 먹기";
+            if (PlayerHidden()) return "";
+            if (NearVent() >= 0) return "환풍구 - 원래 형태일 때 통과할 수 있다";
             if (f.type == FormType.Body) return "";
             return "[Q] 뱉기";   // 변신 중엔 늘 뱉기 안내
         }

@@ -789,13 +789,13 @@ namespace Specimen07
             }
             HideFrom(npcPool, ni); HideFrom(shadowPool, ni); HideFrom(outlinePool, oli);
 
-            // 붙박이 테두리: 책상·선반·문·콘솔·엘리베이터
+            // 붙박이 테두리: 책상·선반·문·콘솔·엘리베이터·환풍구
             int hfi = 0;
             foreach (var h in his)
             {
                 if (h.kind == Game.HiKind.Obj || h.kind == Game.HiKind.Npc) continue;
                 if (!InView(h.tx + 0.5f, h.ty + 0.5f, 1)) continue;
-                float fh = h.kind == Game.HiKind.Door ? WALL_H : h.kind == Game.HiKind.Console ? 0.72f : h.kind == Game.HiKind.Lift ? 1.3f : G.Tile(h.tx, h.ty) == 'S' ? 1.15f : 0.5f;
+                float fh = h.kind == Game.HiKind.Door || h.kind == Game.HiKind.Vent ? WALL_H : h.kind == Game.HiKind.Console ? 0.72f : h.kind == Game.HiKind.Lift ? 1.3f : G.Tile(h.tx, h.ty) == 'S' ? 1.15f : 0.5f;
                 const float inf = 0.03f;
                 Pooled(framePool, hfi++, () => BoxFrame.Make(dynRoot, unitBox)).Show(h.tx - inf, h.ty - inf, h.tx + 1 + inf, h.ty + 1 + inf, fh + inf, h.strong ? 0.055f : 0.03f, h.color);
             }
