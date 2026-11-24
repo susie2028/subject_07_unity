@@ -173,5 +173,13 @@ if __name__ == '__main__':
     slider_bar(False).save(os.path.join(OUT, 'slider_track.png'))
     slider_bar(True).save(os.path.join(OUT, 'slider_fill.png'))
     slider_knob().save(os.path.join(OUT, 'slider_knob.png'))
-    slider_bar(True, red=True).save(os.path.join(OUT, 'slider_fill_hp.png'))
+    # 체력·스태미너 바 안쪽 색 칸 (빈 칸 테두리 안에 들어감): 위 1줄 밝게, 아래 2줄 진하게, 맨 아래 1줄 그림자
+    def bar_fill(top, mid, low):
+        im = Image.new('RGBA', (4, 3)); px = im.load()
+        for x in range(4): px[x, 0] = hexc(top); px[x, 1] = hexc(mid); px[x, 2] = hexc(low)
+        return im
+    bar_fill('f58c9c', 'e0485f', 'b83249').save(os.path.join(OUT, 'bar_hp.png'))
+    bar_fill('b996e8', '8a5ad0', '6a3ea8').save(os.path.join(OUT, 'bar_stamina.png'))
+    p = os.path.join(OUT, 'slider_fill_hp.png')
+    if os.path.exists(p): os.remove(p)
     print('wrote slider_track/fill/knob.png')

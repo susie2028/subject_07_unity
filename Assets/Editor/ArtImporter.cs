@@ -42,7 +42,8 @@ namespace Specimen07.EditorTools
             { "frame_button", new Vector4(8, 5, 8, 5) },
             { "slider_track", new Vector4(3, 3, 3, 3) },  // 음량 바 (빈 칸)
             { "slider_fill", new Vector4(3, 3, 3, 3) },   // 음량 바 (채운 칸) · 스태미너
-            { "slider_fill_hp", new Vector4(3, 3, 3, 3) },  // 체력 바  // 모든 버튼 — 양 끝은 고정, 가운데만 늘어남 (Sliced)     // 이름표 — 왼쪽 노랑 줄무늬는 고정, 가운데만 늘어남 (Sliced)
+            { "bar_hp", new Vector4(1, 0, 1, 0) },        // 체력 바 안쪽 색 칸
+            { "bar_stamina", new Vector4(1, 0, 1, 0) },   // 스태미너 바 안쪽 색 칸  // 모든 버튼 — 양 끝은 고정, 가운데만 늘어남 (Sliced)     // 이름표 — 왼쪽 노랑 줄무늬는 고정, 가운데만 늘어남 (Sliced)
         };
     }
 }
